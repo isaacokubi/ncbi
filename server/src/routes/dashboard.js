@@ -6,7 +6,7 @@ import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
 const router = Router();
 router.use(requireAuth);
-router.get('/summary', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer'), async (req, res, next) => {
+router.get('/summary', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer','department_leader'), async (req, res, next) => {
   try {
     const ids = await accessibleOrganisationIds(req.user);
     const start = new Date(); start.setDate(1); start.setHours(0,0,0,0);
@@ -20,7 +20,8 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
       OperationsRecord.find({ organisation: { $in: ids }, entity: 'event', status: { $in: ['scheduled','active'] }, startAt: { $gte: new Date() } }).sort({ startAt: 1 }).limit(6).select('title startAt organisation').populate('organisation','name').lean(),
       OperationsRecord.countDocuments({ organisation: { $in: ids }, status: 'pending' })
     ]);
-    res.json({ scope: ids.length, asOf: new Date().toISOString(), metrics: { branches, members, visitors, attendanceRecordsThisMonth: attendance, confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals: pendingRecords }, upcomingEvents });
+    const metrics = req.user.role === 'department_leader' ? { attendanceRecordsThisMonth: attendance } : { branches, members, visitors, attendanceRecordsThisMonth: attendance, confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals: pendingRecords };
+    res.json({ scope: ids.length, asOf: new Date().toISOString(), metrics, upcomingEvents });
   } catch (error) { next(error); }
 });
 export default router;
