@@ -237,7 +237,7 @@ router.post('/approval-policies',async(req,res,next)=>{try{
  const candidate={minimumAmount:String(minimumAmount),maximumAmount:maximumAmount===null||maximumAmount===''?null:String(maximumAmount)};
  if(existing.some(policy=>approvalPolicyOverlaps(policy,candidate)))return res.status(409).json({message:'This amount range overlaps an active approval policy for the selected organisation'});
  const policy=await FinanceApprovalPolicy.create({organisation:org,transactionType,minimumAmount:candidate.minimumAmount,maximumAmount:candidate.maximumAmount,approverRoles:roles,requiredApprovals,createdBy:req.user._id,updatedBy:req.user._id});
- await AuditLog.create({organisation:org,actor:req.user._id,action:'approval_policy_create',entity:'finance_approval_policy',recordId:policy._id,summary:'Created budget approval matrix',metadata:{minimumAmount:candidate.minimumAmount,maximumAmount:candidate.maximumAmount,approverRoles:roles,requiredApprovals}});
+ await AuditLog.create({organisation:org,actor:req.user._id,action:'approval_policy_create',entity:'finance_approval_policy',recordId:policy._id,summary:`Created ${transactionType.replaceAll('_',' ')} approval matrix`,metadata:{minimumAmount:candidate.minimumAmount,maximumAmount:candidate.maximumAmount,approverRoles:roles,requiredApprovals}});
  res.status(201).json({policy});
 }catch(e){next(e);}});
 router.patch('/approval-policies/:id/status',async(req,res,next)=>{try{
