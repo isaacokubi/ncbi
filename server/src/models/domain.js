@@ -247,7 +247,7 @@ const supplierPaymentSchema=new Schema({
  journalEntry:{type:Schema.Types.ObjectId,ref:'JournalEntry',default:null}
 },{timestamps:true});
 supplierPaymentSchema.index({organisation:1,createdAt:-1});
-supplierPaymentSchema.index({reference:1},{sparse:true,unique:true});
+supplierPaymentSchema.index({organisation:1,reference:1},{unique:true,partialFilterExpression:{reference:{$type:'string',$gt:''}}});
 
 export const Supplier=mongoose.models.Supplier||model('Supplier',supplierSchema);
 export const PurchaseRequest=mongoose.models.PurchaseRequest||model('PurchaseRequest',purchaseRequestSchema);
