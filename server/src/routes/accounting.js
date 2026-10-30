@@ -36,6 +36,21 @@ router.post('/accounts',async(req,res,next)=>{try{
  await AuditLog.create({organisation:org,actor:req.user._id,action:'create',entity:'ledger_account',recordId:account._id,summary:'Created account '+account.code+' '+account.name});
  res.status(201).json({account});
 }catch(e){next(e);}});
+router.post('/accounts/seed-defaults',async(req,res,next)=>{try{
+ if(!canFinance(req))return res.status(403).json({message:'Finance access denied'});
+ const org=req.body.organisation||(req.user.organisation?._id??req.user.organisation);
+ if(!mongoose.isValidObjectId(org)||!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});
+ const defaults=[
+  ['1000','Cash on Hand','asset','debit'],['1010','Bank Account','asset','debit'],['1020','M-Pesa Clearing','asset','debit'],['1100','Accounts Receivable','asset','debit'],
+  ['2000','Accounts Payable','liability','credit'],['2100','Restricted Funds Payable','liability','credit'],['3000','Accumulated Fund','equity','credit'],
+  ['4000','Tithes','income','credit'],['4010','Offerings','income','credit'],['4020','Donations','income','credit'],['4030','Missions Giving','income','credit'],['4090','Other Income','income','credit'],
+  ['5000','Staff and Ministry Allowances','expense','debit'],['5010','Worship and Ministry','expense','debit'],['5020','Missions and Evangelism','expense','debit'],['5030','Utilities','expense','debit'],['5040','Rent and Facilities','expense','debit'],['5050','Benevolence and Welfare','expense','debit'],['5060','Transport','expense','debit'],['5070','Repairs and Maintenance','expense','debit'],['5080','Administration','expense','debit']
+ ];
+ const result=await LedgerAccount.bulkWrite(defaults.map(([code,name,type,normalBalance])=>({updateOne:{filter:{organisation:org,code},update:{$setOnInsert:{organisation:org,code,name,type,normalBalance,active:true,system:true}},upsert:true}})));
+ await AuditLog.create({organisation:org,actor:req.user._id,action:'seed',entity:'ledger_account',summary:'Installed standard NCBI chart of accounts'});
+ const accounts=await LedgerAccount.find({organisation:org}).sort({code:1}).lean();
+ res.json({created:result.upsertedCount||0,accounts});
+}catch(e){next(e);}});
 router.patch('/accounts/:id/status',async(req,res,next)=>{try{
  if(!canFinance(req))return res.status(403).json({message:'Finance access denied'});
  if(typeof req.body.active!=='boolean')return res.status(400).json({message:'Active must be true or false'});
