@@ -9,7 +9,7 @@ const recordSchema = new Schema({
   startAt: Date, endAt: Date,
   owner: { type: Schema.Types.ObjectId, ref: 'User' },
   assignedTo: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  visibility: { type: String, enum: ['private','team','organisation'], default: 'organisation' },
+  visibility: { type: String, enum: ['private','team','organisation','public'], default: 'organisation' },
   data: { type: Schema.Types.Mixed, default: {} },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

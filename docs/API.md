@@ -21,6 +21,9 @@ All workspace endpoints except health and login require `Authorization: Bearer <
 - `GET /api/workspace/attendance/summary` — scoped attendance/member/confirmed-income summary.
 - `PATCH /api/workspace/members/:id` — update an authorised member profile.
 
+## Public website
+- `GET /api/public/content` — active branch directory, future public events and published public announcements. Only records explicitly marked with `visibility: public` are exposed; no member, finance or pastoral data is returned.
+
 ## Member portal
 - `GET /api/portal/summary` — for member-role accounts linked to a member profile; returns only that profile, its attendance, the account's own event registrations, upcoming branch events and organisation-wide branch announcements.
 
