@@ -59,3 +59,7 @@ The member-number uniqueness rule now uses a partial index so a branch can regis
 
 ## Child safeguarding consent workflow
 A dedicated safeguarding-consent API records explicit guardian authority, purpose-specific consent (participation, photography, public media publication, emergency medical care, authorised collection and off-site travel), authorised collection contacts, and a bounded validity period. Consent capture is restricted to verified members under 18 in the caller's organisation scope. Only senior pastoral roles or users with the explicit safeguarding:manage permission can read, create or revoke records. Consent records are immutable after capture; withdrawal is recorded as a revocation with actor, timestamp and reason, preserving history. Audit entries omit guardian contact details. This workflow is a technical control, not a substitute for NCBI-approved safeguarding policy, identity verification, staff vetting or legal review.
+
+
+## QR attendance API
+Attendance officers can issue a signed, organisation-bound QR session token for a named activity. Tokens use HS256 with issuer/audience/purpose validation and expire after ten minutes. Member check-in verifies the token, organisation access and active member status, records checkInMethod=qr, and relies on the attendance uniqueness constraint to make repeated or concurrent scans idempotent. QR tokens are not reusable as login credentials. A camera/scanner UI and end-to-end device testing remain outstanding; the API is ready for that client integration.

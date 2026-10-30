@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import { OperationsRecord, AuditLog, SafeguardingConsent } from '../models/domain.js';
 import { validateSafeguardingConsentInput, validateSafeguardingRevocation } from '../domain/safeguardingPolicy.js';
 import { Member } from '../models/index.js';
@@ -49,6 +51,73 @@ function isMinor(dateOfBirth, at = new Date()) {
 }
 
 // Dedicated, immutable-after-capture consent records; audit summaries omit contact details.
+
+const attendanceManagers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','department_leader']);
+const attendanceCategories = new Set(['sunday_service','midweek_service','prayer','bible_study','department','conference','outreach','other']);
+function validateQrSession(input) {
+  const activityName = String(input?.activityName || '').trim();
+  const category = input?.category || 'other';
+  const heldAt = new Date(input?.heldAt || '');
+  if (!activityName || activityName.length > 80) return { valid: false, message: 'Activity name must be 1–80 characters' };
+  if (!attendanceCategories.has(category)) return { valid: false, message: 'Invalid attendance category' };
+  if (Number.isNaN(heldAt.getTime()) || heldAt < new Date(Date.now() - 24 * 60 * 60 * 1000) || heldAt > new Date(Date.now() + 24 * 60 * 60 * 1000)) return { valid: false, message: 'Attendance session date must be within 24 hours of now' };
+  return { valid: true, value: { activityName, category, heldAt } };
+}
+
+// QR session tokens are signed, short-lived and bound to one organisation and service.
+router.post('/attendance/qr-session', async (req, res, next) => {
+  try {
+    if (!attendanceManagers.has(req.user.role)) return res.status(403).json({ message: 'Attendance session management permission required' });
+    const validation = validateQrSession(req.body);
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+    const organisation = req.body.organisation || (req.user.organisation?._id ?? req.user.organisation);
+    if (!mongoose.isValidObjectId(organisation) || !(await assertOrganisationAccess(req.user, organisation))) return res.status(403).json({ message: 'Organisation is outside your authorised scope' });
+    const token = jwt.sign({
+      purpose: 'ncbi-attendance-checkin', organisation: String(organisation),
+      ...validation.value, heldAt: validation.value.heldAt.toISOString()
+    }, process.env.JWT_SECRET, {
+      algorithm: 'HS256', expiresIn: '10m', jwtid: randomUUID(),
+      issuer: 'ncbi-cms', audience: 'attendance-checkin'
+    });
+    res.status(201).json({ token, expiresInSeconds: 600, activityName: validation.value.activityName, category: validation.value.category, heldAt: validation.value.heldAt, organisation });
+  } catch (error) { next(error); }
+});
+
+router.post('/attendance/qr-checkin', async (req, res, next) => {
+  try {
+    const { token, member: memberId } = req.body;
+    if (!token || typeof token !== 'string' || token.length > 4096 || !mongoose.isValidObjectId(memberId)) return res.status(400).json({ message: 'A valid session token and member identifier are required' });
+    let session;
+    try {
+      session = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'], issuer: 'ncbi-cms', audience: 'attendance-checkin' });
+    } catch {
+      return res.status(401).json({ message: 'QR session is invalid or expired; ask an usher for a new code' });
+    }
+    if (session.purpose !== 'ncbi-attendance-checkin' || !mongoose.isValidObjectId(session.organisation) || !attendanceCategories.has(session.category) || !session.jti) return res.status(401).json({ message: 'QR session is not a valid attendance session' });
+    if (!(await assertOrganisationAccess(req.user, session.organisation))) return res.status(403).json({ message: 'QR session belongs to another organisation' });
+    const member = await Member.findOne({ _id: memberId, homeOrganisation: session.organisation, status: { $in: ['member','worker','minister','new_believer'] } }).select('_id').lean();
+    if (!member) return res.status(404).json({ message: 'Active member profile not found in this branch' });
+    const heldAt = new Date(session.heldAt);
+    const existing = await Attendance.findOne({ organisation: session.organisation, member: member._id, heldAt, activityName: session.activityName }).lean();
+    if (existing) return res.json({ attendance: existing, alreadyCheckedIn: true });
+    try {
+      const attendance = await Attendance.create({
+        organisation: session.organisation, member: member._id,
+        activityName: session.activityName, category: session.category,
+        heldAt, recordedBy: req.user._id, checkInMethod: 'qr'
+      });
+      await AuditLog.create({ organisation: session.organisation, actor: req.user._id, action: 'qr-attendance-checkin', entity: 'attendance', recordId: attendance._id, summary: 'Member checked in using a signed QR session' });
+      return res.status(201).json({ attendance, alreadyCheckedIn: false });
+    } catch (error) {
+      if (error.code === 11000) {
+        const winner = await Attendance.findOne({ organisation: session.organisation, member: member._id, heldAt, activityName: session.activityName }).lean();
+        if (winner) return res.json({ attendance: winner, alreadyCheckedIn: true });
+      }
+      return next(error);
+    }
+  } catch (error) { next(error); }
+});
+
 router.get('/safeguarding/consents', async (req, res, next) => {
   try {
     if (!canManageSafeguarding(req.user)) return res.status(403).json({ message: 'Specific child safeguarding permission required' });
