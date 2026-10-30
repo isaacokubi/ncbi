@@ -26,7 +26,7 @@ function storageRoot(){const value=process.env.CHURCH_MEDIA_STORAGE_DIR||process
 function safeName(value,ext){const base=path.basename(String(value||'church-media')).replace(/[\r\n"]/g,'').replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,110);return (base.replace(/\.[^.]*$/,'')||'church-media')+ext;}
 export function parseByteRange(header,size){
  if(!header)return null;
- const match=/^bytes=(\\d*)-(\\d*)$/.exec(String(header).trim());
+ const match=/^bytes=(\d*)-(\d*)$/.exec(String(header).trim());
  if(!match||(!match[1]&&!match[2])||!Number.isSafeInteger(size)||size<1)return {invalid:true};
  let start,end;
  if(!match[1]){const suffix=Number(match[2]);if(!Number.isSafeInteger(suffix)||suffix<1)return {invalid:true};start=Math.max(0,size-suffix);end=size-1;}
