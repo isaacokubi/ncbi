@@ -215,19 +215,39 @@ const LEGACY_PUBLIC_COPY = {
   },
   footer: { strapline: 'ONE CHURCH. ONE VISION. A CALL TO SERVE.', motto: 'A CALL TO SERVE' }
 };
+function mergeTypedContent(defaultValue, savedValue) {
+  if (Array.isArray(defaultValue)) {
+    if (!Array.isArray(savedValue)) return defaultValue;
+    if (!defaultValue.length) return savedValue.filter(item => item == null || ['string', 'number', 'boolean'].includes(typeof item));
+    const template = defaultValue[0];
+    return savedValue.map(item => mergeTypedContent(template, item));
+  }
+  if (defaultValue && typeof defaultValue === 'object') {
+    if (!savedValue || typeof savedValue !== 'object' || Array.isArray(savedValue)) return defaultValue;
+    return Object.fromEntries(Object.entries(defaultValue).map(([key, fallback]) => [
+      key,
+      mergeTypedContent(fallback, savedValue[key])
+    ]));
+  }
+  return typeof savedValue === typeof defaultValue && savedValue !== null ? savedValue : defaultValue;
+}
+
 export function mergeSiteContent(value) {
-  const source = value && typeof value === 'object' ? value : {};
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const savedPages = source.pages && typeof source.pages === 'object' && !Array.isArray(source.pages) ? source.pages : {};
   const pages = Object.fromEntries(Object.entries(DEFAULT_SITE_CONTENT.pages).map(([key, defaults]) => {
-    const saved = source.pages?.[key] && typeof source.pages[key] === 'object' ? { ...source.pages[key] } : {};
+    const saved = savedPages[key] && typeof savedPages[key] === 'object' && !Array.isArray(savedPages[key]) ? { ...savedPages[key] } : {};
     const legacy = LEGACY_PUBLIC_COPY.pages[key] || {};
     for (const [field, oldValue] of Object.entries(legacy)) {
       if (JSON.stringify(saved[field]) === JSON.stringify(oldValue)) delete saved[field];
     }
-    return [key, { ...defaults, ...saved }];
+    return [key, mergeTypedContent(defaults, saved)];
   }));
-  const navigation = { ...DEFAULT_SITE_CONTENT.navigation, ...(source.navigation || {}) };
-  for (const [key, oldValue] of Object.entries(LEGACY_PUBLIC_COPY.navigation)) if (navigation[key] === oldValue) navigation[key] = DEFAULT_SITE_CONTENT.navigation[key];
-  const footer = { ...DEFAULT_SITE_CONTENT.footer, ...(source.footer || {}) };
-  for (const [key, oldValue] of Object.entries(LEGACY_PUBLIC_COPY.footer)) if (footer[key] === oldValue) footer[key] = DEFAULT_SITE_CONTENT.footer[key];
+  const savedNavigation = source.navigation && typeof source.navigation === 'object' && !Array.isArray(source.navigation) ? { ...source.navigation } : {};
+  for (const [key, oldValue] of Object.entries(LEGACY_PUBLIC_COPY.navigation)) if (savedNavigation[key] === oldValue) delete savedNavigation[key];
+  const navigation = mergeTypedContent(DEFAULT_SITE_CONTENT.navigation, savedNavigation);
+  const savedFooter = source.footer && typeof source.footer === 'object' && !Array.isArray(source.footer) ? { ...source.footer } : {};
+  for (const [key, oldValue] of Object.entries(LEGACY_PUBLIC_COPY.footer)) if (savedFooter[key] === oldValue) delete savedFooter[key];
+  const footer = mergeTypedContent(DEFAULT_SITE_CONTENT.footer, savedFooter);
   return { navigation, pages, footer };
 }
