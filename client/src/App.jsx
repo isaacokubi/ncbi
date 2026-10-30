@@ -190,7 +190,7 @@ function PublicHome({onLogin,onRegister,brandLogo}) {
  const pageLink=(id,label,className)=> <a key={id} className={className||undefined} href={`#${id}`} aria-current={activePage===id?'page':undefined} onClick={e=>{e.preventDefault();navigate(id);}}>{label}</a>;
  const closeMenu=()=>setMenuOpen(false);
  const loadingState=(label)=>loading?<div className="public-state">{label}</div>:null;
- const errorState=error?<div className="public-state public-state-error" role="alert">{error}<button className="public-retry-button" onClick={loadPublicContent}>Try again <RefreshCw size={14}/></button></div>:null;
+ const errorState=()=>error?<div className="public-state public-state-error" role="alert">{error}<button className="public-retry-button" onClick={loadPublicContent}>Try again <RefreshCw size={14}/></button></div>:null;
  return <main className="public-site">
   <header className="public-header">
    <a className="public-brand" href="#home" aria-label="NCBI home" onClick={e=>{e.preventDefault();navigate('home');}}><div className="brand-mark"><img src={brandLogo||"/ncbi-logo.jpg"} onError={e=>{if(!e.currentTarget.dataset.fallback){e.currentTarget.dataset.fallback="true";e.currentTarget.src="/ncbi-logo.jpg";}else{e.currentTarget.style.visibility="hidden";}}} alt="NCBI emblem"/></div><div><b>NCBI</b><small>NEW CHURCH BELIEVERS INTERNATIONAL</small></div></a>
