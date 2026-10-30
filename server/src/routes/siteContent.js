@@ -4,6 +4,14 @@ import { SiteContent } from '../models/siteContent.js';
 
 const router = Router();
 const editors = ['super_admin', 'national_admin'];
+const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const validTextFields = value => isRecord(value) && Object.values(value).every(field =>
+  typeof field === 'string' ||
+  (Array.isArray(field) && field.every(item =>
+    typeof item === 'string' || (isRecord(item) && Object.values(item).every(part => typeof part === 'string'))
+  ))
+);
+const validLabelMap = value => value == null || (isRecord(value) && Object.values(value).every(item => typeof item === 'string'));
 
 router.get('/', requireAuth, allowRoles(...editors), async (_req, res, next) => {
   try {
@@ -23,9 +31,9 @@ router.put('/', requireAuth, allowRoles(...editors), async (req, res, next) => {
     if (Buffer.byteLength(encoded, 'utf8') > 100 * 1024) return res.status(413).json({ message: 'Website content must be 100 KB or smaller.' });
     const allowedPages = ['home', 'about', 'mission', 'ministries', 'branches', 'programmes', 'news', 'contact'];
     if (Object.keys(content.pages).some(key => !allowedPages.includes(key))) return res.status(400).json({ message: 'Website content contains an unsupported page.' });
-    if (Object.values(content.pages).some(page => !page || typeof page !== 'object' || Array.isArray(page))) return res.status(400).json({ message: 'Each website page must be an object of editable fields.' });
-    if (content.navigation != null && (typeof content.navigation !== 'object' || Array.isArray(content.navigation))) return res.status(400).json({ message: 'Navigation content must be an object.' });
-    if (content.footer != null && (typeof content.footer !== 'object' || Array.isArray(content.footer))) return res.status(400).json({ message: 'Footer content must be an object.' });
+    if (Object.values(content.pages).some(page => !validTextFields(page))) return res.status(400).json({ message: 'Page fields must contain plain text or lists of plain-text cards.' });
+    if (!validLabelMap(content.navigation)) return res.status(400).json({ message: 'Navigation labels must be plain text.' });
+    if (!validLabelMap(content.footer)) return res.status(400).json({ message: 'Footer fields must be plain text.' });
     const saved = await SiteContent.findOneAndUpdate(
       { key: 'global' },
       { $set: { pages: content.pages, navigation: content.navigation || {}, footer: content.footer || {}, updatedBy: req.user._id } },
