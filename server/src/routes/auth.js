@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User } from '../models/index.js';
+import { User, Organisation } from '../models/index.js';
 import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
 import { passwordChangeError } from '../domain/authPolicy.js';
@@ -14,11 +14,111 @@ router.post('/login', async (req, res, next) => {
     const password = String(req.body.password || '');
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
     const user = await User.findOne({ email }).select('+passwordHash').populate('organisation', 'name code level');
-    if (!user || !user.active || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({ message: 'Email or password is incorrect' });
     }
+    if (user.accountApproval === 'pending') return res.status(403).json({ message: 'Your registration is awaiting approval by the appropriate NCBI authority.' });
+    if (user.accountApproval === 'rejected') return res.status(403).json({ message: 'Your registration was not approved. Please contact the church office.' });
+    if (!user.active) return res.status(403).json({ message: 'This account is inactive. Please contact your church administrator.' });
     const token = jwt.sign({ sub: user.id, role: user.role, tokenVersion: user.tokenVersion || 0 }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '8h' });
     res.json({ token, user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, permissions: user.permissions || [], organisation: user.organisation } });
+  } catch (error) { next(error); }
+});
+
+
+// Public registration: applicants can request only a basic member-portal account.
+// Privileged roles are provisioned separately by authorised administrators.
+router.get('/registration/branches', async (_req, res, next) => {
+  try {
+    const branches = await Organisation.find({ level: 'branch', status: 'active' })
+      .select('name code country address').sort({ name: 1 }).lean();
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ branches });
+  } catch (error) { next(error); }
+});
+
+router.post('/register', async (req, res, next) => {
+  try {
+    const fullName = String(req.body.fullName || '').trim().replace(/\\s+/g, ' ');
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    const phone = String(req.body.phone || '').trim();
+    const organisationId = String(req.body.organisation || '').trim();
+    const category = String(req.body.category || '');
+    const membershipNumber = String(req.body.membershipNumber || '').trim();
+    if (fullName.length < 3 || fullName.length > 120 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member'].includes(category)) {
+      return res.status(400).json({ message: 'Enter a valid name, email, phone, password (at least 6 characters), account category and church branch.' });
+    }
+    const branch = await Organisation.findOne({ _id: organisationId, level: 'branch', status: 'active' }).select('_id').lean();
+    if (!branch) return res.status(400).json({ message: 'Select an active NCBI church branch.' });
+    if (category === 'member' && !membershipNumber) return res.status(400).json({ message: 'Enter your membership number so the branch pastor can verify your membership.' });
+    if (await User.exists({ email })) return res.status(409).json({ message: 'An account with this email already exists.' });
+    const passwordHash = await bcrypt.hash(password, 12);
+    await User.create({
+      fullName, email, passwordHash, role: 'member', organisation: branch._id,
+      active: false, accountApproval: 'pending', registrationCategory: category,
+      registrationPhone: phone, claimedMembershipNumber: category === 'member' ? membershipNumber : undefined
+    });
+    res.status(201).json({
+      message: category === 'member'
+        ? 'Registration submitted. Your selected branch pastor must approve your membership before you can sign in.'
+        : 'Registration submitted. An NCBI administrator must approve your account before you can sign in.'
+    });
+  } catch (error) { next(error); }
+});
+
+router.get('/registrations/pending', requireAuth, async (req, res, next) => {
+  try {
+    const memberPastor = req.user.role === 'branch_pastor';
+    const adminRoles = ['super_admin','international_executive','national_admin'];
+    if (!memberPastor && !adminRoles.includes(req.user.role)) return res.status(403).json({ message: 'Registration approval permission required.' });
+    const filter = { accountApproval: 'pending' };
+    if (memberPastor) {
+      const branchId = req.user.organisation?._id || req.user.organisation;
+      filter.organisation = branchId;
+      filter.registrationCategory = 'member';
+    } else {
+      filter.registrationCategory = 'non_member';
+    }
+    const registrations = await User.find(filter)
+      .select('fullName email organisation registrationCategory registrationPhone claimedMembershipNumber createdAt')
+      .populate('organisation','name code level').sort({ createdAt: 1 }).limit(200).lean();
+    res.json({ registrations });
+  } catch (error) { next(error); }
+});
+
+router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) => {
+  try {
+    const decision = String(req.body.decision || '');
+    const note = String(req.body.note || '').trim().slice(0, 500);
+    if (!['approve','reject'].includes(decision)) return res.status(400).json({ message: 'Decision must be approve or reject.' });
+    if (decision === 'reject' && !note) return res.status(400).json({ message: 'Provide a reason when rejecting an application.' });
+    const memberPastor = req.user.role === 'branch_pastor';
+    const adminRoles = ['super_admin','international_executive','national_admin'];
+    if (!memberPastor && !adminRoles.includes(req.user.role)) return res.status(403).json({ message: 'Registration approval permission required.' });
+    const target = await User.findOne({ _id: req.params.id, accountApproval: 'pending' });
+    if (!target) return res.status(404).json({ message: 'Pending registration not found.' });
+    if (memberPastor) {
+      const ownBranch = req.user.organisation?._id || req.user.organisation;
+      if (target.registrationCategory !== 'member' || String(target.organisation) !== String(ownBranch)) return res.status(403).json({ message: 'Pastors may approve member applications only for their assigned branch.' });
+    } else if (target.registrationCategory !== 'non_member') {
+      return res.status(403).json({ message: 'Administrators may approve non-member applications only. Member applications belong to the selected branch pastor.' });
+    }
+    target.accountApproval = decision === 'approve' ? 'approved' : 'rejected';
+    target.active = decision === 'approve';
+    target.approvalNote = note;
+    if (decision === 'approve') { target.approvedBy = req.user._id; target.approvedAt = new Date(); }
+    else { target.rejectedBy = req.user._id; target.rejectedAt = new Date(); }
+    await target.save();
+    await AuditLog.create({
+      organisation: target.organisation, actor: req.user._id,
+      action: decision === 'approve' ? 'account.registration_approved' : 'account.registration_rejected',
+      entity: 'user', recordId: target._id,
+      summary: 'Registration ' + (decision === 'approve' ? 'approved' : 'rejected') + ' for ' + target.fullName,
+      metadata: { registrationCategory: target.registrationCategory, note },
+      ipAddress: req.ip, userAgent: req.get('user-agent')
+    });
+    res.json({ message: decision === 'approve' ? 'Account approved. The applicant can now sign in.' : 'Registration rejected.', registration: { id: target.id, accountApproval: target.accountApproval, active: target.active } });
   } catch (error) { next(error); }
 });
 
