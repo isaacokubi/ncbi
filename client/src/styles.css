@@ -1647,3 +1647,5 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 
 /* Dedicated operational forms */
 .operational-fields{grid-column:1/-1;border:1px solid #e9e1eb;border-radius:9px;padding:16px;background:#fcfbfc;margin:8px 0 4px}.operational-fields-heading{margin-bottom:14px}.operational-fields-heading p{font-size:11px;color:var(--muted);margin:5px 0 0}.operational-fields .form-grid{margin-top:0}.operational-fields .field textarea{min-height:76px;resize:vertical}.dark .operational-fields{background:#251d2a;border-color:#44344b}
+
+.brand-mark{overflow:hidden}.brand-mark img{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:2px}.auth-brand .brand-mark img{padding:3px}.public-brand .brand-mark img{padding:2px}
