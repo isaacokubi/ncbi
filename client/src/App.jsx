@@ -6,6 +6,7 @@ import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tool
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 const navGroups = [
+ { title:'ADMINISTRATION', items:[['branding','Church branding',ShieldCheck]] },
  { title:'OVERVIEW', items:[['dashboard','Overview',LayoutDashboard],['registrations','Registration approvals',ShieldCheck],['organisations','Organisation structure',Network],['users','User access & roles',ShieldCheck],['audit','Audit trail',ShieldCheck],['memberPortal','My member portal',Users],['security','Account security',ShieldCheck]] },
  { title:'CHURCH MANAGEMENT', items:[['members','Membership',Users],['visitors','Visitor directory',HeartHandshake],['visitorFollowup','Visitor follow-up',HeartHandshake],['attendance','Attendance',ClipboardList],['departments','Departments & ministries',BookOpen]] },
  { title:'MINISTRY & OPERATIONS', items:[['events','Events & programmes',CalendarDays],['pastoral','Pastoral care',HeartHandshake],['missions','Evangelism & missions',Activity],['discipleship','Discipleship',BookOpen],['services','Service planning',Church],['leadership','Leadership & HR',Users]] },
@@ -16,6 +17,7 @@ const financePageKeys=new Set(['finance','payments','accounts','journals','budge
 const seniorRoles=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'];
 const branchAdminRoles=[...seniorRoles,'branch_admin'];
 function visibleForRole(key,role){
+ if(key==='branding')return ['super_admin','national_admin'].includes(role);
  if(role==='member')return key==='memberPortal'||key==='security';
  if(key==='registrations')return branchAdminRoles.includes(role);
  if(role==='treasurer')return ['dashboard','security','finance','payments','accounts','journals','budgets','reconciliation','reports'].includes(key);
@@ -94,7 +96,7 @@ async function api(path, token, options={}) {
  if(!response.ok){const error=new Error(body.message||'Request failed ('+response.status+')');error.status=response.status;throw error;}
  return body;
 }
-function Registration({onLogin,onPublic}) {
+function Registration({onLogin,onPublic,brandLogo}) {
  const [branches,setBranches]=useState([]); const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [message,setMessage]=useState('');
  const [form,setForm]=useState({fullName:'',email:'',phone:'',password:'',category:'member',organisation:'',membershipNumber:''});
@@ -102,7 +104,7 @@ function Registration({onLogin,onPublic}) {
  useEffect(()=>{api('/auth/registration/branches','').then(r=>setBranches(r.branches||[])).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
  const submit=async e=>{e.preventDefault();setBusy(true);setError('');setMessage('');try{const r=await api('/auth/register','',{method:'POST',body:JSON.stringify(form)});setMessage(r.message);setForm({fullName:'',email:'',phone:'',password:'',category:'member',organisation:'',membershipNumber:''});}catch(e){setError(e.message);}finally{setBusy(false);}};
  return <main className="auth-screen"><section className="auth-card registration-card">
-  <div className="auth-brand"><div className="brand-mark"><Church size={25}/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div>
+  <div className="auth-brand"><div className="brand-mark"><img src={brandLogo} alt="NCBI emblem"/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div>
   <div className="auth-intro"><div className="eyebrow">JOIN THE NCBI FAMILY</div><h1>Request an account.</h1><p>All registrations are reviewed before access is granted to protect the NCBI church community.</p></div>
   {message?<div className="registration-success" role="status"><CheckCircle size={22}/><b>Application submitted</b><p>{message}</p><button className="auth-submit" onClick={onLogin}>Return to sign in</button></div>:<form onSubmit={submit}>
    <label>Full name</label><input required minLength="3" maxLength="120" autoComplete="name" value={form.fullName} onChange={e=>set('fullName',e.target.value)} placeholder="Your full name"/>
@@ -142,13 +144,13 @@ function DocumentFilesPanel({ token, documents, onError, onSuccess }) {
  </article>;
 }
 
-function Login({onLogin,busy,error,onPublic,onRegister}) {
+function Login({onLogin,busy,error,onPublic,onRegister,brandLogo}) {
  const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
  return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><div className="brand-mark"><Church size={25}/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div><div className="auth-intro"><div className="eyebrow">ONE CHURCH. ONE VISION.</div><h1>Church leadership, connected.</h1><p>Sign in to your authorised NCBI management workspace.</p></div><form onSubmit={e=>{e.preventDefault();onLogin(email,password);}}><label>Email address</label><input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@church.org"/><label>Password</label><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/>{error&&<div className="form-error" role="alert">{error}</div>}<button className="auth-submit" disabled={busy}>{busy?'Signing in…':'Sign in securely'}</button></form><small className="auth-foot">Access is monitored and limited by your assigned church role.</small><button type="button" className="text-button auth-public-link" onClick={onRegister}>Create an account</button><button type="button" className="text-button auth-public-link" onClick={onPublic}>Back to NCBI public website</button></section></main>;
 }
 function Field({label,children}) { return <label className="field"><span>{label}</span>{children}</label>; }
 
-function PublicHome({onLogin,onRegister}) {
+function PublicHome({onLogin,onRegister,brandLogo}) {
  const [content,setContent]=useState({branches:[],events:[],announcements:[]});
  const [loading,setLoading]=useState(true); const [error,setError]=useState('');
  const [menuOpen,setMenuOpen]=useState(false);
@@ -158,7 +160,7 @@ function PublicHome({onLogin,onRegister}) {
  const closeMenu=()=>setMenuOpen(false);
  return <main className="public-site">
   <header className="public-header">
-   <a className="public-brand" href="#home" aria-label="NCBI home" onClick={closeMenu}><div className="brand-mark"><Church size={24}/></div><div><b>NCBI</b><small>NEW CHURCH BELIEVERS INTERNATIONAL</small></div></a>
+   <a className="public-brand" href="#home" aria-label="NCBI home" onClick={closeMenu}><div className="brand-mark"><img src={brandLogo} alt="NCBI emblem"/></div><div><b>NCBI</b><small>NEW CHURCH BELIEVERS INTERNATIONAL</small></div></a>
    <button className="public-menu-toggle" type="button" aria-label={menuOpen?'Close navigation':'Open navigation'} aria-expanded={menuOpen} onClick={()=>setMenuOpen(v=>!v)}>{menuOpen?<X size={21}/>:<Menu size={21}/>}</button>
    <nav className={`public-nav ${menuOpen?'is-open':''}`} aria-label="Main navigation">
     {publicLinks.map(([id,label])=><a key={id} href={`#${id}`} onClick={closeMenu}>{label}</a>)}
@@ -177,7 +179,7 @@ function PublicHome({onLogin,onRegister}) {
     </div>
     <div className="public-hero-art" aria-label="NCBI church community">
      <div className="public-art-orbit orbit-one"/><div className="public-art-orbit orbit-two"/>
-     <div className="public-art-emblem"><Church size={76} strokeWidth={1.1}/><span>NCBI</span><small>ONE CHURCH · ONE VISION</small></div>
+     <div className="public-art-emblem"><img src={brandLogo} alt="New Church Believers International official emblem"/></div>
      <div className="public-art-caption"><b>Faith in action.</b><span>Serving God. Strengthening communities.</span></div>
     </div>
    </div>
@@ -220,12 +222,22 @@ function PublicHome({onLogin,onRegister}) {
    {!loading&&!error&&!content.announcements.length&&<div className="public-state">There are no public announcements at the moment. Please visit again for the latest NCBI updates.</div>}
   </div></section>
   <section className="public-contact-section" id="contact"><div className="public-section-shell public-contact-inner"><div><div className="public-eyebrow">TAKE YOUR NEXT STEP</div><h2>There is a place<br/>for you in the family.</h2><p>Connect with an NCBI congregation, take part in a programme or access your church workspace.</p></div><div className="public-contact-actions"><a className="public-primary-cta" href="#branches">Find a branch <ArrowUpRight size={17}/></a><button className="public-secondary-cta" onClick={onLogin}>Staff & member sign in</button></div></div></section>
-  <footer className="public-footer"><div className="public-footer-main"><div className="public-footer-brand"><div className="brand-mark"><Church size={23}/></div><div><b>NEW CHURCH BELIEVERS INTERNATIONAL</b><span>ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM.</span></div></div><div className="public-footer-links">{publicLinks.map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}<button onClick={onRegister}>Register</button><button onClick={onLogin}>Sign in <ArrowUpRight size={14}/></button></div></div><div className="public-footer-bottom"><span>A CALL TO SERVE</span><span>© {new Date().getFullYear()} New Church Believers International</span></div></footer>
+  <footer className="public-footer"><div className="public-footer-main"><div className="public-footer-brand"><div className="brand-mark"><img src={brandLogo} alt="NCBI emblem"/></div><div><b>NEW CHURCH BELIEVERS INTERNATIONAL</b><span>ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM.</span></div></div><div className="public-footer-links">{publicLinks.map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}<button onClick={onRegister}>Register</button><button onClick={onLogin}>Sign in <ArrowUpRight size={14}/></button></div></div><div className="public-footer-bottom"><span>A CALL TO SERVE</span><span>© {new Date().getFullYear()} New Church Believers International</span></div></footer>
  </main>;
+}
+
+
+function BrandingSettings({token,brandLogo,onUpdated,onError,onSuccess}) {
+ const [file,setFile]=useState(null);const [preview,setPreview]=useState('');const [saving,setSaving]=useState(false);
+ const choose=e=>{const f=e.target.files?.[0];if(!f)return;if(!['image/jpeg','image/png','image/webp'].includes(f.type)){onError('Choose a JPG, PNG or WebP image.');return;}if(f.size>1048576){onError('Logo must be 1 MB or smaller.');return;}setFile(f);setPreview(URL.createObjectURL(f));onError('');};
+ const save=async()=>{if(!file)return;setSaving(true);onError('');try{const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Could not read the image.'));reader.readAsDataURL(file);});const result=await api('/branding/logo',token,{method:'PUT',body:JSON.stringify({logoData:data})});onUpdated(result.logoUrl);setFile(null);setPreview('');onSuccess('Official NCBI logo updated successfully.');}catch(e){onError(e.message);}finally{setSaving(false);}};
+ return <section className="branding-workspace"><div className="panel branding-card"><div className="panel-heading"><div><span className="eyebrow">OFFICIAL IDENTITY</span><h2>Church logo</h2><p>Upload a replacement emblem for the public website and management portal.</p></div></div><div className="branding-preview"><img src={preview||brandLogo} alt="NCBI logo preview"/><div><b>{file?'New logo preview':'Current official logo'}</b><small>JPG, PNG or WebP · maximum 1 MB</small></div></div><label className="branding-file-label">Select replacement logo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={choose}/></label><div className="editor-actions"><button type="button" className="secondary-button" disabled={!file||saving} onClick={()=>{setFile(null);setPreview('');}}>Cancel</button><button type="button" className="gold-button" disabled={!file||saving} onClick={save}>{saving?'Uploading…':'Save new logo'}</button></div><small className="field-help">Available to Super Admin and National Admin only. The existing logo stays active if an upload fails.</small></div></section>;
 }
 
 function App(){
  const [token,setToken]=useState(()=>sessionStorage.getItem('ncbi_access_token')||'');
+ const [brandLogo,setBrandLogo]=useState('/ncbi-logo.jpg');
+ useEffect(()=>{let alive=true;fetch(API+'/public/branding').then(r=>r.ok?r.json():null).then(d=>{if(alive&&d?.logoUrl)setBrandLogo(d.logoUrl);}).catch(()=>{});return()=>{alive=false;};},[]);
  const [publicView,setPublicView]=useState(true); const [registrationView,setRegistrationView]=useState(false);
  const [user,setUser]=useState(null); const [page,setPage]=useState('dashboard');
  const [collapsed,setCollapsed]=useState(false); const [mobileNavOpen,setMobileNavOpen]=useState(false); const [navSearch,setNavSearch]=useState(''); const [expandedNav,setExpandedNav]=useState({}); const [dark,setDark]=useState(false);
@@ -244,7 +256,7 @@ function App(){
  const loadPage=useCallback(async(t,key=page,p=1)=>{
    setError(''); setSuccess('');
    if(key==='dashboard'){await loadDashboard(t);return;}
-   if(key==='security'){setRows([]);return;}
+   if(key==='security'||key==='branding'){setRows([]);return;}
    if(key==='registrations'){const r=await api('/auth/registrations/pending',t);setRows(r.registrations||[]);setPagination({page:1,pages:1,total:(r.registrations||[]).length});return;}
    if(key==='organisations'){const r=await api('/workspace/organisations',t);setRows(r.organisations||[]);setPagination({page:1,pages:1,total:r.organisations?.length||0});return;}
    if(key==='users'){const [r,m]=await Promise.all([api('/workspace/users',t),api('/workspace/members?limit=100',t)]);setRows(r.users||[]);setMemberOptions(m.members||[]);setPagination({page:1,pages:1,total:r.users?.length||0});return;}
@@ -304,7 +316,7 @@ function App(){
  const filteredRows=useMemo(()=>{const q=search.toLowerCase();if(!q)return rows;return rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q));},[rows,search]);
  const activeItem=navGroups.flatMap(g=>g.items).find(x=>x[0]===page);
  const role=user?.role||'member';
- const dashboardProfile=dashboardProfiles[role]||dashboardProfiles.branch_admin; const title=page==='dashboard'?dashboardProfile.title:page==='registrations'?'Account registration approvals':page==='organisations'?'Organisation structure':page==='users'?'User access & roles':page==='audit'?'Audit trail':page==='members'?'Membership':page==='attendance'?'Attendance register':page==='finance'?'Finance transactions':page==='payments'?'M-Pesa payments':page==='accounts'?'Chart of accounts':page==='journals'?'General ledger':page==='budgets'?'Budgets':page==='reconciliation'?'Bank reconciliation':page==='reports'?'Reports & analytics':page==='memberPortal'?'My member portal':page==='security'?'Account security':(configs[page]?.title||'Workspace');
+ const dashboardProfile=dashboardProfiles[role]||dashboardProfiles.branch_admin; const title=page==='dashboard'?dashboardProfile.title:page==='registrations'?'Account registration approvals':page==='organisations'?'Organisation structure':page==='users'?'User access & roles':page==='audit'?'Audit trail':page==='members'?'Membership':page==='attendance'?'Attendance register':page==='finance'?'Finance transactions':page==='payments'?'M-Pesa payments':page==='accounts'?'Chart of accounts':page==='journals'?'General ledger':page==='budgets'?'Budgets':page==='reconciliation'?'Bank reconciliation':page==='reports'?'Reports & analytics':page==='memberPortal'?'My member portal':page==='security'?'Account security':page==='branding'?'Church branding':(configs[page]?.title||'Workspace');
  const dashboardMetrics=dashboard?.metrics||{};
  const selectedReportCurrency=Object.hasOwn(reportData?.totals||{},reportCurrency)?reportCurrency:(Object.keys(reportData?.totals||{})[0]||reportCurrency);
  const dashboardStatDefinitions=[
@@ -326,12 +338,12 @@ function App(){
  const exportReport=async()=>{try{const response=await fetch(API+'/reports/overview.csv?months='+encodeURIComponent(reportData?.period?.months||12),{headers:{Authorization:'Bearer '+token}});if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.message||'Report export failed');}const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='ncbi-management-report.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);}catch(e){setError(e.message);}};
  const dateNow=new Intl.DateTimeFormat('en-KE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  if(loading)return <div className="loading-screen"><div className="loading-mark"><Church size={27}/></div><b>NCBI Management System</b><span>Securing your workspace…</span></div>;
- if(!token||!user)return registrationView?<Registration onLogin={()=>{setRegistrationView(false);setPublicView(false);}} onPublic={()=>{setRegistrationView(false);setPublicView(true);}}/>:publicView?<PublicHome onLogin={()=>setPublicView(false)} onRegister={()=>{setRegistrationView(true);setPublicView(false);}}/>:<Login onLogin={login} busy={busy} error={loginError} onPublic={()=>setPublicView(true)} onRegister={()=>{setRegistrationView(true);setPublicView(false);}}/>;
+ if(!token||!user)return registrationView?<Registration brandLogo={brandLogo} onLogin={()=>{setRegistrationView(false);setPublicView(false);}} onPublic={()=>{setRegistrationView(false);setPublicView(true);}}/>:publicView?<PublicHome brandLogo={brandLogo} onLogin={()=>setPublicView(false)} onRegister={()=>{setRegistrationView(true);setPublicView(false);}}/>:<Login brandLogo={brandLogo} onLogin={login} busy={busy} error={loginError} onPublic={()=>setPublicView(true)} onRegister={()=>{setRegistrationView(true);setPublicView(false);}}/>;
 
  return <div className={dark?'app dark':'app'}>
   {mobileNavOpen&&<button type="button" className="nav-backdrop" aria-label="Close navigation" onClick={()=>setMobileNavOpen(false)}/>}
   <aside className={['sidebar',collapsed?'collapsed':'',mobileNavOpen?'mobile-open':''].filter(Boolean).join(' ')} aria-label="Main navigation">
-   <div className="brand"><div className="brand-mark"><Church size={23}/></div>{(!collapsed||mobileNavOpen)&&<div><strong>NCBI</strong><span>A CALL TO SERVE</span></div>}<button type="button" className="icon-button collapse" onClick={()=>setCollapsed(value=>!value)} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'} aria-expanded={!collapsed}><Menu size={18}/></button><button type="button" className="icon-button mobile-nav-close" onClick={()=>setMobileNavOpen(false)} aria-label="Close navigation"><X size={19}/></button></div>
+   <div className="brand"><div className="brand-mark"><img src={brandLogo} alt="NCBI emblem"/></div>{(!collapsed||mobileNavOpen)&&<div><strong>NCBI</strong><span>A CALL TO SERVE</span></div>}<button type="button" className="icon-button collapse" onClick={()=>setCollapsed(value=>!value)} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'} aria-expanded={!collapsed}><Menu size={18}/></button><button type="button" className="icon-button mobile-nav-close" onClick={()=>setMobileNavOpen(false)} aria-label="Close navigation"><X size={19}/></button></div>
    {(!collapsed||mobileNavOpen)&&<div className="workspace-switch"><div className="workspace-avatar">NC</div><div><b>{user.organisation?.name||'NCBI Workspace'}</b><small>{human(role)}</small></div></div>}
    {(!collapsed||mobileNavOpen)&&<div className="searchbox"><Search size={16}/><input aria-label="Search navigation modules" placeholder="Find a module…" value={navSearch} onChange={e=>setNavSearch(e.target.value)}/>{navSearch&&<button type="button" aria-label="Clear navigation search" onClick={()=>setNavSearch('')}><X size={14}/></button>}</div>}
    <nav aria-label="Workspace navigation">{visibleNavGroups.map(group=><section key={group.title} className="nav-group"><button type="button" className="nav-group-toggle" onClick={()=>toggleNavGroup(group.title)} aria-expanded={expandedNav[group.title]??true} title={group.title}><small className="nav-heading">{(collapsed&&!mobileNavOpen)?'':group.title}</small>{(!collapsed||mobileNavOpen)&&<ChevronDown size={14} className={(expandedNav[group.title]??true)?'group-chevron open':'group-chevron'}/>}</button>{(navSearch.trim()||(expandedNav[group.title]??true))&&group.items.map(([key,label,Icon])=><button type="button" key={key} title={label} aria-current={page===key?'page':undefined} className={page===key?'nav-item selected':'nav-item'} onClick={()=>handleNavigate(key)}><Icon size={18} aria-hidden="true"/>{(!collapsed||mobileNavOpen)&&<span>{label}</span>}</button>)}</section>)}
@@ -359,7 +371,7 @@ function App(){
      </div>
     </section>}
     {page!=='dashboard'&&<><div className="module-heading"><div><div className="eyebrow">NCBI MANAGEMENT WORKSPACE</div><h1>{title}</h1><p>{page==='organisations'?'Manage the international, national, regional, district and branch structure.':page==='users'?'Create authorised accounts and assign roles within your organisation scope.':page==='audit'?'Review recent security and administrative actions within your authorised scope.':page==='safeguarding'?'Capture and withdraw purpose-specific guardian consent for children; access is restricted and actions are audited.':page==='members'?'Maintain membership records, status and transfers.':page==='visitors'?'Record guests and manage follow-up through your church teams.':page==='attendance'?'Record and review attendance across church services and activities.':page==='finance'?'Record income and expenses with approval and confirmation controls.':page==='payments'?'Initiate Daraja STK Push collections and track callback-confirmed payments. Live requests require approved Safaricom credentials and a public HTTPS callback URL.':page==='accounts'?'Maintain the branch chart of accounts and account classifications.':page==='journals'?'Create balanced double-entry journals and require independent posting approval.':page==='budgets'?'Set annual and periodic budgets against expense ledger accounts.':page==='reconciliation'?'Reconcile bank statement balances to posted general-ledger activity.':page==='reports'?'Review live organisation, membership, attendance and stewardship indicators.':page==='memberPortal'?'Your membership details, attendance, event registrations and branch announcements.':configs[page]?.description}</p></div><div className="module-actions">{page==='accounts'&&canWrite&&<button className="secondary-button" onClick={seedAccounts}>Install standard chart</button>}{canWrite&&!['reports','audit','memberPortal'].includes(page)&&(page!=='users'||canManageUsers)&&<button className="gold-button" onClick={openCreate}><Plus size={16}/> Add new</button>}</div></div>
-     {page==='security'?<section className="security-workspace"><h2>Account security</h2><p>Change your password. Use at least 6 characters. Existing sessions are revoked after a successful change.</p><form className="panel security-card" onSubmit={changePassword}><Field label="Current password *"><input required type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)}/></Field><Field label="New password *"><input required minLength={6} type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></Field><Field label="Confirm new password *"><input required minLength={6} type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}/></Field><button className="gold-button" disabled={busy}>{busy?'Updating…':'Update password'}</button></form></section>:null}
+     {page==='branding'?<BrandingSettings token={token} brandLogo={brandLogo} onUpdated={setBrandLogo} onError={setError} onSuccess={setSuccess}/>:page==='security'?<section className="security-workspace"><h2>Account security</h2><p>Change your password. Use at least 6 characters. Existing sessions are revoked after a successful change.</p><form className="panel security-card" onSubmit={changePassword}><Field label="Current password *"><input required type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)}/></Field><Field label="New password *"><input required minLength={6} type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></Field><Field label="Confirm new password *"><input required minLength={6} type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}/></Field><button className="gold-button" disabled={busy}>{busy?'Updating…':'Update password'}</button></form></section>:null}
      {page==='attendance'&&canWrite&&<QrAttendancePanel token={token} user={user} members={memberOptions} organisations={organisations}/>}
      {page==='memberPortal'?<div className="member-portal">
       <section className="portal-welcome panel"><div><div className="eyebrow">YOUR NCBI MEMBERSHIP</div><h2>Welcome, {portalData?.profile?.firstName||user.fullName.split(' ')[0]}</h2><p>Stay connected with your congregation, keep your details current and take part in branch programmes.</p></div><div className="portal-welcome-actions"><span className="portal-status"><i/> {human(portalData?.profile?.status||'member')}</span><button type="button" className="gold-button" onClick={()=>{setPortalForm({phone:portalData?.profile?.phone||'',residentialLocation:portalData?.profile?.residentialLocation||'',emergencyContactName:portalData?.profile?.emergencyContactName||'',emergencyContactRelationship:portalData?.profile?.emergencyContactRelationship||'',emergencyContactPhone:portalData?.profile?.emergencyContactPhone||''});setPortalEditing(v=>!v);}}><Pencil size={15}/>{portalEditing?'Close profile editor':'Update my details'}</button></div></section>
