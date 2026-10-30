@@ -46,6 +46,7 @@ const attendanceSchema = new Schema({
   checkInMethod: { type: String, enum: ['manual', 'qr', 'self'], default: 'manual' }
 }, timestamps);
 attendanceSchema.index({ organisation: 1, member: 1, heldAt: 1, activityName: 1 }, { unique: true, partialFilterExpression: { member: { $type: 'objectId' } } });
+attendanceSchema.index({ organisation: 1, heldAt: -1 });
 
 const financeSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
