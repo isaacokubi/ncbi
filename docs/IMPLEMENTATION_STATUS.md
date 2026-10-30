@@ -3,6 +3,7 @@
 This document distinguishes working code from planned work. A module is not production-ready merely because a navigation item or model exists.
 
 ## Implemented in this delivery
+- Consolidated reporting API (`GET /api/reports/overview`) with validated hierarchy scope, 3–24 month membership and attendance trends, confirmed finance totals grouped by currency, ministry activity counts and branch comparison. Unconfirmed financial entries are excluded.
 - React sign-in against the API, authenticated session restoration, sign-out and role-scoped live dashboard KPIs/events/organisation directory.
 - Client loading, empty, retry and API error states; no illustrative dashboard figures are represented as live data.
 - Database-backed registers and create/update/archive workflows for members, visitor follow-up, attendance, events and event registrations, departments, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training, ministry reports and other operations.
@@ -27,7 +28,7 @@ This document distinguishes working code from planned work. A module is not prod
 - Full visitor conversion workflow, QR attendance, member self-service beyond event registration, child safeguarding and consent management.
 - Encrypted pastoral notes, granular case assignments and field-level access controls.
 - SMS/email/WhatsApp provider integrations and delivery receipts.
-- Event registration/ticketing, QR check-in, venue/resource conflict checking and certificate generation; event records are available, but the complete registration workflow remains to be built.
+- QR attendance check-in, venue/resource conflict checking and certificate generation remain outstanding. Event registration supports authenticated self-service, duplicate-safe submissions, cancellation/re-registration and leadership-managed statuses.
 - Missions field reporting, discipleship lesson delivery and assessments.
 - Asset depreciation, maintenance and disposal approvals; project procurement and milestone financial controls.
 - Document malware scanning, immutable retention, versioning and external object storage.
@@ -38,3 +39,14 @@ This document distinguishes working code from planned work. A module is not prod
 
 ## Production gate
 Do not load real member, child, counselling or financial records until NCBI has approved data ownership, privacy notices, lawful basis/consent where required, access roles, retention schedules, incident procedures, backup controls and a pilot acceptance plan. Complete a Kenya Data Protection Act assessment and obtain legal/privacy review for the actual processing.
+
+
+## Reporting API contract
+`GET /api/reports/overview?months=12&organisation=<optional-id>` returns:
+- `scope`: accessible organisation unit and active branch counts.
+- `totals`: confirmed income and expense by currency, plus confirmed transaction counts.
+- `trend`: month-keyed new member registrations, attendance records and finance totals.
+- `ministryActivity`: non-archived operational record counts by entity.
+- `branchPerformance`: up to 30 accessible branches with current member and attendance-record counts.
+
+The optional organisation filter is rejected unless it belongs to the authenticated user's server-derived organisation scope. This endpoint is an operational management report, not an audited financial statement. Financial values are included only for transactions whose state is `confirmed`.
