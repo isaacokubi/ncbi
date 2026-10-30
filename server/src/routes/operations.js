@@ -375,7 +375,12 @@ router.patch('/:entity/:id', async (req, res, next) => {
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
-      if (entity === 'member_notification' && (String(payload.memberId || '') !== String(record.data?.memberId || '') || String(payload.recipientUserId || '') !== String(record.data?.recipientUserId || ''))) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
+      if (entity === 'member_notification') {
+        if (String(payload.memberId || '') !== String(record.data?.memberId || '')) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
+        const message = String(payload.message || '').trim();
+        if (!message || message.length > 2000) return res.status(400).json({ message: 'Notification message must contain 1–2,000 characters' });
+        payload.recipientUserId = String(record.data.recipientUserId); payload.channel = 'in_app'; payload.message = message;
+      }
       record.data = payload;
     }
     if (sensitiveEntities.has(entity) && record.visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
