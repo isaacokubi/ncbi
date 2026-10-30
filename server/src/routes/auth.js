@@ -89,7 +89,8 @@ router.get('/registrations/pending', requireAuth, async (req, res, next) => {
       filter.registrationCategory = 'member';
     } else {
       filter.registrationCategory = { $in: ['non_member','official'] };
-      const accessibleIds = await accessibleOrganisationIds(req.user);\n      filter.organisation = { $in: accessibleIds };
+      const accessibleIds = await accessibleOrganisationIds(req.user);
+      filter.organisation = { $in: accessibleIds };
     }
     const registrations = await User.find(filter)
       .select('fullName email organisation registrationCategory requestedRole registrationPhone claimedMembershipNumber createdAt')
