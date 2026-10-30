@@ -65,6 +65,7 @@ const financeSchema = new Schema({
   status: { type: String, enum: ['draft', 'submitted', 'approved', 'rejected', 'confirmed', 'voided'], default: 'draft', index: true },
   paymentMethod: { type: String, enum: ['cash', 'mpesa', 'bank', 'cheque', 'online', 'other'], default: 'other' },
   reference: String, description: String,
+  member: { type: Schema.Types.ObjectId, ref: 'Member', default: null, index: true },
   debitAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },
   creditAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },
   journalEntry: { type: Schema.Types.ObjectId, ref: 'JournalEntry', default: null },

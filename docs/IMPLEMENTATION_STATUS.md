@@ -81,3 +81,12 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - The generic operations read API now enforces role policy server-side. Member accounts cannot enumerate general operational registers, treasurers cannot use generic operations as a route into non-finance records, and department leaders can read only the four operational record types used by their dashboard.
 - Management roles retain access subject to organisation scope and additional restrictions for sensitive pastoral and safeguarding data.
 - Automated policy tests cover member, treasurer, department leader, branch administrator and senior leadership access boundaries.
+
+
+## Expanded member self-service delivery
+- Member giving history reads only confirmed income transactions with an explicit `member` foreign-key match; historic transactions without that relationship are not guessed or backfilled. Finance staff can link new income entries to a member; they remain hidden until independently confirmed.
+- Members can download printable HTML receipts for verified linked contributions and use browser print/save-as-PDF. A server-generated PDF service remains outstanding.
+- Members can submit private prayer requests; requests are assigned to their linked assigned pastor where one exists. Members see only their own request status, and prayer text is omitted from audit summaries.
+- Members can request enrolment in active branch small groups and discipleship courses. Duplicate requests are prevented by a deterministic programme/member reference.
+- Member notifications can be addressed with `member_notification` records using `data.recipientUserId`; members can read only their own and mark them read.
+- Member document metadata is visible only when `data.memberId` exactly matches the linked profile. Downloads remain disabled until private object storage, malware scanning, expiring access and audit logging are implemented.

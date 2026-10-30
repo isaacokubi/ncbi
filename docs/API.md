@@ -87,3 +87,12 @@ Set `MPESA_ENV`, consumer key/secret, shortcode, passkey, callback URL and a ran
 
 ## Role-based operations access
 The generic operations register is available to senior, district and branch management roles within their server-derived organisation scope. Department leaders receive read-only access to department, event, discipleship-course and service-plan records. Member accounts use the dedicated member portal and event-registration endpoints; treasurers use finance and accounting endpoints. Other roles are denied access to the generic operations register. Sensitive pastoral records retain additional role restrictions.
+
+
+## Member self-service (expanded)
+- `GET /api/portal/summary` includes giving only for `FinanceTransaction` records explicitly linked to the authenticated member profile and in `confirmed` income state. Existing unlinked records are intentionally excluded.
+- `GET /api/portal/giving/:id/receipt` returns a private printable HTML receipt only when the transaction is confirmed income linked to that member; browser print can save it as PDF.
+- `POST /api/portal/prayer-requests` creates a private member-owned prayer request, assigned to the member's assigned pastor where one exists. Prayer text is excluded from audit summaries.
+- `POST /api/portal/enrolments` accepts `programmeId` and `programmeType` (`small_group` or `discipleship_course`); duplicate submissions are idempotent.
+- `PATCH /api/portal/notifications/:id/read` marks only a notification addressed to the authenticated account as read.
+- Member documents are listed only when a document record has an exact `data.memberId` match. They remain metadata-only until private object storage and authorised download URLs are deployed.

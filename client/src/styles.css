@@ -542,3 +542,14 @@ p{line-height:1.65}
  .sidebar.mobile-open.collapsed .nav-item{justify-content:flex-start;padding-inline:12px}
  .sidebar.mobile-open.collapsed .nav-item span{display:block}
 }
+
+/* Expanded member self-service workspace */
+.portal-feature{min-width:0;overflow:hidden}
+.portal-prayer-form{display:grid;gap:12px;margin:12px 0 18px}
+.portal-prayer-form textarea{min-height:110px;resize:vertical}
+.portal-check{display:flex;align-items:center;gap:9px;color:var(--muted,#6c6472);font-size:14px}
+.portal-check input{width:17px;height:17px}
+.portal-enrolment-history{border-top:1px solid var(--line,#e9e3ed);margin-top:14px;padding-top:14px}
+.portal-document-note{font-size:12px;color:var(--muted,#766d7b);line-height:1.6}
+.portal-feature .table-wrap{margin-top:12px}
+.portal-feature .row-action{white-space:nowrap}
