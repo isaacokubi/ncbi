@@ -71,8 +71,8 @@ function validateStructuredOperationData(entity, data) {
     discipline_case: ['caseType','caseOfficer','adminSummary'],
     counselling_case: ['supportCategory','coordinatorName'],
     volunteer: ['volunteerRole','ministryName','availability','skills','coordinatorName'],
-    training: ['programmeName','category','facilitator','venue','learningOutcomes'],
-    member_enrolment: ['programmeName','enrolmentType','reviewNotes']
+    training: ['trainingName','trainingCategory','facilitator','trainingVenue','learningOutcomes'],
+    member_enrolment: ['programmeName','programmeType','reviewNotes']
   };
   for (const field of textFields[entity] || []) {
     if (data[field] !== undefined && (typeof data[field] !== 'string' || data[field].length > 5000)) {
@@ -86,7 +86,7 @@ function validateStructuredOperationData(entity, data) {
     welfare_visit: ['visitDate','nextFollowUpAt'],
     discipline_case: ['reviewDate'],
     counselling_case: ['appointmentDate','reviewDate'],
-    training: ['startDate','endDate'],
+    training: [],
     member_enrolment: ['requestedStart']
   };
   for (const field of dateFields[entity] || []) {
@@ -106,6 +106,12 @@ function validateStructuredOperationData(entity, data) {
       data[field] = value;
     }
   }
+  if (entity === 'training' && data.capacity !== undefined && data.capacity !== null && data.capacity !== '') {
+    const capacity = Number(data.capacity);
+    if (!Number.isSafeInteger(capacity) || capacity < 1 || capacity > 1000000) return 'Training capacity must be a whole number between 1 and 1,000,000';
+    data.capacity = capacity;
+  }
+  if (entity === 'member_enrolment' && data.programmeType !== undefined && !['discipleship','membership','baptism','leadership','other'].includes(data.programmeType)) return 'Select a valid programme type';
   const amountField = entity === 'sponsorship' ? 'committedAmount' : entity === 'donation_pledge' ? 'pledgedAmount' : null;
   if (amountField) {
     if (data[amountField] !== undefined) {
