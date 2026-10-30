@@ -536,3 +536,9 @@ p{line-height:1.65}
 .dark .mobile-nav-trigger{background:#2b2032;border-color:#51415b;color:#ead58c}
 @keyframes navBackdropIn{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.sidebar,.sidebar *,.nav-backdrop{animation:none!important;transition:none!important}}
+
+@media(max-width:720px){
+ .sidebar.mobile-open.collapsed .brand{justify-content:flex-start}
+ .sidebar.mobile-open.collapsed .nav-item{justify-content:flex-start;padding-inline:12px}
+ .sidebar.mobile-open.collapsed .nav-item span{display:block}
+}
