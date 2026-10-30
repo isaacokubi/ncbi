@@ -91,7 +91,7 @@ export const MODULE_PRESENTATION = Object.freeze({
 });
 
 export const ACTION_TERMS = Object.freeze({
-  create: { members: 'Register a congregant', visitors: 'Register a first-time guest', attendance: 'Record service attendance', departments: 'Establish a ministry department', events: 'Schedule a church programme', announcements: 'Publish a news announcement', budgets: 'Prepare a budget proposal', finance: 'Record a financial transaction', payments: 'Initiate a payment request', journals: 'Prepare a journal entry', reconciliation: 'Start a bank reconciliation' },
+  create: { members: 'Register a congregant', visitors: 'Register a first-time guest', attendance: 'Record service attendance', departments: 'Establish a ministry department', events: 'Schedule a church programme', announcements: 'Publish a news announcement', budgets: 'Prepare a budget proposal', finance: 'Record a financial transaction', payments: 'Initiate a payment request', accounts: 'Add ledger account', journals: 'Prepare a journal entry', reconciliation: 'Start a bank reconciliation' },
   save: { members: 'Save membership details', visitors: 'Save guest details', finance: 'Submit financial transaction', budgets: 'Submit budget proposal', attendance: 'Record attendance', journals: 'Submit journal for review', events: 'Save programme details' }
 });
 
@@ -102,6 +102,9 @@ export const EMPTY_STATES = Object.freeze({
   departments: 'No ministry departments are registered in this organisational scope.',
   events: 'No church events or programmes match this view. Adjust the search or schedule a programme.',
   finance: 'No financial transactions match this view. Submitted requests will appear here for authorised review.',
+  payments: 'No M-Pesa collection requests have been initiated in this organisation scope. Initiate a request to see its provider-confirmed status here.',
+  accounts: 'No ledger accounts are configured for this organisation. Install the standard chart or add an account before recording financial activity.',
+  journals: 'No journal entries are available in this organisation scope. Prepare a balanced journal and submit it for independent review.',
   budgets: 'No budget proposals are available in this scope. Prepare a proposal and submit it for independent authorisation.',
   reconciliation: 'No bank reconciliations are available in this scope.',
   documents: 'No institutional records match this view. Register a document to begin its controlled record history.',
