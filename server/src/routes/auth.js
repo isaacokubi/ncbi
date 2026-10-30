@@ -70,7 +70,7 @@ router.post('/register', async (req, res, next) => {
 router.get('/registrations/pending', requireAuth, async (req, res, next) => {
   try {
     const memberPastor = req.user.role === 'branch_pastor';
-    const adminRoles = ['super_admin','international_executive','national_admin'];
+    const adminRoles = ['super_admin','international_executive','national_admin','branch_admin'];
     if (!memberPastor && !adminRoles.includes(req.user.role)) return res.status(403).json({ message: 'Registration approval permission required.' });
     const filter = { accountApproval: 'pending' };
     if (memberPastor) {
@@ -79,6 +79,7 @@ router.get('/registrations/pending', requireAuth, async (req, res, next) => {
       filter.registrationCategory = 'member';
     } else {
       filter.registrationCategory = 'non_member';
+      if (req.user.role === 'branch_admin') filter.organisation = req.user.organisation?._id || req.user.organisation;
     }
     const registrations = await User.find(filter)
       .select('fullName email organisation registrationCategory registrationPhone claimedMembershipNumber createdAt')
@@ -101,8 +102,8 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
     if (memberPastor) {
       const ownBranch = req.user.organisation?._id || req.user.organisation;
       if (target.registrationCategory !== 'member' || String(target.organisation) !== String(ownBranch)) return res.status(403).json({ message: 'Pastors may approve member applications only for their assigned branch.' });
-    } else if (target.registrationCategory !== 'non_member') {
-      return res.status(403).json({ message: 'Administrators may approve non-member applications only. Member applications belong to the selected branch pastor.' });
+    } else if (target.registrationCategory !== 'non_member' || (req.user.role === 'branch_admin' && String(target.organisation) !== String(req.user.organisation?._id || req.user.organisation))) {
+      return res.status(403).json({ message: 'Administrators may approve non-member applications only within their authorised branch scope. Member applications belong to the selected branch pastor.' });
     }
     if (decision === 'approve' && target.registrationCategory === 'member') {
       const verifiedMember = await Member.findOne({
