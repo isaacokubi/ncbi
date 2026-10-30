@@ -384,11 +384,6 @@ router.get('/event-registrations', allowRoles('super_admin','international_execu
       if (!mongoose.isValidObjectId(req.query.eventId)) return res.status(400).json({ message: 'Invalid programme identifier' });
       filter['data.eventId'] = new mongoose.Types.ObjectId(req.query.eventId);
     }
-    if (req.query.search) {
-      const escaped = String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\router.patch('/event-registrations/:id/status', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'), async (req, res, next) => {');
-      const expression = new RegExp(escaped, 'i');
-      filter.$or = [{ title: expression }, { 'data.attendeeName': expression }, { 'data.email': expression }];
-    }
     const [records, total, events, counts] = await Promise.all([
       OperationsRecord.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate('organisation','name code level').lean(),
       OperationsRecord.countDocuments(filter),
