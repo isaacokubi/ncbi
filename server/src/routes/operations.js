@@ -21,7 +21,7 @@ const managers = new Set(['super_admin','international_executive','national_admi
 const canManageSensitive = new Set(['super_admin','international_executive','national_admin','branch_pastor']);
 
 async function validateLinkedMember(entity, payload, organisation) {
-  if (!['pastoral_case','welfare_visit','discipline_case','counselling_case','volunteer','member_enrolment'].includes(entity) || !payload.memberId) return null;
+  if (!['pastoral_case','prayer_request','benevolence','welfare_visit','discipline_case','counselling_case','volunteer','member_enrolment','baptism'].includes(entity) || !payload.memberId) return null;
   if (!mongoose.isValidObjectId(payload.memberId)) return 'Select a valid member for this record';
   const member = await Member.findOne({ _id: payload.memberId, homeOrganisation: organisation }).select('_id').lean();
   return member ? null : 'The selected member does not belong to this church organisation';
