@@ -71,6 +71,6 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 
 ## Member self-service portal improvements
 - Expanded the member portal into a responsive personal workspace with membership identity, branch, contact details, membership status, ministry connections, attendance totals and recent check-ins, upcoming programmes, the member's own event registrations and branch announcements.
-- Members can update only their own contact and emergency-contact fields. The server resolves the member profile from the authenticated account and rejects changes to membership number, status, branch, ministry assignments and other staff-managed fields.
+- Members can update only their own phone, residential location and emergency-contact fields. The sign-in email remains read-only here so changing a profile contact address cannot silently desynchronise the login identity. The server resolves the member profile from the authenticated account and rejects changes to membership number, status, branch, ministry assignments and other staff-managed fields.
 - Portal attendance totals are derived from attendance records attached to the exact linked member profile; no sample or estimated values are shown.
 - Giving statements, contribution receipts, prayer-request submission, small-group enrolment, discipleship progress, personal notifications and member document access remain future modules because the current data model does not yet provide safe, member-linked workflows for them.
