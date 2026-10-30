@@ -2,7 +2,8 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
-import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseRequest, SupplierInvoice, SupplierPayment } from '../models/domain.js';
+import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseRequest, SupplierInvoice, SupplierPayment, FinanceApprovalPolicy } from '../models/domain.js';
+import { approvalProgress } from '../domain/approvalMatrix.js';
 import { budgetPeriodRange, selectApplicableBudget, budgetPostingDecision } from '../domain/budgetControl.js';
 import { supplierNameError, supplierInvoiceError, supplierPaymentError, supplierDecisionError, invoicePaymentStatus, moneyToMinor } from '../domain/supplierWorkflow.js';
 
@@ -15,6 +16,17 @@ const audit=async(req,org,action,entity,record,summary,metadata={})=>AuditLog.cr
 const scopedIds=req=>accessibleOrganisationIds(req.user);
 const validCurrency=value=>/^[A-Z]{3}$/.test(String(value||'').toUpperCase());
 const asAmount=value=>String(value??'').trim();
+const resolveApprovalPolicy=async(organisation,transactionType,amount)=>FinanceApprovalPolicy.findOne({organisation,transactionType,active:true,minimumAmount:{$lte:amount},$or:[{maximumAmount:null},{maximumAmount:{$gte:amount}}]}).lean();
+const applyApprovalDecision=({record,policy,actor,decision,note})=>{
+ record.approvals=record.approvals||[];
+ const required=policy?.requiredApprovals||1;
+ const progress=approvalProgress({approvals:record.approvals,actorId:actor._id,decision,requiredApprovals:required});
+ if(!progress.allowed)return {error:progress.reason};
+ record.approvals.push({actor:actor._id,role:actor.role,decision,note,decidedAt:new Date()});
+ if(decision==='reject'){record.status='rejected';record.decidedBy=actor._id;record.decisionNote=note;}
+ else if(progress.complete){record.status='approved';record.approvedBy=actor._id;record.approvedAt=new Date();record.decidedBy=actor._id;record.decisionNote=note;}
+ return {complete:progress.complete,remaining:progress.remaining};
+};
 
 router.get('/suppliers',async(req,res,next)=>{try{
  if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Supplier register access denied'});
@@ -114,9 +126,19 @@ router.post('/invoices/:id/decision',async(req,res,next)=>{try{
  const decision=String(req.body.decision||''),note=String(req.body.note||'').trim().slice(0,500),ids=await scopedIds(req);
  const invoice=await SupplierInvoice.findOne({_id:req.params.id,organisation:{$in:ids}});
  if(!invoice)return res.status(404).json({message:'Supplier invoice not found'});
- const error=supplierDecisionError({status:invoice.status,decision,actorId:req.user._id,createdBy:invoice.createdBy});
+ const error=supplierDecisionError({status:invoice.status,decision,actorId:req.user._id,createdBy:invoice.createdBy,approvals:invoice.approvals||[]});
  if(error)return res.status(409).json({message:error});
  if(decision==='reject'&&!note)return res.status(400).json({message:'A rejection reason is required'});
+ const policy=await resolveApprovalPolicy(invoice.organisation,'supplier_invoice',invoice.amount);
+ if(policy&&!policy.approverRoles.includes(req.user.role))return res.status(403).json({message:'Your role is not authorised by the supplier invoice approval matrix'});
+ if(!policy&&!approverRoles.has(req.user.role))return res.status(403).json({message:'Independent invoice approval permission required'});
+ const progress=applyApprovalDecision({record:invoice,policy,actor:req.user,decision,note});
+ if(progress.error)return res.status(409).json({message:progress.error});
+ if(decision==='approve'&&!progress.complete){
+  await invoice.save();
+  await audit(req,invoice.organisation,'supplier_invoice_approve','supplier_invoice',invoice,'Supplier invoice approval recorded',{note,remainingApprovals:progress.remaining});
+  return res.json({invoice,approvalProgress:{complete:false,remaining:progress.remaining}});
+ }
  if(decision==='approve'){
   const expenseAccount=await LedgerAccount.findOne({_id:invoice.expenseAccount,organisation:invoice.organisation,active:true,type:'expense'});
   if(!expenseAccount)return res.status(409).json({message:'The invoice expense account is no longer active'});
@@ -136,8 +158,8 @@ router.post('/invoices/:id/decision',async(req,res,next)=>{try{
    invoice.journalEntry=entry._id;
   }
   invoice.status='approved';invoice.approvedBy=req.user._id;invoice.approvedAt=new Date();
- }else invoice.status='rejected';
- invoice.decidedBy=req.user._id;invoice.decisionNote=note;await invoice.save();
+ }else { invoice.status='rejected';invoice.decidedBy=req.user._id;invoice.decisionNote=note; }
+ await invoice.save();
  await audit(req,invoice.organisation,'supplier_invoice_'+decision,'supplier_invoice',invoice,'Supplier invoice '+invoice.status,{note,journalEntry:invoice.journalEntry||null});
  res.json({invoice});
 }catch(e){next(e);}});
@@ -171,10 +193,19 @@ router.post('/payments/:id/decision',async(req,res,next)=>{try{
  if(!['approve','reject'].includes(decision)||!approverRoles.has(req.user.role))return res.status(403).json({message:'Independent supplier payment approval permission required'});
  const ids=await scopedIds(req),payment=await SupplierPayment.findOne({_id:req.params.id,organisation:{$in:ids}});
  if(!payment)return res.status(404).json({message:'Supplier payment not found'});
- const error=supplierDecisionError({status:payment.status,decision,actorId:req.user._id,createdBy:payment.createdBy});
+ const error=supplierDecisionError({status:payment.status,decision,actorId:req.user._id,createdBy:payment.createdBy,approvals:payment.approvals||[]});
  if(error)return res.status(409).json({message:error});
  if(decision==='reject'&&!note)return res.status(400).json({message:'A rejection reason is required'});
- payment.status=decision==='approve'?'approved':'rejected';payment.approvedBy=decision==='approve'?req.user._id:null;payment.approvedAt=decision==='approve'?new Date():null;payment.decisionNote=note;await payment.save();
+ const policy=await resolveApprovalPolicy(payment.organisation,'supplier_payment',payment.amount);
+ if(policy&&!policy.approverRoles.includes(req.user.role))return res.status(403).json({message:'Your role is not authorised by the supplier payment approval matrix'});
+ if(!policy&&!approverRoles.has(req.user.role))return res.status(403).json({message:'Independent supplier payment approval permission required'});
+ const progress=applyApprovalDecision({record:payment,policy,actor:req.user,decision,note});
+ if(progress.error)return res.status(409).json({message:progress.error});
+ await payment.save();
+ if(decision==='approve'&&!progress.complete){
+  await audit(req,payment.organisation,'supplier_payment_approve','supplier_payment',payment,'Supplier payment approval recorded',{note,remainingApprovals:progress.remaining});
+  return res.json({payment,approvalProgress:{complete:false,remaining:progress.remaining}});
+ }
  await audit(req,payment.organisation,'supplier_payment_'+decision,'supplier_payment',payment,'Supplier payment '+payment.status,{note});
  res.json({payment});
 }catch(e){next(e);}});
