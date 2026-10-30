@@ -16,7 +16,7 @@ router.get('/summary', async (req, res, next) => {
     const member = await Member.findOne({
       _id: req.user.memberProfile,
       homeOrganisation: req.user.organisation._id ?? req.user.organisation
-    }).select('membershipNumber firstName lastName phone email status joinedAt ministries homeOrganisation transferHistory').populate('homeOrganisation', 'name code').lean();
+    }).select('membershipNumber firstName lastName phone email status joinedAt ministries homeOrganisation').populate('homeOrganisation', 'name code').lean();
     if (!member) return res.status(404).json({ message: 'Linked member profile is unavailable' });
     const now = new Date();
     const [attendance, events, registrations, announcements] = await Promise.all([
