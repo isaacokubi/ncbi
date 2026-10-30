@@ -11,7 +11,7 @@ async function request(path, token, options = {}) {
 const dateText = value => value ? new Intl.DateTimeFormat('en-KE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)) : '—';
 const blank = () => ({ title: '', message: '', category: 'general', audience: 'congregation', status: 'draft', visibility: 'organisation', startAt: '' });
 
-export default function AnnouncementWorkspace({ token, user, onError, onSuccess }) {
+export default function AnnouncementWorkspace({ token, onError, onSuccess }) {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,7 @@ export default function AnnouncementWorkspace({ token, user, onError, onSuccess 
     try {
       const data = { message: form.message.trim(), category: form.category, audience: form.audience };
       if (!data.message) throw new Error('Write the announcement before saving.');
+      if (form.visibility === 'public' && !['public','congregation'].includes(form.audience)) throw new Error('A notice intended only for leaders or members cannot be published on the public website. Choose a church-workspace visibility instead.');
       if (form.status === 'active' && form.visibility === 'public' && !window.confirm('Publish this announcement on the public NCBI website now?')) { setBusy(false); return; }
       const payload = { title: form.title.trim(), status: form.status, visibility: form.visibility, startAt: form.startAt || undefined, data };
       await request('/operations/announcement' + (editing ? '/' + editing._id : ''), token, { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
@@ -61,6 +62,7 @@ export default function AnnouncementWorkspace({ token, user, onError, onSuccess 
     catch (error) { onError(error.message); }
   };
   const publish = async item => {
+    if (!['public','congregation'].includes(item.data?.audience || 'congregation')) { onError('This notice is intended for an internal audience and cannot be published publicly.'); return; }
     if (!window.confirm('Publish this announcement on the public NCBI website?')) return;
     try { await request('/operations/announcement/' + item._id, token, { method: 'PATCH', body: JSON.stringify({ status: 'active', visibility: 'public' }) }); onSuccess('Announcement published.'); await refresh(); }
     catch (error) { onError(error.message); }
@@ -96,7 +98,7 @@ export default function AnnouncementWorkspace({ token, user, onError, onSuccess 
       <div className="panel-heading"><div><span className="eyebrow">NOTICE REGISTER</span><h3>Church communications and notices</h3><p>Search, review, edit and publish notices within your permitted organisation scope.</p></div><button className="refresh-button" type="button" onClick={refresh} disabled={loading}><RefreshCw size={14} className={loading ? 'spin' : ''}/> Refresh workspace</button></div>
       <div className="toolbar"><div className="table-search"><Search size={16}/><input aria-label="Search notices" placeholder="Search title, message or church…" value={query} onChange={e => setQuery(e.target.value)}/></div><div className="toolbar-right"><select aria-label="Filter notice status" value={status} onChange={e => setStatus(e.target.value)}><option value="">All statuses</option>{['draft','pending','active','scheduled','in_progress','completed','cancelled','closed'].map(x => <option key={x} value={x}>{x.replaceAll('_',' ')}</option>)}</select></div></div>
       <div className="table-wrap"><table><thead><tr><th>Announcement</th><th>Audience</th><th>Church unit</th><th>Status</th><th>Last updated</th><th>Actions</th></tr></thead><tbody>
-        {filtered.map(item => <tr key={item._id}><td><b>{item.title}</b><small className="cell-sub">{(item.data?.message || '').slice(0, 105)}{(item.data?.message || '').length > 105 ? '…' : ''}</small></td><td>{(item.data?.audience || 'congregation').replaceAll('_',' ')}</td><td>{item.organisation?.name || '—'}</td><td><span className={'status-pill ' + item.status}>{item.status}</span></td><td>{dateText(item.updatedAt || item.createdAt)}</td><td><div className="row-actions"><button className="row-action" type="button" onClick={() => setPreview(item)}><Eye size={14}/> Preview</button><button className="row-action" type="button" onClick={() => openEdit(item)}><Pencil size={14}/> Edit</button>{item.status !== 'active' && <button className="row-action approve" type="button" onClick={() => publish(item)}><Send size={14}/> Publish</button>}<button className="row-action reject" type="button" onClick={() => archive(item)}><Archive size={14}/> Archive</button></div></td></tr>)}
+        {filtered.map(item => <tr key={item._id}><td><b>{item.title}</b><small className="cell-sub">{(item.data?.message || '').slice(0, 105)}{(item.data?.message || '').length > 105 ? '…' : ''}</small></td><td>{(item.data?.audience || 'congregation').replaceAll('_',' ')}</td><td>{item.organisation?.name || '—'}</td><td><span className={'status-pill ' + item.status}>{item.status}</span></td><td>{dateText(item.updatedAt || item.createdAt)}</td><td><div className="row-actions"><button className="row-action" type="button" onClick={() => setPreview(item)}><Eye size={14}/> Preview</button><button className="row-action" type="button" onClick={() => openEdit(item)}><Pencil size={14}/> Edit</button>{item.status !== 'active' && ['public','congregation'].includes(item.data?.audience || 'congregation') && <button className="row-action approve" type="button" onClick={() => publish(item)}><Send size={14}/> Publish</button>}<button className="row-action reject" type="button" onClick={() => archive(item)}><Archive size={14}/> Archive</button></div></td></tr>)}
         {!loading && !filtered.length && <tr><td colSpan="6" className="empty-cell">{query || status ? 'No notices match these filters. Clear the search or status filter.' : 'No announcements have been created in this church workspace yet. Use “Publish a news announcement” to prepare the first notice.'}</td></tr>}
       </tbody></table></div>
       <div className="table-footer"><span>{loading ? 'Loading notices…' : 'Showing ' + filtered.length + ' of ' + items.length + ' notices'}</span></div>
