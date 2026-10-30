@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ncbi-shell-v1';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
+const CACHE_NAME = 'ncbi-shell-v2';
+const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/ncbi-logo.jpg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
