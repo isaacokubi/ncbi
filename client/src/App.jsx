@@ -369,7 +369,7 @@ function WebsiteContentSettings({token,onError,onSuccess,onCreateRecord}) {
 }
 
 function App(){
- const [token,setToken]=useState(()=>sessionStorage.getItem('ncbi_access_token')||'');
+ const [token,setToken]=useState(()=>{const params=new URLSearchParams(window.location.search);return params.has('resetPassword')||params.has('verifyEmail')?'':(sessionStorage.getItem('ncbi_access_token')||'');});
  const [brandLogo,setBrandLogo]=useState('/ncbi-logo.jpg'); const [heroImage,setHeroImage]=useState('');
  useEffect(()=>{let alive=true;fetch(API+'/public/branding').then(r=>r.ok?r.json():null).then(d=>{if(alive&&d?.logoUrl)setBrandLogo(d.logoUrl);if(alive&&d?.heroImageUrl)setHeroImage(d.heroImageUrl);}).catch(()=>{});return()=>{alive=false;};},[]);
  const [publicView,setPublicView]=useState(()=>{const params=new URLSearchParams(window.location.search);return !(params.has('resetPassword')||params.has('verifyEmail'));}); const [registrationView,setRegistrationView]=useState(false);
