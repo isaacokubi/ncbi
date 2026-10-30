@@ -98,7 +98,12 @@ router.get('/attendance',async(req,res,next)=>{
     const page=Math.max(1,Number(req.query.page)||1),limit=Math.min(100,Math.max(1,Number(req.query.limit)||25));
     const filter={organisation:{$in:ids}};
     if(req.query.from||req.query.to)filter.heldAt={...(req.query.from?{$gte:new Date(req.query.from)}:{}),...(req.query.to?{$lte:new Date(req.query.to)}:{})};
-    if(req.query.activity)filter.activityName={$regex:String(req.query.activity).slice(0,80).replace(/[.*+?^${}()|[\]\\]/g,'\\router.post('/members/:id/transfer''),$options:'i'};
+    if(req.query.activity){const safe=String(req.query.activity).slice(0,80).replace(/[^a-z0-9 ]/gi,'');filter.activityName={$regex:safe,$options:'i'};}
+    const [records,total]=await Promise.all([Attendance.find(filter).sort({heldAt:-1}).skip((page-1)*limit).limit(limit).populate('member','firstName lastName membershipNumber').populate('organisation','name code').populate('recordedBy','fullName').lean(),Attendance.countDocuments(filter)]);
+    res.json({attendance:records,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});
+  }catch(e){next(e);}
+});
+router.post('/members/:id/transfer''),$options:'i'};
     const [records,total]=await Promise.all([Attendance.find(filter).sort({heldAt:-1}).skip((page-1)*limit).limit(limit).populate('member','firstName lastName membershipNumber').populate('organisation','name code').populate('recordedBy','fullName').lean(),Attendance.countDocuments(filter)]);
     res.json({attendance:records,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});
   }catch(e){next(e);}
