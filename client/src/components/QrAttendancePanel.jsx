@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 import { Camera, CameraOff, Copy, QrCode, ShieldCheck } from 'lucide-react';
 
 const API = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
@@ -24,6 +25,7 @@ export default function QrAttendancePanel({ token, user, members, organisations 
   const [organisation, setOrganisation] = useState(user.organisation?._id || user.organisation || '');
   const [session, setSession] = useState(null);
   const [qrToken, setQrToken] = useState('');
+  const [qrImage, setQrImage] = useState('');
   const [member, setMember] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -41,6 +43,15 @@ export default function QrAttendancePanel({ token, user, members, organisations 
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraActive(false);
   };
+  useEffect(() => {
+    let active = true;
+    if (!session?.token) { setQrImage(''); return undefined; }
+    QRCode.toDataURL(session.token, { errorCorrectionLevel: 'M', margin: 2, width: 320, color: { dark: '#220031', light: '#FFFFFF' } })
+      .then(value => { if (active) setQrImage(value); })
+      .catch(() => { if (active) setQrImage(''); });
+    return () => { active = false; };
+  }, [session?.token]);
+
   useEffect(() => () => {
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -85,7 +96,7 @@ export default function QrAttendancePanel({ token, user, members, organisations 
     try {
       const result = await request('/operations/attendance/qr-session', token, { activityName, category, heldAt: new Date(heldAt).toISOString(), organisation: organisation || undefined });
       setSession(result); setQrToken(result.token);
-      setMessage('Signed attendance session created. Copy its token into your approved QR-code printing tool; keep it private because it authorises check-in for this service.');
+      setMessage('Signed attendance QR created. Display or print it for this service. It expires in ten minutes, so create a fresh code when it expires.');
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
 
@@ -107,7 +118,7 @@ export default function QrAttendancePanel({ token, user, members, organisations 
       <label>Branch / organisation<select value={organisation} onChange={e=>setOrganisation(e.target.value)}>{organisations.map(o=><option key={o._id} value={o._id}>{o.name}</option>)}</select></label>
       <button className="gold-button" disabled={busy}>{busy?'Creating…':'Create signed QR session'}</button>
     </form>}
-    {session && <div className="qr-session-result"><b>Session ready · expires in 10 minutes</b><small>{session.activityName} · {new Date(session.heldAt).toLocaleString()}</small><div className="qr-token"><code>{session.token}</code><button type="button" className="secondary-button" onClick={()=>navigator.clipboard?.writeText(session.token)}><Copy size={14}/> Copy token</button></div><small>QR image rendering is not included yet. Use a trusted local QR encoder; do not paste this token into a public QR website.</small></div>}
+    {session && <div className="qr-session-result"><b>Session ready · expires in 10 minutes</b><small>{session.activityName} · {new Date(session.heldAt).toLocaleString()}</small>{qrImage ? <div className="qr-image-wrap"><img className="qr-image" src={qrImage} alt="Signed NCBI attendance QR code"/><div className="qr-image-actions"><button type="button" className="secondary-button" onClick={()=>{const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><title>NCBI attendance QR</title><style>body{font-family:Arial;text-align:center;padding:24px}img{width:320px;max-width:90vw}p{font-size:14px}</style><h2>NCBI · Attendance</h2><img src="'+qrImage+'" alt="Attendance QR"><p>'+new Date(session.heldAt).toLocaleString()+'</p><script>window.onload=()=>window.print()<\/script>');w.document.close();}}><QrCode size={14}/> Print QR</button><button type="button" className="secondary-button" onClick={()=>navigator.clipboard?.writeText(session.token)}><Copy size={14}/> Copy secure token</button></div></div> : <small>Generating QR image…</small>}<small>Keep this QR code within the church service. Anyone holding it can submit check-ins until it expires.</small></div>}
     <div className="qr-scanner">
       <div><b>Scan an attendee QR code</b><p>Use a camera-enabled HTTPS browser, or paste the signed token. Select the attendee before submitting.</p></div>
       <video ref={videoRef} className={cameraActive?'qr-video active':'qr-video'} muted playsInline/>
