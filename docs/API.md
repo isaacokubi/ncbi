@@ -82,4 +82,4 @@ Set `MPESA_ENV`, consumer key/secret, shortcode, passkey, callback URL and a ran
 
 ## Member self-service profile
 - `GET /api/portal/summary` — returns the authenticated member's linked profile, own attendance history and totals, own event registrations, upcoming branch events and branch announcements.
-- `PATCH /api/portal/profile` — members may update only their own phone, email, residential location and emergency-contact details. The server derives the member profile from the authenticated account; membership identity, status, branch and ministry assignments cannot be changed through this endpoint.
+- `PATCH /api/portal/profile` — members may update only their own phone, residential location and emergency-contact details. Sign-in email is read-only in this workflow. The server derives the member profile from the authenticated account; membership identity, status, branch and ministry assignments cannot be changed through this endpoint.
