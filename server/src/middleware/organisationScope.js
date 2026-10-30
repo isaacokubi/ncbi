@@ -1,11 +1,12 @@
 import { Organisation } from '../models/index.js';
+import { isPlatformWideOrganisationRole } from '../domain/organisationScopePolicy.js';
 
 const DESCENDANT_ROLES = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor']);
 
 export async function accessibleOrganisationIds(user) {
   const ownId = user.organisation?._id ?? user.organisation;
   if (!ownId) return [];
-  if (user.role === 'super_admin') {
+  if (isPlatformWideOrganisationRole(user.role)) {
     return (await Organisation.find({ status: { $ne: 'archived' } }).distinct('_id'));
   }
   if (!DESCENDANT_ROLES.has(user.role)) return [ownId];
