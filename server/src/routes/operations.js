@@ -12,6 +12,8 @@ import { canCheckInWithQr, validateQrSessionInput } from '../domain/attendanceQr
 import { canReadOperationsEntity } from '../domain/workspaceEntityPolicy.js';
 import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
 import { validateAnnouncementRecord } from '../domain/announcementPolicy.js';
+import { InventoryItem, InventoryMovement } from '../models/domain.js';
+import { inventoryItemInputError, inventoryMovementInputError, inventoryMovementDelta } from '../domain/inventoryPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -534,6 +536,108 @@ router.patch('/event-registrations/:id/status', allowRoles('super_admin','intern
     await audit(req, 'registration-status', 'event_registration', registration, `Set registration status to ${registration.status}`);
     res.json({ registration });
   } catch (error) { next(error); }
+});
+
+
+router.get('/inventory/stock', async (req, res, next) => {
+  try {
+    if (!canReadOperationsEntity(req.user, 'inventory')) return res.status(403).json({ message: 'Inventory access denied' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const items = await InventoryItem.find({ organisation: { $in: ids }, active: true }).sort({ itemName: 1 }).populate('organisation','name code').lean();
+    const totals = items.reduce((result,item) => {
+      result.itemCount += 1;
+      if (item.balance <= Number(item.reorderLevel || 0)) result.lowStockCount += 1;
+      result.totalUnits += Number(item.balance || 0);
+      return result;
+    }, { itemCount: 0, lowStockCount: 0, totalUnits: 0 });
+    res.set('Cache-Control','private, no-store');
+    res.json({ items, totals });
+  } catch (error) { next(error); }
+});
+
+router.post('/inventory/stock', async (req, res, next) => {
+  try {
+    if (!managers.has(req.user.role)) return res.status(403).json({ message: 'You cannot create inventory items' });
+    const input = req.body || {};
+    const validationError = inventoryItemInputError(input);
+    if (validationError) return res.status(400).json({ message: validationError });
+    const organisation = req.user.organisation?._id ?? req.user.organisation;
+    if (!mongoose.isValidObjectId(organisation) || !(await assertOrganisationAccess(req.user, organisation))) return res.status(403).json({ message: 'Organisation is outside your authorised scope' });
+    const item = await InventoryItem.create({
+      organisation, itemCode: String(input.itemCode).trim().toUpperCase(), itemName: String(input.itemName).trim(),
+      category: String(input.category).trim(), unit: String(input.unit).trim(), location: String(input.location).trim(),
+      reorderLevel: Number(input.reorderLevel || 0), balance: 0, createdBy: req.user._id, updatedBy: req.user._id
+    });
+    await audit(req, 'create', 'inventory_item', item, 'Created inventory item '+item.itemCode);
+    res.status(201).json({ item });
+  } catch (error) { next(error); }
+});
+
+router.get('/inventory/stock/:id/movements', async (req, res, next) => {
+  try {
+    if (!canReadOperationsEntity(req.user, 'inventory')) return res.status(403).json({ message: 'Inventory access denied' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Inventory item not found' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const item = await InventoryItem.findOne({ _id: req.params.id, organisation: { $in: ids }, active: true }).lean();
+    if (!item) return res.status(404).json({ message: 'Inventory item not found' });
+    const movements = await InventoryMovement.find({ item: item._id, organisation: item.organisation }).sort({ createdAt: -1 }).limit(100).populate('performedBy','fullName').lean();
+    res.set('Cache-Control','private, no-store');
+    res.json({ item, movements });
+  } catch (error) { next(error); }
+});
+
+router.post('/inventory/stock/:id/movements', async (req, res, next) => {
+  let session;
+  try {
+    if (!managers.has(req.user.role)) return res.status(403).json({ message: 'You cannot record stock movements' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Inventory item not found' });
+    const input = req.body || {};
+    const validationError = inventoryMovementInputError(input);
+    if (validationError) return res.status(400).json({ message: validationError });
+    const ids = await accessibleOrganisationIds(req.user);
+    const item = await InventoryItem.findOne({ _id: req.params.id, organisation: { $in: ids }, active: true });
+    if (!item) return res.status(404).json({ message: 'Inventory item not found' });
+    const organisation = item.organisation;
+    const idempotencyKey = String(input.idempotencyKey).trim();
+    const existing = await InventoryMovement.findOne({ organisation, idempotencyKey }).lean();
+    if (existing) {
+      if (String(existing.item) !== String(item._id) || existing.movementType !== input.movementType || Number(existing.quantity) !== Number(input.quantity)) return res.status(409).json({ message: 'This movement request key was already used for a different stock movement' });
+      return res.json({ movement: existing, duplicate: true });
+    }
+    session = await mongoose.startSession();
+    let createdMovement;
+    await session.withTransaction(async () => {
+      const current = await InventoryItem.findOne({ _id: item._id, organisation, active: true }).session(session);
+      if (!current) throw Object.assign(new Error('Inventory item not found'), { status: 404 });
+      if (input.movementType === 'opening_stock' && (current.balance !== 0 || await InventoryMovement.exists({ item: current._id }).session(session))) {
+        throw Object.assign(new Error('Opening stock can only be recorded once, before any other stock movement'), { status: 409 });
+      }
+      const balanceBefore = Number(current.balance || 0);
+      const delta = inventoryMovementDelta(input, balanceBefore);
+      const balanceAfter = balanceBefore + delta;
+      if (balanceAfter < 0) throw Object.assign(new Error('Insufficient stock. This movement would make the stock balance negative.'), { status: 409 });
+      if (!Number.isFinite(balanceAfter) || balanceAfter > 1000000000) throw Object.assign(new Error('The resulting stock balance is outside the permitted range'), { status: 400 });
+      current.balance = balanceAfter;
+      current.updatedBy = req.user._id;
+      await current.save({ session });
+      [createdMovement] = await InventoryMovement.create([{
+        organisation, item: current._id, movementType: input.movementType, quantity: Number(input.quantity), delta,
+        balanceBefore, balanceAfter, adjustmentDirection: input.adjustmentDirection || 'increase',
+        reference: String(input.reference || '').trim().slice(0,100), destination: String(input.destination || '').trim().slice(0,160),
+        notes: String(input.notes || '').trim(), idempotencyKey, performedBy: req.user._id
+      }], { session });
+    });
+    await audit(req, 'stock-movement', 'inventory_item', item, input.movementType+' '+input.quantity+' '+item.unit+' for '+item.itemCode);
+    res.status(201).json({ movement: createdMovement, balance: createdMovement.balanceAfter });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    if (error.code === 11000) {
+      const existing = await InventoryMovement.findOne({ organisation: req.user.organisation?._id ?? req.user.organisation, idempotencyKey: String(req.body?.idempotencyKey || '').trim() }).lean();
+      if (existing && String(existing.item) === String(req.params.id)) return res.json({ movement: existing, duplicate: true });
+      return res.status(409).json({ message: 'This stock movement has already been submitted' });
+    }
+    next(error);
+  } finally { if (session) await session.endSession(); }
 });
 
 router.get('/:entity', async (req, res, next) => {
