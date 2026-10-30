@@ -103,3 +103,9 @@ The generic operations register is available to senior, district and branch mana
 - `POST /api/portal/enrolments` accepts `programmeId` and `programmeType` (`small_group` or `discipleship_course`); duplicate submissions are idempotent.
 - `PATCH /api/portal/notifications/:id/read` marks only a notification addressed to the authenticated account as read.
 - Member documents are listed only when a document record has an exact `data.memberId` match. They remain metadata-only until private object storage and authorised download URLs are deployed.
+
+
+## Member portal delivery controls
+- Pastoral prayer-request follow-up is managed through the dedicated follow-up route; the portal exposes only the short member-visible update, not internal pastoral notes.
+- The Documents register allows a manager to assign a document to a member profile before uploading files. Only the exact assigned member account can download its private file versions.
+- The Member Notifications workspace resolves the selected member to one active portal account and sends an in-app notification. This is not an email/SMS provider integration.
