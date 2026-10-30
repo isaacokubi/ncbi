@@ -1771,3 +1771,50 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .public-site-shortcut:hover{background:#ffffff12;color:#fff;}
 @media(max-width:900px){.public-hero-inner{grid-template-columns:minmax(0,1fr) minmax(300px,.85fr);gap:25px}.public-art-emblem.bishop-portrait{height:460px;min-height:390px}}
 @media(max-width:720px){.public-hero-inner{grid-template-columns:1fr}.public-hero-art{min-height:420px;margin-top:22px}.public-art-frame{width:min(100%,430px)}.public-art-emblem.bishop-portrait{height:440px;min-height:360px}.public-art-caption{right:0;bottom:64px;max-width:80%}}
+
+
+/* Give the bishop portrait substantially more horizontal presence on the public home hero. */
+.public-hero-inner{
+  grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);
+  gap:clamp(22px,3vw,48px);
+}
+.public-hero-art{
+  min-width:0;
+  min-height:680px;
+  width:100%;
+}
+.public-art-frame{
+  width:min(100%,760px);
+}
+.public-art-emblem.bishop-portrait{
+  width:100%;
+  height:clamp(500px,70vh,680px);
+  min-height:500px;
+  border-radius:34% 34% 14px 14px!important;
+}
+.bishop-portrait img{
+  object-fit:cover;
+  object-position:center 20%;
+}
+@media(max-width:900px){
+  .public-hero-inner{
+    grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
+    gap:20px;
+  }
+  .public-hero-art{min-height:560px}
+  .public-art-frame{width:100%}
+  .public-art-emblem.bishop-portrait{
+    height:clamp(460px,62vh,560px);
+    min-height:460px;
+  }
+}
+@media(max-width:720px){
+  .public-hero-inner{grid-template-columns:minmax(0,1fr)}
+  .public-hero-art{min-height:0;margin-top:20px}
+  .public-art-frame{width:100%;max-width:560px;margin-inline:auto}
+  .public-art-emblem.bishop-portrait{
+    height:clamp(440px,78vw,520px);
+    min-height:440px;
+    border-radius:30% 30% 14px 14px!important;
+  }
+}
