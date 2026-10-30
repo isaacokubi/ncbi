@@ -132,7 +132,8 @@ function PublicHome({onLogin,onRegister}) {
  const [loading,setLoading]=useState(true); const [error,setError]=useState('');
  const [menuOpen,setMenuOpen]=useState(false);
  const publicLinks=[['about','About NCBI'],['mission','Our mission'],['ministries','Ministries'],['branches','Branches'],['programmes','Programmes'],['news','News'],['contact','Contact']];
- const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const data=await api('/public/content','');setContent({branches:Array.isArray(data.branches)?data.branches:[],events:Array.isArray(data.events)?data.events:[],announcements:Array.isArray(data.announcements)?data.announcements:[]});}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);\n useEffect(()=>{loadPublicContent();},[loadPublicContent]);
+ const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const data=await api('/public/content','');setContent({branches:Array.isArray(data.branches)?data.branches:[],events:Array.isArray(data.events)?data.events:[],announcements:Array.isArray(data.announcements)?data.announcements:[]});}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);
+ useEffect(()=>{loadPublicContent();},[loadPublicContent]);
  const closeMenu=()=>setMenuOpen(false);
  return <main className="public-site">
   <header className="public-header">
