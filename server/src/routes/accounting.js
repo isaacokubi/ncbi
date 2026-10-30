@@ -77,7 +77,7 @@ router.post('/journals/:id/post',async(req,res,next)=>{try{
  const ids=await accessibleOrganisationIds(req.user);
  const journal=await JournalEntry.findOne({_id:req.params.id,organisation:{$in:ids}});
  if(!journal)return res.status(404).json({message:'Journal entry not found'});
- if(String(journal.createdBy)!==String(req.user._id)===false)return res.status(403).json({message:'The creator cannot post their own journal'});
+ if(String(journal.createdBy)===String(req.user._id))return res.status(403).json({message:'The creator cannot post their own journal'});
  if(journal.status!=='submitted')return res.status(409).json({message:'Only submitted journal entries can be posted'});
  journal.status='posted';journal.approvedBy=req.user._id;journal.postedAt=new Date();await journal.save();
  await AuditLog.create({organisation:journal.organisation,actor:req.user._id,action:'post',entity:'journal_entry',recordId:journal._id,summary:'Posted journal '+journal.entryNumber});
