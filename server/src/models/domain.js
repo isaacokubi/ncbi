@@ -112,3 +112,9 @@ const paymentIntentSchema = new Schema({
 }, { timestamps: true });
 paymentIntentSchema.index({ organisation: 1, createdAt: -1 });
 export const PaymentIntent = mongoose.models.PaymentIntent || model('PaymentIntent', paymentIntentSchema);
+
+const sequenceSchema = new Schema({
+  key: { type: String, required: true, unique: true },
+  value: { type: Number, default: 0 }
+}, { timestamps: true });
+export const SequenceCounter = mongoose.models.SequenceCounter || model('SequenceCounter', sequenceSchema);
