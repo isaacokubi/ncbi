@@ -55,3 +55,7 @@ The optional organisation filter is rejected unless it belongs to the authentica
 
 ## Database index migration
 The member-number uniqueness rule now uses a partial index so a branch can register multiple visitors before membership numbers are assigned. A second partial unique index guarantees that one member profile is linked to at most one portal account. Before deploying this schema change to an existing database, back up MongoDB and run `npm run migrate-member-indexes -w server` with the production `MONGODB_URI`. The migration is idempotent; resolve any duplicate linked profiles before running it.
+
+
+## Child safeguarding consent workflow
+A dedicated safeguarding-consent API records explicit guardian authority, purpose-specific consent (participation, photography, public media publication, emergency medical care, authorised collection and off-site travel), authorised collection contacts, and a bounded validity period. Consent capture is restricted to verified members under 18 in the caller's organisation scope. Only senior pastoral roles or users with the explicit safeguarding:manage permission can read, create or revoke records. Consent records are immutable after capture; withdrawal is recorded as a revocation with actor, timestamp and reason, preserving history. Audit entries omit guardian contact details. This workflow is a technical control, not a substitute for NCBI-approved safeguarding policy, identity verification, staff vetting or legal review.

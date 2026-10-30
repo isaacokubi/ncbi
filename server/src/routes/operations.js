@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
-import { OperationsRecord, AuditLog } from '../models/domain.js';
+import { OperationsRecord, AuditLog, SafeguardingConsent } from '../models/domain.js';
+import { validateSafeguardingConsentInput, validateSafeguardingRevocation } from '../domain/safeguardingPolicy.js';
+import { Member } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateEventRegistrationInput, validateEventRegistrationStatus } from '../domain/eventRegistrationPolicy.js';
@@ -31,6 +33,71 @@ function scopedRecordFilter(entity, ids, user) {
   if (entity === 'event_registration' && user.role === 'member') filter.createdBy = user._id;
   return filter;
 }
+
+
+const safeguardingManagers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor']);
+function canManageSafeguarding(user) {
+  return safeguardingManagers.has(user.role) || (user.permissions || []).includes('safeguarding:manage');
+}
+function isMinor(dateOfBirth, at = new Date()) {
+  if (!dateOfBirth) return false;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime()) || dob > at) return false;
+  let age = at.getFullYear() - dob.getFullYear();
+  if (at.getMonth() < dob.getMonth() || (at.getMonth() === dob.getMonth() && at.getDate() < dob.getDate())) age--;
+  return age < 18;
+}
+
+// Dedicated, immutable-after-capture consent records; audit summaries omit contact details.
+router.get('/safeguarding/consents', async (req, res, next) => {
+  try {
+    if (!canManageSafeguarding(req.user)) return res.status(403).json({ message: 'Specific child safeguarding permission required' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const filter = { organisation: { $in: ids } };
+    if (req.query.child) {
+      if (!mongoose.isValidObjectId(req.query.child)) return res.status(400).json({ message: 'Invalid child identifier' });
+      filter.child = req.query.child;
+    }
+    if (['active','revoked'].includes(req.query.status)) filter.status = req.query.status;
+    const consents = await SafeguardingConsent.find(filter).sort({ createdAt: -1 }).limit(100)
+      .populate('child', 'firstName lastName membershipNumber dateOfBirth')
+      .populate('capturedBy', 'fullName').populate('revokedBy', 'fullName').lean();
+    res.json({ consents });
+  } catch (error) { next(error); }
+});
+
+router.post('/safeguarding/consents', async (req, res, next) => {
+  try {
+    if (!canManageSafeguarding(req.user)) return res.status(403).json({ message: 'Specific child safeguarding permission required' });
+    const childId = req.body.child;
+    if (!mongoose.isValidObjectId(childId)) return res.status(400).json({ message: 'A valid child member identifier is required' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const child = await Member.findOne({ _id: childId, homeOrganisation: { $in: ids } }).select('_id homeOrganisation dateOfBirth').lean();
+    if (!child || !isMinor(child.dateOfBirth)) return res.status(404).json({ message: 'An eligible minor in your organisation scope was not found' });
+    const validation = validateSafeguardingConsentInput(req.body, child, new Date());
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+    const consent = await SafeguardingConsent.create({ organisation: child.homeOrganisation, child: child._id, ...validation.value, capturedBy: req.user._id, status: 'active' });
+    await AuditLog.create({ organisation: child.homeOrganisation, actor: req.user._id, action: 'safeguarding-consent-captured', entity: 'safeguarding_consent', recordId: consent._id, summary: 'Child safeguarding consent recorded' });
+    res.status(201).json({ consent });
+  } catch (error) { next(error); }
+});
+
+router.patch('/safeguarding/consents/:id/revoke', async (req, res, next) => {
+  try {
+    if (!canManageSafeguarding(req.user)) return res.status(403).json({ message: 'Specific child safeguarding permission required' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Consent record not found' });
+    const validation = validateSafeguardingRevocation(req.body);
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+    const ids = await accessibleOrganisationIds(req.user);
+    const consent = await SafeguardingConsent.findOne({ _id: req.params.id, organisation: { $in: ids } });
+    if (!consent) return res.status(404).json({ message: 'Consent record not found' });
+    if (consent.status === 'revoked') return res.json({ consent, alreadyRevoked: true });
+    consent.status = 'revoked'; consent.revokedBy = req.user._id; consent.revokedAt = new Date(); consent.revocationReason = validation.value.reason;
+    await consent.save();
+    await AuditLog.create({ organisation: consent.organisation, actor: req.user._id, action: 'safeguarding-consent-revoked', entity: 'safeguarding_consent', recordId: consent._id, summary: 'Child safeguarding consent revoked' });
+    res.json({ consent, alreadyRevoked: false });
+  } catch (error) { next(error); }
+});
 
 // Keep this fixed path before /:entity so "audit" is not parsed as an entity name.
 router.get('/audit/logs', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'), async (req, res, next) => {

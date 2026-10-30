@@ -118,3 +118,17 @@ const sequenceSchema = new Schema({
   value: { type: Number, default: 0 }
 }, { timestamps: true });
 export const SequenceCounter = mongoose.models.SequenceCounter || model('SequenceCounter', sequenceSchema);
+
+
+const safeguardingConsentSchema = new Schema({
+ organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
+ child:{type:Schema.Types.ObjectId,ref:'Member',required:true,index:true},
+ guardianName:{type:String,required:true,trim:true,maxlength:120}, guardianRelationship:{type:String,required:true,trim:true,maxlength:60}, guardianPhone:{type:String,required:true,trim:true,maxlength:30},
+ guardianConfirmedAuthority:{type:Boolean,required:true,default:false},
+ consentTypes:[{type:String,enum:['participation','photography','media_publication','emergency_medical','authorised_collection','offsite_travel']}],
+ authorisedPickupPersons:[{name:{type:String,trim:true,maxlength:120},phone:{type:String,trim:true,maxlength:30}}],
+ validFrom:{type:Date,required:true},validUntil:{type:Date,default:null},status:{type:String,enum:['active','revoked'],default:'active',index:true},
+ capturedBy:{type:Schema.Types.ObjectId,ref:'User',required:true},revokedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},revokedAt:Date,revocationReason:{type:String,maxlength:300}
+},{timestamps:true});
+safeguardingConsentSchema.index({organisation:1,child:1,status:1,validUntil:1});
+export const SafeguardingConsent = mongoose.models.SafeguardingConsent || model('SafeguardingConsent', safeguardingConsentSchema);
