@@ -6,18 +6,33 @@ import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tool
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 const navGroups = [
- { title:'ADMINISTRATION', items:[['branding','Church branding',ShieldCheck]] },
+ { title:'ADMINISTRATION', items:[['branding','Church branding',ShieldCheck],['websiteContent','Public website',Church]] },
  { title:'OVERVIEW', items:[['dashboard','Overview',LayoutDashboard],['registrations','Registration approvals',ShieldCheck],['organisations','Organisation structure',Network],['users','User access & roles',ShieldCheck],['audit','Audit trail',ShieldCheck],['memberPortal','My member portal',Users],['security','Account security',ShieldCheck]] },
  { title:'CHURCH MANAGEMENT', items:[['members','Membership',Users],['visitors','Visitor directory',HeartHandshake],['visitorFollowup','Visitor follow-up',HeartHandshake],['attendance','Attendance',ClipboardList],['departments','Departments & ministries',BookOpen]] },
  { title:'MINISTRY & OPERATIONS', items:[['events','Events & programmes',CalendarDays],['pastoral','Pastoral care',HeartHandshake],['missions','Evangelism & missions',Activity],['discipleship','Discipleship',BookOpen],['services','Service planning',Church],['leadership','Leadership & HR',Users]] },
  { title:'STEWARDSHIP', items:[['finance','Finance transactions',Wallet],['payments','M-Pesa payments',CircleDollarSign],['accounts','Chart of accounts',CircleDollarSign],['journals','General ledger',FileBarChart],['budgets','Budgets',Wallet],['reconciliation','Bank reconciliation',CircleDollarSign],['assets','Assets & property',Church],['projects','Projects',Network],['documents','Documents',FileBarChart],['reports','Reports & analytics',FileBarChart]] }
 
 ];
+const DEFAULT_SITE_CONTENT = {
+ navigation:{about:'About NCBI',mission:'Our mission',ministries:'Ministries',branches:'Branches',programmes:'Programmes',news:'News',contact:'Contact',register:'Register',signIn:'Staff & member sign in'},
+ pages:{
+  home:{kicker:'NEW CHURCH BELIEVERS INTERNATIONAL',titleLine1:'One Church.',titleLine2:'One Vision.',description:'A connected church family committed to serving communities, strengthening believers and advancing the Gospel.',branchesCta:'Explore our branches',registerCta:'Register with NCBI',workspaceCta:'Access your workspace',motto:'A CALL TO SERVE',heroCaptionTitle:'Faith in action.',heroCaptionText:'Serving God. Strengthening communities.',strapline:['UNITED IN FAITH','GROWING IN PURPOSE','SERVING OUR COMMUNITIES']},
+  about:{eyebrow:'WHO WE ARE',titleLine1:'A church family,',titleLine2:'connected by purpose.',body:'New Church Believers International brings congregations together in a shared commitment to faith, fellowship and service. Across our church family, we seek to nurture believers, equip leaders and make a meaningful difference in the communities we serve.'},
+  mission:{eyebrow:'OUR SHARED PURPOSE',title:'One vision. Many ways to serve.',subtitle:'Rooted in faith and expressed through practical service, care and community.',cards:[{eyebrow:'01 / FAITH',title:'Grow in faith',body:'Encouraging worship, biblical learning, fellowship and a lifelong walk with Christ.'},{eyebrow:'02 / SERVICE',title:'Serve with compassion',body:'Putting faith into action through care, outreach and practical support for our communities.'},{eyebrow:'03 / LEADERSHIP',title:'Equip people',body:'Supporting leaders, volunteers and ministry teams to serve with integrity and purpose.'}]},
+  ministries:{eyebrow:'LIFE TOGETHER',titleLine1:'Faith that reaches',titleLine2:'beyond the walls.',body:'Church life is more than a gathering. It is a shared journey of worship, learning, care and service in our local communities.',cta:'Connect with a congregation',cards:[{title:'Worship & fellowship',body:'Gathering as one church family to worship, encourage and grow together.'},{title:'Discipleship & teaching',body:'Building a strong foundation through learning, mentoring and spiritual growth.'},{title:'Pastoral care & community',body:'Walking alongside people and responding to the needs of our communities.'},{title:'Leadership & outreach',body:'Equipping people to lead, serve and share the Gospel with compassion.'}]},
+  branches:{eyebrow:'FIND YOUR CHURCH FAMILY',title:'Our church branches',subtitle:'Find an active NCBI congregation and connect locally.',empty:'Our public branch directory is being updated. Please check back soon.'},
+  programmes:{eyebrow:'GATHER · LEARN · SERVE',title:'Upcoming programmes',subtitle:'Events publicly published by NCBI branches.',empty:'No public programmes have been announced yet. New events will appear here when published by a branch.'},
+  news:{eyebrow:'STAY CONNECTED',title:'News & announcements',subtitle:'Official public notices from across the NCBI family.',empty:'There are no public announcements at the moment. Please visit again for the latest NCBI updates.'},
+  contact:{eyebrow:'TAKE YOUR NEXT STEP',titleLine1:'There is a place',titleLine2:'for you in the family.',body:'Connect with an NCBI congregation, take part in a programme or access your church workspace.',branchesCta:'Find a branch',signInCta:'Staff & member sign in'}
+ },
+ footer:{brand:'NEW CHURCH BELIEVERS INTERNATIONAL',strapline:'ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM.',motto:'A CALL TO SERVE'}
+};
+
 const financePageKeys=new Set(['finance','payments','accounts','journals','budgets','reconciliation']);
 const seniorRoles=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'];
 const branchAdminRoles=[...seniorRoles,'branch_admin'];
 function visibleForRole(key,role){
- if(key==='branding')return ['super_admin','national_admin'].includes(role);
+ if(['branding','websiteContent'].includes(key))return ['super_admin','national_admin'].includes(role);
  if(role==='member')return key==='memberPortal'||key==='security';
  if(key==='registrations')return branchAdminRoles.includes(role);
  if(role==='treasurer')return ['dashboard','security','finance','payments','accounts','journals','budgets','reconciliation','reports'].includes(key);
@@ -151,14 +166,14 @@ function Login({onLogin,busy,error,onPublic,onRegister,brandLogo}) {
 function Field({label,children}) { return <label className="field"><span>{label}</span>{children}</label>; }
 
 function PublicHome({onLogin,onRegister,brandLogo}) {
- const [content,setContent]=useState({branches:[],events:[],announcements:[]});
+ const [content,setContent]=useState({branches:[],events:[],announcements:[]}); const [siteContent,setSiteContent]=useState(DEFAULT_SITE_CONTENT);
  const [loading,setLoading]=useState(true); const [error,setError]=useState('');
  const [menuOpen,setMenuOpen]=useState(false);
- const publicLinks=[['about','About NCBI'],['mission','Our mission'],['ministries','Ministries'],['branches','Branches'],['programmes','Programmes'],['news','News'],['contact','Contact']];
+ const publicLinks=[['about',siteContent.navigation.about],['mission',siteContent.navigation.mission],['ministries',siteContent.navigation.ministries],['branches',siteContent.navigation.branches],['programmes',siteContent.navigation.programmes],['news',siteContent.navigation.news],['contact',siteContent.navigation.contact]]; const pageCopy=siteContent.pages;
  const validPages=['home',...publicLinks.map(([id])=>id)];
  const readPage=()=>{const candidate=window.location.hash.replace(/^#/,'')||'home';return validPages.includes(candidate)?candidate:'home';};
  const [activePage,setActivePage]=useState(readPage);
- const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const data=await api('/public/content','');setContent({branches:Array.isArray(data.branches)?data.branches:[],events:Array.isArray(data.events)?data.events:[],announcements:Array.isArray(data.announcements)?data.announcements:[]});}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);
+ const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const data=await api('/public/content','');setContent({branches:Array.isArray(data.branches)?data.branches:[],events:Array.isArray(data.events)?data.events:[],announcements:Array.isArray(data.announcements)?data.announcements:[]});if(data.siteContent)setSiteContent({...DEFAULT_SITE_CONTENT,...data.siteContent,pages:{...DEFAULT_SITE_CONTENT.pages,...(data.siteContent.pages||{})},navigation:{...DEFAULT_SITE_CONTENT.navigation,...(data.siteContent.navigation||{})},footer:{...DEFAULT_SITE_CONTENT.footer,...(data.siteContent.footer||{})}});}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);
  useEffect(()=>{loadPublicContent();},[loadPublicContent]);
  useEffect(()=>{const sync=()=>setActivePage(readPage());window.addEventListener('popstate',sync);window.addEventListener('hashchange',sync);return()=>{window.removeEventListener('popstate',sync);window.removeEventListener('hashchange',sync);};},[]);
  const navigate=(id)=>{if(!validPages.includes(id))return;setActivePage(id);setMenuOpen(false);if(window.location.hash!==`#${id}`)window.history.pushState({page:id},'',`#${id}`);window.scrollTo({top:0,behavior:'auto'});};
