@@ -181,8 +181,24 @@ router.post('/attendance',async(req,res,next)=>{
       const allowed=await Member.findOne({_id:member,homeOrganisation:org}).select('_id').lean();
       if(!allowed)return res.status(403).json({message:'Member must belong to the selected attendance organisation'});
     }
-    const attendance=await Attendance.create({...validation.value,organisation:org,recordedBy:req.user._id});
-    res.status(201).json({attendance});
+    const identity = validation.value.member
+      ? { organisation: org, member: validation.value.member, heldAt: validation.value.heldAt, activityName: validation.value.activityName }
+      : null;
+    if (identity) {
+      const existing = await Attendance.findOne(identity).lean();
+      if (existing) return res.json({ attendance: existing, alreadyRecorded: true });
+    }
+    try {
+      const attendance=await Attendance.create({...validation.value,organisation:org,recordedBy:req.user._id,checkInMethod:'manual'});
+      await AuditLog.create({organisation:org,actor:req.user._id,action:'attendance-recorded',entity:'attendance',recordId:attendance._id,summary:'Manually recorded worship or ministry attendance'});
+      return res.status(201).json({attendance,alreadyRecorded:false});
+    } catch (error) {
+      if (error.code === 11000 && identity) {
+        const existing = await Attendance.findOne(identity).lean();
+        if (existing) return res.json({attendance:existing,alreadyRecorded:true});
+      }
+      return next(error);
+    }
   }catch(e){next(e);}
 });
 router.get('/attendance/summary',async(req,res,next)=>{
