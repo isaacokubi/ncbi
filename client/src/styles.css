@@ -750,3 +750,7 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .public-art-emblem img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;image-rendering:auto;border-radius:50%}
 .branding-preview img{object-fit:contain!important;image-rendering:auto}
 @media(max-width:760px){.sidebar .brand-mark{width:42px!important;height:42px!important}.auth-brand .brand-mark{width:58px!important;height:58px!important}.public-brand .brand-mark,.public-footer-brand .brand-mark{width:48px!important;height:48px!important}.public-art-emblem{width:205px!important;height:205px!important}}
+
+/* Public content pages use normal document flow; the home hero keeps its own layout. */
+.public-page-view.public-section{display:block;align-items:initial;}
+.public-page-view.public-section>.public-section-shell{display:block;}
