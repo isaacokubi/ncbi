@@ -28,14 +28,14 @@ This document distinguishes working code from planned work. A module is not prod
 - Visitor conversion now promotes a scoped visitor to new believer or member, assigns a branch-sequenced membership number, preserves the original record and writes an audit event.
 - Member portal API exposes only an administrator-linked member profile, that member's attendance, the member's own event registrations, upcoming branch events and organisation-wide branch announcements. User provisioning validates member-profile ownership and prevents linking one profile to multiple accounts. QR attendance, broader member self-service, child safeguarding and consent management remain outstanding.
 - Encrypted pastoral notes, granular case assignments and field-level access controls.
-- SMS/email/WhatsApp provider integrations and delivery receipts.
+- SMS/email/WhatsApp provider integrations and delivery receipts; the public site currently displays only records explicitly marked public.
 - QR attendance check-in, venue/resource conflict checking and certificate generation remain outstanding. Event registration supports authenticated self-service, duplicate-safe submissions, cancellation/re-registration and leadership-managed statuses.
 - Missions field reporting, discipleship lesson delivery and assessments.
 - Asset depreciation, maintenance and disposal approvals; project procurement and milestone financial controls.
 - Document malware scanning, immutable retention, versioning and external object storage.
 - MFA, refresh-token rotation/revocation, password reset, session management, formal audit immutability and alerting.
 - Mobile apps, offline sync, public website, data migration tooling and multilingual/multi-currency reporting.
-- Dedicated member/parent portals, safeguarding case management, encrypted counselling notes and child/guardian consent workflows. Generic operations records are not a substitute for these specialist controls.
+- Parent/guardian portal, safeguarding case management, encrypted counselling notes and child/guardian consent workflows. Generic operations records are not a substitute for these specialist controls.
 - Automated integration/e2e/security/performance tests and verified backup/restore drills.
 
 ## Production gate
