@@ -25,7 +25,10 @@ There is intentionally no public sign-up route and no default administrator. Pro
 - `POST /api/workspace/attendance`, attendance summary
 - `GET /api/dashboard/summary` — role-scoped, database-backed KPIs
 - `GET/POST /api/operations/:entity`, `PATCH/DELETE /api/operations/:entity/:id`
-- `GET/POST /api/finance/transactions`, `POST /api/finance/transactions/:id/decision` (confirmation posts a balanced journal to the general ledger)\n- `GET/POST /api/accounting/accounts`, `GET/POST /api/accounting/journals`, `GET/POST /api/accounting/budgets`, `GET/POST /api/accounting/reconciliations`\n- `GET/POST /api/workspace/users`, `PATCH /api/workspace/users/:id/status` (role-hierarchy constrained user administration)
+- `GET/POST /api/finance/transactions`, `POST /api/finance/transactions/:id/decision` (confirmation posts a balanced journal to the general ledger)
+- `GET/POST /api/accounting/accounts` (including standard NCBI chart provisioning), `GET/POST /api/accounting/journals`, `GET/POST /api/accounting/budgets`, `GET/POST /api/accounting/reconciliations`
+- `/api/payments/mpesa/stk-push` and secret-protected Daraja callback; credentials and deployed callback URL are required for live collections
+- `GET/POST /api/workspace/users`, `PATCH /api/workspace/users/:id/status` (role-hierarchy constrained user administration)
 
 Operations entities include departments, events and event registrations, visitor follow-ups, pastoral and prayer records, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training and ministry reports. Sensitive pastoral, prayer, benevolence, discipline and counselling records are role-gated and private by default; field-level encryption and specialist safeguarding workflows are still required before real sensitive data is stored. Sensitive pastoral records are separately role-gated. Finance entries are submitted first; creator self-approval is prohibited and only confirmed transactions contribute to totals.
 
