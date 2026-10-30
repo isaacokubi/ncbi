@@ -219,3 +219,13 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 
 - Budget decisions, journal posting, purchase-request decisions, supplier-invoice decisions and supplier-payment decisions/settlement now use Mongoose optimistic concurrency. A stale write is rejected with HTTP 409 rather than silently overwriting another actor's update.
 - The client must reload the latest record after a conflict before retrying. This protects concurrent edits to the same record; it is not a transactional reservation across separate budget-consuming records. Concurrent cross-record budget overspend prevention and pending purchase commitment reservation remain outstanding and require database-level atomic budget reservations/transactions plus integration tests.
+
+
+## Visitor follow-up pipeline
+
+- The visitor follow-up workspace now reads the branch-scoped visitor register and exposes open, due, overdue and unassigned follow-up totals.
+- Authorised branch and senior leaders can start a follow-up directly from a visitor profile, record contact method/outcome/notes, assign the current officer by default, and schedule the next contact.
+- Every follow-up action is appended to a bounded 100-entry history; the latest contact and next-action fields are maintained for operational queues. Open follow-ups require a future next-contact date; completed/closed follow-ups do not.
+- Follow-up endpoints enforce organisation scope and restrict assignment to active authorised staff in the same branch. The overview is private/no-store.
+- Automated policy tests cover supported methods/outcomes/statuses, future scheduling, completed follow-ups and malformed input. GitHub Actions passed for the backend route update and earlier frontend component/style commits; the latest combined frontend integration check is still running at the time of this note.
+- Remaining work: richer assignment controls, reminders/notifications, visitor conversion analytics, escalation rules, and end-to-end tests against a configured MongoDB deployment. This workflow does not send SMS, WhatsApp or email.
