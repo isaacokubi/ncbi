@@ -963,3 +963,8 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
   .public-page-view.public-section>.public-section-shell,
   .public-page-view>.public-section-shell{width:calc(100% - 30px)}
 }
+
+
+/* Budget approval matrix administration */
+.budget-approval-panel{padding:20px;margin:0 0 18px}.budget-approval-panel .panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.budget-approval-panel .form-grid{margin:16px 0;grid-template-columns:repeat(2,minmax(0,1fr))}.approval-role-field{grid-column:1/-1;border:1px solid var(--line,#e8e1eb);border-radius:10px;padding:12px 14px}.approval-role-field legend{font-size:11px;font-weight:700;color:var(--purple);padding:0 5px}.approval-role-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.approval-role-options label{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink,#34283a)}.approval-role-options input{accent-color:var(--gold)}.budget-approval-panel .table-wrap{margin-top:14px}
+@media(max-width:680px){.budget-approval-panel .form-grid{grid-template-columns:1fr}.approval-role-options{grid-template-columns:repeat(2,minmax(0,1fr))}.budget-approval-panel .panel-heading{flex-direction:column}}
