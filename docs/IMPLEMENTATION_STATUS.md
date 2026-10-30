@@ -29,6 +29,8 @@ This document distinguishes working code from planned work. A module is not prod
 
 - Public account registration is branch-scoped and creates pending member or non-member applications. Branch pastors decide verified member applications for their own branch; branch administrators decide non-member applications for their own branch; national and platform administrators decide non-member applications within their wider authority. These decision boundaries are enforced by a shared policy and automated tests.
 
+- Membership transfers now require a destination that is an active branch, reject transfers to the same branch or non-branch organisational units, preserve the transfer history, update the linked member portal account's organisation and write an audit event. Transfer policy boundary tests cover active-branch, same-branch and invalid-destination cases.
+
 ## Not yet production-complete
 - Bank feeds, electronic receipts, tax handling and multi-stage approval matrices. The manual bank reconciliation tool does not import statements or connect to a bank feed.
 - Visitor conversion now promotes a scoped visitor to new believer or member, assigns a branch-sequenced membership number, preserves the original record and writes an audit event.
