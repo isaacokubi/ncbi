@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Organisation, Member, Attendance, FinanceTransaction, User } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
+import { validateAttendanceInput } from '../domain/attendancePolicy.js';
 
 const router = Router(); router.use(requireAuth);
 const roleRank={super_admin:100,international_executive:90,national_admin:80,regional_overseer:70,district_pastor:60,branch_pastor:50,branch_admin:45,treasurer:35,department_leader:25,member:10};
@@ -108,8 +109,20 @@ router.post('/members/:id/transfer',allowRoles('super_admin','international_exec
   catch(e){next(e);}
 });
 router.post('/attendance',async(req,res,next)=>{
-  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','department_leader'].includes(req.user.role))return res.status(403).json({message:'Attendance recording permission required'});const {activityName,category,heldAt,member,visitorName,organisation}=req.body;const org=organisation||(req.user.organisation?._id??req.user.organisation);if(!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});if(!activityName||!heldAt||Number.isNaN(new Date(heldAt).getTime())||(!member&&!visitorName))return res.status(400).json({message:'Activity, valid date and member or visitor are required'});if(member){const allowed=await Member.findOne({_id:member,homeOrganisation:{$in:await accessibleOrganisationIds(req.user)}});if(!allowed)return res.status(403).json({message:'Member is outside your authorised organisation scope'});}const attendance=await Attendance.create({organisation:org,activityName,category,heldAt,member:member||null,visitorName,recordedBy:req.user._id});res.status(201).json({attendance});}
-  catch(e){next(e);}
+  try{
+    if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','department_leader'].includes(req.user.role))return res.status(403).json({message:'Attendance recording permission required'});
+    const validation=validateAttendanceInput(req.body);
+    if(!validation.valid)return res.status(400).json({message:validation.message});
+    const org=req.body.organisation||(req.user.organisation?._id??req.user.organisation);
+    if(!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});
+    const {member}=validation.value;
+    if(member){
+      const allowed=await Member.findOne({_id:member,homeOrganisation:org}).select('_id').lean();
+      if(!allowed)return res.status(403).json({message:'Member must belong to the selected attendance organisation'});
+    }
+    const attendance=await Attendance.create({...validation.value,organisation:org,recordedBy:req.user._id});
+    res.status(201).json({attendance});
+  }catch(e){next(e);}
 });
 router.get('/attendance/summary',async(req,res,next)=>{
   try{const ids=await accessibleOrganisationIds(req.user);const month=new Date();month.setDate(1);month.setHours(0,0,0,0);const [members,attendance,transactions]=await Promise.all([Member.countDocuments({homeOrganisation:{$in:ids},status:{$in:['member','worker','minister']}}),Attendance.countDocuments({organisation:{$in:ids},heldAt:{$gte:month}}),FinanceTransaction.aggregate([{$match:{organisation:{$in:ids},status:'confirmed',direction:'income',occurredAt:{$gte:month}}},{$group:{_id:'$currency',total:{$sum:{$toDouble:'$amount'}}}}])]);res.json({members,attendanceRecordsThisMonth:attendance,confirmedIncomeThisMonth:transactions});}
