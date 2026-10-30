@@ -43,3 +43,16 @@ export function registrationDecisionError(actor, target) {
 
   return null;
 }
+
+export function normalizeRegistrationPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.startsWith('254')) return digits.slice(3);
+  if (digits.startsWith('0')) return digits.slice(1);
+  return digits;
+}
+
+export function registrationIdentityMatches(member, fullName, phone) {
+  const normalizeName = value => String(value || '').toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+  return normalizeRegistrationPhone(member?.phone) === normalizeRegistrationPhone(phone) &&
+    normalizeName([member?.firstName, member?.lastName].filter(Boolean).join(' ')) === normalizeName(fullName);
+}

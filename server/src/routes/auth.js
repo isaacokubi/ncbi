@@ -7,7 +7,7 @@ import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
 import { passwordChangeError, passwordLengthError, phoneNumberError } from '../domain/authPolicy.js';
 import { accountActionUrl, sendAccountEmail } from '../services/email.js';
-import { registrationDecisionError, registrationScopeError } from '../domain/registrationPolicy.js';
+import { registrationDecisionError, registrationScopeError, registrationIdentityMatches } from '../domain/registrationPolicy.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
 const router = Router();
@@ -61,7 +61,6 @@ router.post('/register', async (req, res, next) => {
     const allowedLevels = category === 'official' ? requestedLevels[requestedRole] : ['branch'];
     const branch = await Organisation.findOne({ _id: organisationId, level: { $in: allowedLevels }, status: 'active' }).select('_id level').lean();
     if (!branch) return res.status(400).json({ message: 'Select an active NCBI organisation at the level required for this application.' });
-    if (category === 'member' && !membershipNumber) return res.status(400).json({ message: 'Enter your membership number so the branch pastor can verify your membership.' });
     if (await User.exists({ email })) return res.status(409).json({ message: 'An account with this email already exists.' });
     const passwordHash = await bcrypt.hash(password, 12);
     await User.create({
@@ -117,16 +116,65 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
     const decisionError = registrationDecisionError(req.user, target);
     if (decisionError) return res.status(403).json({ message: decisionError });
     if (decision === 'approve' && target.registrationCategory === 'member') {
-      const verifiedMember = await Member.findOne({
-        homeOrganisation: target.organisation,
-        membershipNumber: target.claimedMembershipNumber,
-        status: { $in: ['new_believer','member','worker','minister'] }
-      }).select('_id').lean();
-      if (!verifiedMember) return res.status(409).json({ message: 'Membership could not be verified in this branch. Check the membership number and member record before approving.' });
+      // A missing membership number is not a reason to strand an applicant.
+      // First try the supplied number, then a unique name + phone match inside this branch.
+      const suppliedNumber = String(req.body.membershipNumber || target.claimedMembershipNumber || '').trim();
+      const eligibleStatuses = ['new_believer','member','worker','minister'];
+      let verifiedMember = suppliedNumber
+        ? await Member.findOne({ homeOrganisation: target.organisation, membershipNumber: suppliedNumber, status: { $in: eligibleStatuses } }).select('_id membershipNumber').lean()
+        : null;
+
+      if (!verifiedMember && target.registrationPhone) {
+        const candidates = await Member.find({
+          homeOrganisation: target.organisation,
+          status: { $in: eligibleStatuses },
+          phone: { $exists: true, $ne: '' }
+        }).select('_id firstName lastName phone membershipNumber').lean();
+        const matches = candidates.filter(member => registrationIdentityMatches(member, target.fullName, target.registrationPhone));
+        if (matches.length > 1) return res.status(409).json({ message: 'More than one member matches this name and phone number. Ask the applicant for their membership number or resolve the duplicate member records before approving.' });
+        if (matches.length === 1) verifiedMember = matches[0];
+      }
+
+      // If no existing record matches, the authorised branch pastor may assign the
+      // church's next membership number and create the member record during approval.
+      if (!verifiedMember) {
+        if (!suppliedNumber) return res.status(409).json({
+          code: 'MEMBERSHIP_VERIFICATION_REQUIRED',
+          message: 'No existing member matched this applicant by name and phone. Enter the membership number assigned by your branch, or create/verify the member record before approving.'
+        });
+        const names = target.fullName.split(/\s+/);
+        if (await Member.exists({ homeOrganisation: target.organisation, membershipNumber: suppliedNumber })) return res.status(409).json({ message: 'That membership number is already assigned in this branch. Check the member record and choose the correct number.' });
+        let createdMember;
+        try {
+          createdMember = await Member.create({
+            firstName: names.shift() || target.fullName,
+            lastName: names.join(' ') || 'Member',
+            phone: target.registrationPhone,
+            email: target.email,
+            membershipNumber: suppliedNumber,
+            status: 'member',
+            homeOrganisation: target.organisation
+          });
+        } catch (error) {
+          if (error?.code === 11000) return res.status(409).json({ message: 'That membership number was assigned at the same time by another user. Refresh the workspace and verify the correct member record.' });
+          throw error;
+        }
+        verifiedMember = { _id: createdMember._id, membershipNumber: createdMember.membershipNumber };
+      } else if (!verifiedMember.membershipNumber && suppliedNumber) {
+        const updatedMember = await Member.findOneAndUpdate(
+          { _id: verifiedMember._id, homeOrganisation: target.organisation, $or: [{ membershipNumber: { $exists: false } }, { membershipNumber: null }, { membershipNumber: '' }] },
+          { $set: { membershipNumber: suppliedNumber } },
+          { new: true, runValidators: true }
+        ).select('_id membershipNumber').lean();
+        if (!updatedMember) return res.status(409).json({ message: 'This member record was updated by someone else. Refresh the workspace and verify it again.' });
+        verifiedMember = updatedMember;
+      }
+
       if (await User.exists({ memberProfile: verifiedMember._id, _id: { $ne: target._id } })) {
         return res.status(409).json({ message: 'This member already has a portal account.' });
       }
       target.memberProfile = verifiedMember._id;
+      if (verifiedMember.membershipNumber) target.claimedMembershipNumber = verifiedMember.membershipNumber;
     }
     if (decision === 'approve' && target.registrationCategory === 'official') {
       const roleRank = { super_admin:100, international_executive:90, national_admin:80, regional_overseer:70, district_pastor:60, branch_pastor:50, branch_admin:45, treasurer:35, department_leader:25, member:10 };
