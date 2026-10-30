@@ -8,6 +8,7 @@ This document distinguishes working code from planned work. A module is not prod
 - Database-backed registers and create/update/archive workflows for members, visitor follow-up, attendance, events and event registrations, departments, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training, ministry reports and other operations.
 - Scoped user administration with role hierarchy checks, account activation/deactivation and one-time temporary passwords.
 - Finance transaction entry with separate approval/confirmation controls; confirming a transaction creates its corresponding balanced posted journal entry using validated organisation-specific debit and credit accounts.
+- Daraja M-Pesa STK Push request, secret-protected callback handling, callback amount/phone validation and idempotent confirmed finance transaction plus balanced ledger posting. Live use requires NCBI's approved Safaricom credentials and a deployed public HTTPS callback URL.
 - Chart of accounts, balanced double-entry journal submission and independent posting, expense budgets and bank statement reconciliation APIs and client workspaces. Bank reconciliation compares posted ledger activity with the entered statement balance; it does not import bank statements or connect to a bank feed.
 - GitHub Actions CI workflow for server syntax/tests and client production build.
 - Hierarchical organisation creation with parent-level validation and pending/active/suspended/archived lifecycle.
@@ -21,7 +22,7 @@ This document distinguishes working code from planned work. A module is not prod
 - Sensitive pastoral entities have narrower role access and default private visibility.
 
 ## Not yet production-complete
-- Automated Daraja/M-Pesa STK push and callback reconciliation, bank feeds, electronic receipts, tax handling and multi-stage approval matrices. The manual ledger and bank statement reconciliation tools do not constitute a payment gateway integration.
+- Bank feeds, electronic receipts, tax handling and multi-stage approval matrices. The manual bank reconciliation tool does not import statements or connect to a bank feed.
 - Full visitor conversion workflow, QR attendance, member self-service, child safeguarding and consent management.
 - Encrypted pastoral notes, granular case assignments and field-level access controls.
 - SMS/email/WhatsApp provider integrations and delivery receipts.
