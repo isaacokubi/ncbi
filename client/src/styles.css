@@ -112,3 +112,88 @@
 .portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}.portal-grid>.panel{min-width:0;overflow:hidden}.portal-profile{grid-column:1/-1;padding:26px}.portal-profile h2{margin:8px 0 2px;font-size:26px}.portal-profile>p{color:var(--muted,#777)}.portal-meta{display:flex;gap:26px;flex-wrap:wrap;margin:20px 0}.portal-meta span{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted,#777)}.portal-meta b{font-size:14px;color:var(--text,#222)}@media(max-width:900px){.portal-grid{grid-template-columns:1fr}.portal-profile{grid-column:auto}}
 .portal-event-copy{flex:1;min-width:0}.portal-event-copy small{display:block;color:var(--muted,#777);margin-top:4px}
 .public-site{min-height:100vh;background:#fff;color:#24162a}.public-header{height:82px;padding:0 clamp(20px,6vw,90px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}.public-brand{display:flex;align-items:center;gap:12px}.public-brand b{display:block;font-size:21px;color:#220031}.public-brand small{display:block;font-size:9px;letter-spacing:1.2px;color:#7a687e}.public-hero{padding:100px clamp(24px,10vw,150px);background:linear-gradient(115deg,#220031,#260823);color:#fff;min-height:400px}.public-hero h1{font-size:clamp(42px,7vw,76px);line-height:1.02;margin:18px 0}.public-hero p{max-width:600px;line-height:1.7;color:#eee1f0;font-size:17px}.public-hero strong{display:inline-block;margin-top:24px;color:#dfcc80;letter-spacing:3px}.public-section{padding:50px clamp(20px,6vw,90px)}.public-branches,.public-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}.public-branches .panel,.public-cards .panel{padding:20px}.public-branches h3,.public-cards h3{margin:0 0 8px;color:#260823}.public-branches p,.public-cards p{color:#776c7a;line-height:1.5}.public-branches a{color:#8e6b2b}.public-footer{background:#220031;color:#fff;padding:35px clamp(20px,6vw,90px);display:flex;flex-direction:column;gap:8px}.public-footer span{font-size:11px;letter-spacing:1px;color:#dfcc80}.public-footer small{color:#e9dff0}.auth-public-link{margin-top:12px;width:100%;justify-content:center}@media(max-width:600px){.public-header{height:70px}.public-brand small{font-size:7px}.public-hero{padding-top:65px;padding-bottom:65px}.public-section{padding-top:34px;padding-bottom:34px}}
+
+
+/* Typography system: accessible, consistent sizing across every workspace. */
+:root{
+  font-size:16px;
+  --font-body:15px;
+  --font-small:13px;
+  --font-micro:12px;
+  --font-heading:clamp(1.65rem,2vw,2rem);
+}
+body{font-size:var(--font-body);line-height:1.55}
+button,input,select,textarea{font:inherit}
+.sidebar .brand strong{font-size:22px}
+.brand span{font-size:11px;letter-spacing:1.25px}
+.workspace-avatar,.profile-avatar,.top-avatar{font-size:13px}
+.workspace-switch b,.profile b{font-size:13px}
+.workspace-switch small,.profile small{font-size:11px;line-height:1.4}
+.searchbox input{font-size:13px}
+.searchbox input::placeholder{font-size:13px}
+.nav-heading{font-size:11px;letter-spacing:1px}
+.nav-item{font-size:13px;min-height:42px}
+.crumb,.topbar b{font-size:14px}
+.period-label{font-size:11px}
+.notification-pop{font-size:14px;line-height:1.55}
+.welcome h1,.module-heading h1{font-size:var(--font-heading)}
+.eyebrow{font-size:11px;letter-spacing:1px}
+.welcome p,.section-title p,.panel-heading p,.module-heading p{font-size:14px;line-height:1.6}
+.gold-button,.refresh-button,.text-button,.section-title select,.scope-bar button{font-size:13px}
+.scope-bar{font-size:13px;min-height:44px;height:auto;padding-block:9px}
+.section-title h2{font-size:19px}
+.stat-top{font-size:13px}
+.stat-card>strong{font-size:27px}
+.stat-card>small{font-size:12px}
+.positive{font-size:12px}
+.panel-heading h3{font-size:16px}
+.chart-key b,.chart-key small{font-size:12px}
+.chart-key strong{font-size:19px}
+.branch-row b,.alert-row b,.event-row b{font-size:13px}
+.branch-row small,.alert-row small,.event-row small{font-size:12px;line-height:1.45}
+.count-badge,.alert-count{font-size:12px}
+.date-tile b{font-size:18px}
+.date-tile small{font-size:10px}
+.app footer{font-size:11px;line-height:1.5}
+.auth-intro h1{font-size:30px}
+.auth-intro p{font-size:14px;line-height:1.65}
+.auth-card label{font-size:13px}
+.auth-card input{font-size:14px}
+.auth-submit{font-size:14px}
+.auth-foot{font-size:11px;line-height:1.55}
+.loading-screen b{font-size:21px}
+.loading-screen span{font-size:13px}
+.empty-state,.muted-note{font-size:13px;line-height:1.6}
+.module-placeholder h1{font-size:30px}
+.module-placeholder p{font-size:15px;line-height:1.7}
+.page-error,.page-success{font-size:13px}
+.module-heading p{font-size:14px}
+.table-search input{font-size:14px}
+.toolbar-right select,.inline-select{font-size:13px}
+.table-wrap th{font-size:11px;letter-spacing:.55px}
+.table-wrap td{font-size:13px;line-height:1.5}
+.table-wrap td b{font-size:13px}
+.cell-sub{font-size:12px;line-height:1.4}
+.status-pill{font-size:11px}
+.table-footer{font-size:12px}
+.editor-head h3{font-size:18px}
+.editor-head p{font-size:13px;line-height:1.5}
+.field{font-size:13px}
+.field input,.field select,.field textarea{font-size:14px;min-height:42px}
+.field .json-field{font-size:12px}
+.field-help{font-size:13px;line-height:1.55}
+.secondary-button{font-size:13px}
+.row-action{font-size:12px}
+.report-grid .stat-card>strong{font-size:24px}
+.portal-meta{font-size:13px}
+.portal-meta b{font-size:15px}
+@media(max-width:720px){
+  :root{--font-body:14px;--font-small:12px}
+  .welcome h1,.module-heading h1{font-size:25px}
+  .nav-item{font-size:12px}
+  .table-wrap th{font-size:10px}
+  .table-wrap td{font-size:12px;padding:12px 11px}
+  .table-wrap td b{font-size:12px}
+  .cell-sub{font-size:11px}
+  .field input,.field select,.field textarea{font-size:16px}
+}
