@@ -31,10 +31,12 @@ router.post('/login', async (req, res, next) => {
 // Privileged roles are provisioned separately by authorised administrators.
 router.get('/registration/branches', async (_req, res, next) => {
   try {
-    const branches = await Organisation.find({ level: 'branch', status: 'active' })
-      .select('name code country address').sort({ name: 1 }).lean();
+    const [branches, organisations] = await Promise.all([
+      Organisation.find({ level: 'branch', status: 'active' }).select('name code country address level').sort({ name: 1 }).lean(),
+      Organisation.find({ level: { $in: ['international','national','regional','district','branch'] }, status: 'active' }).select('name code country level').sort({ level: 1, name: 1 }).lean()
+    ]);
     res.set('Cache-Control', 'public, max-age=60');
-    res.json({ branches });
+    res.json({ branches, organisations });
   } catch (error) { next(error); }
 });
 
@@ -47,23 +49,30 @@ router.post('/register', async (req, res, next) => {
     const organisationId = String(req.body.organisation || '').trim();
     const category = String(req.body.category || '');
     const membershipNumber = String(req.body.membershipNumber || '').trim();
-    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member'].includes(category)) {
+    const requestedRole = String(req.body.requestedRole || '').trim();
+    const allowedRequestedRoles = ['international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer','department_leader'];
+    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member','official'].includes(category) || (category === 'official' && !allowedRequestedRoles.includes(requestedRole))) {
       return res.status(400).json({ message: 'Enter a valid name, email, phone, password (at least 6 characters), account category and church branch.' });
     }
-    const branch = await Organisation.findOne({ _id: organisationId, level: 'branch', status: 'active' }).select('_id').lean();
-    if (!branch) return res.status(400).json({ message: 'Select an active NCBI church branch.' });
+    const requestedLevels = { international_executive:['international'], national_admin:['national'], regional_overseer:['regional'], district_pastor:['district'], branch_pastor:['branch'], branch_admin:['branch'], treasurer:['branch','district','regional','national'], department_leader:['branch','district','regional','national'] };
+    const allowedLevels = category === 'official' ? requestedLevels[requestedRole] : ['branch'];
+    const branch = await Organisation.findOne({ _id: organisationId, level: { $in: allowedLevels }, status: 'active' }).select('_id level').lean();
+    if (!branch) return res.status(400).json({ message: 'Select an active NCBI organisation at the level required for this application.' });
     if (category === 'member' && !membershipNumber) return res.status(400).json({ message: 'Enter your membership number so the branch pastor can verify your membership.' });
     if (await User.exists({ email })) return res.status(409).json({ message: 'An account with this email already exists.' });
     const passwordHash = await bcrypt.hash(password, 12);
     await User.create({
       fullName, email, passwordHash, role: 'member', organisation: branch._id,
       active: false, accountApproval: 'pending', registrationCategory: category,
+      requestedRole: category === 'official' ? requestedRole : undefined,
       registrationPhone: phone, claimedMembershipNumber: category === 'member' ? membershipNumber : undefined
     });
     res.status(201).json({
       message: category === 'member'
         ? 'Registration submitted. Your selected branch pastor must approve your membership before you can sign in.'
-        : 'Registration submitted. An NCBI administrator must approve your account before you can sign in.'
+        : category === 'official'
+          ? 'Official application submitted. NCBI leadership must verify your appointment and approve the requested dashboard before access is granted.'
+          : 'Registration submitted. An NCBI administrator must approve your account before you can sign in.'
     });
   } catch (error) { next(error); }
 });
@@ -79,11 +88,11 @@ router.get('/registrations/pending', requireAuth, async (req, res, next) => {
       filter.organisation = branchId;
       filter.registrationCategory = 'member';
     } else {
-      filter.registrationCategory = 'non_member';
+      filter.registrationCategory = { $in: ['non_member','official'] };
       if (req.user.role === 'branch_admin') filter.organisation = req.user.organisation?._id || req.user.organisation;
     }
     const registrations = await User.find(filter)
-      .select('fullName email organisation registrationCategory registrationPhone claimedMembershipNumber createdAt')
+      .select('fullName email organisation registrationCategory requestedRole registrationPhone claimedMembershipNumber createdAt')
       .populate('organisation','name code level').sort({ createdAt: 1 }).limit(200).lean();
     res.json({ registrations });
   } catch (error) { next(error); }
@@ -111,6 +120,14 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
         return res.status(409).json({ message: 'This member already has a portal account.' });
       }
       target.memberProfile = verifiedMember._id;
+    }
+    if (decision === 'approve' && target.registrationCategory === 'official') {
+      const roleRank = { super_admin:100, international_executive:90, national_admin:80, regional_overseer:70, district_pastor:60, branch_pastor:50, branch_admin:45, treasurer:35, department_leader:25, member:10 };
+      const levels = { international_executive:['international'], national_admin:['national'], regional_overseer:['regional'], district_pastor:['district'], branch_pastor:['branch'], branch_admin:['branch'], treasurer:['branch','district','regional','national'], department_leader:['branch','district','regional','national'] };
+      const requestedOrg = await Organisation.findById(target.organisation).select('level').lean();
+      if (!target.requestedRole || roleRank[target.requestedRole] === undefined || roleRank[target.requestedRole] >= roleRank[req.user.role]) return res.status(403).json({ message: 'You are not authorised to approve or assign the requested church dashboard.' });
+      if (!requestedOrg || !levels[target.requestedRole]?.includes(requestedOrg.level)) return res.status(409).json({ message: 'The requested dashboard does not match the selected church organisation level.' });
+      target.role = target.requestedRole;
     }
     if (decision === 'approve' && target.registrationCategory === 'non_member') {
       const names = target.fullName.split(/\s+/);
