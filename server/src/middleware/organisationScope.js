@@ -5,7 +5,7 @@ const DESCENDANT_ROLES = new Set(['super_admin','international_executive','natio
 export async function accessibleOrganisationIds(user) {
   const ownId = user.organisation?._id ?? user.organisation;
   if (!ownId) return [];
-  if (['super_admin','international_executive'].includes(user.role)) {
+  if (user.role === 'super_admin') {
     return (await Organisation.find({ status: { $ne: 'archived' } }).distinct('_id'));
   }
   if (!DESCENDANT_ROLES.has(user.role)) return [ownId];
