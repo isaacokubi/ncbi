@@ -26,6 +26,8 @@ export function dashboardMetricsForRole(role, metrics) {
     branches: metrics.branches
   };
   if (role === 'international_executive') return {
+    activeOrganisations: metrics.activeOrganisations,
+    activeUsers: metrics.activeUsers,
     nationalOffices: metrics.nationalOffices,
     regionalUnits: metrics.regionalUnits,
     districtUnits: metrics.districtUnits,
@@ -76,6 +78,7 @@ export function dashboardMetricsForRole(role, metrics) {
     pendingApprovals: metrics.pendingApprovals
   };
   if (role === 'branch_admin') return {
+    branches: metrics.branches,
     members: metrics.members,
     visitors: metrics.visitors,
     attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
