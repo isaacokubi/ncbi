@@ -256,3 +256,21 @@ The inventory workspace now has a dedicated organisation-scoped stock register i
 - Upload controls now expose the formats already validated by the server: JPG/PNG/WebP images (15 MB), MP4/WebM video (100 MB), MP3/M4A/WAV/OGG audio (50 MB), and PDF documents (25 MB). Images are resized/compressed in the browser; Cloudinary stores and optimises supported image/video media.
 - Audio and PDF submissions are shown as dedicated resource cards with an authenticated open action. Existing publication consent, branch scoping and headquarters review rules remain in place.
 - GitHub Actions run [41065938920](https://github.com/isaacokubi/ncbi/actions/runs/41065938920) completed successfully for commit `b7626c6314ce003051cd16e40c0e47ea97a8f020`, including server checks, client terminology tests and the production Vite build.
+
+
+## Operational workspace completion pass (30 October 2026)
+
+The eight stewardship workspaces now have dedicated task-focused interfaces rather than falling back to the generic record table:
+
+- **Inventory:** live stock register and immutable movement ledger, with receipts, issues, transfers, adjustments, stocktakes, reorder thresholds and balance safeguards.
+- **Procurement:** supplier directory, purchase requests, configured multi-approver decisions, invoice review and supplier payment settlement workflows. Quotation comparison and automatic purchase-order conversion remain outstanding.
+- **Communications:** campaign planning, audience/channel details, planned dates, approval notes and publication references. Server-side controls reserve approval, rejection and publication to headquarters leadership; publication requires a previously approved record and rejection requires a review explanation.
+- **Media ministry:** Cloudinary-backed church media library with image/video upload and authenticated audio/PDF resource actions, preserving consent and publication review controls.
+- **Transport:** trip scheduling with driver, vehicle, route, passenger, odometer, fuel and maintenance details, including next service date, provider, cost and vehicle availability state.
+- **Governance and compliance:** policy, resolution, meeting, risk and action registers with responsible officers, review dates, evidence references, status and completion controls. Past-due work is highlighted in the workspace.
+- **Membership and discipleship classes:** class programme/curriculum/capacity register plus learner enrolment requests, approval and dated lesson attendance history. Server checks the member's organisation, prevents repeat active enrolment for the same programme, enforces configured capacity and validates each attendance session. Attendance history is bounded to 100 sessions per enrolment.
+- **Ministry service rosters:** team, leader, service date/time, venue, assigned-member/role text, confirmations, substitutions and attendance state. Server prevents duplicate active rosters for the same ministry team/date/time in an organisation.
+
+All these records use the existing organisation-scoped OperationsRecord API and its audit trail. The pages do not claim to provide vehicle GPS/telematics, fuel-card reconciliation, automated calendar notifications, member-ID-based volunteer conflict detection, online examinations/certification, procurement quote scoring, or automatic purchase-order generation. Those require additional integrations or data models.
+
+Automated Node policy tests cover headquarters communication approval, approval-before-publication, and bounded/validated learner attendance history. GitHub Actions validates server/client syntax, client terminology resources and the production client build. These checks are not a substitute for a live multi-role MongoDB/Cloudinary integration test or user acceptance testing on the deployed production environment.
