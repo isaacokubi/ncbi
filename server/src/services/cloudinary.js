@@ -13,7 +13,7 @@ function configured(){
 export function uploadChurchMedia(buffer,{mimeType,isVideo,isAudio=false,isDocument=false,originalName}){
  const client=configured();
  const resourceType=isDocument?'raw':(isVideo||isAudio)?'video':'image';
- const publicId='ncbi/church-media/'+randomUUID();
+ const publicId='ncbi/church-media/'+randomUUID()+(isDocument?'.pdf':'');
  const transformation=isDocument||isAudio?[]:isVideo
   ?[{quality:'auto:good',video_codec:'h264',width:1920,height:1080,crop:'limit',format:'mp4'}]
   :[{quality:'auto:good',width:1920,height:1920,crop:'limit',format:'webp'}];
