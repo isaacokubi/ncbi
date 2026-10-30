@@ -38,6 +38,12 @@ router.post('/mpesa/callback/:secret',async(req,res)=>{
   if(!claimed)return res.status(200).json({ResultCode:0,ResultDesc:'Callback already being processed'});
   const receipt=String(get('MpesaReceiptNumber')||'');
   if(!receipt){await PaymentIntent.updateOne({_id:payment._id},{$set:{status:'accepted',responseDescription:'Successful callback omitted receipt number'}});return res.status(200).json({ResultCode:0,ResultDesc:'Receipt details pending'});}
+  const receiptOwner=await PaymentIntent.findOne({mpesaReceipt:receipt,_id:{$ne:payment._id}}).select('_id').lean();
+  const existingReceiptTransaction=await FinanceTransaction.findOne({organisation:payment.organisation,reference:receipt}).select('_id').lean();
+  if(receiptOwner||(existingReceiptTransaction&&String(existingReceiptTransaction._id)!==String(payment.financeTransaction||''))){
+   payment.status='failed';payment.responseDescription='M-Pesa receipt number is already recorded against another payment or finance transaction';payment.callbackReceivedAt=new Date();await payment.save();
+   return res.status(200).json({ResultCode:0,ResultDesc:'Duplicate receipt rejected for manual reconciliation'});
+  }
   let journal=await JournalEntry.findOne({sourceType:'mpesa_payment',sourceId:payment._id});
   if(!journal){
    journal=await JournalEntry.create({organisation:payment.organisation,entryNumber:'MPESA-'+String(payment._id),entryDate:new Date(),description:'M-Pesa payment '+receipt+' · '+payment.accountReference,status:'posted',lines:[{account:payment.debitAccount,debit:String(payment.amount),credit:'0.00'},{account:payment.creditAccount,debit:'0.00',credit:String(payment.amount)}],createdBy:payment.createdBy,postedAt:new Date(),sourceType:'mpesa_payment',sourceId:payment._id});
