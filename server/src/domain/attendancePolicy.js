@@ -12,7 +12,7 @@ export function validateAttendanceInput(input = {}) {
   if (!categories.has(category)) return { valid: false, message: 'Invalid attendance category' };
   if (!member && !visitorName) return { valid: false, message: 'Select a registered member or enter a visitor name' };
   if (member && visitorName) return { valid: false, message: 'An attendance record must identify either a member or a visitor, not both' };
-  if (member && !/^[a-f\\d]{24}$/i.test(member)) return { valid: false, message: 'Invalid member identifier' };
+  if (member && !/^[a-f0-9]{24}$/i.test(member)) return { valid: false, message: 'Invalid member identifier' };
   if (visitorName.length > 120) return { valid: false, message: 'Visitor name must be 120 characters or fewer' };
   return { valid: true, value: { activityName, category, heldAt, member, visitorName: visitorName || undefined } };
 }
