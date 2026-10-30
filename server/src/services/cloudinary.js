@@ -10,7 +10,7 @@ function configured(){
  return cloudinary;
 }
 
-export function uploadChurchMedia(buffer,{mimeType,isVideo,originalName}){
+export function uploadChurchMedia(buffer,{mimeType,isVideo,isAudio=false,isDocument=false,originalName}){
  const client=configured();
  const resourceType=isDocument?'raw':(isVideo||isAudio)?'video':'image';
  const publicId='ncbi/church-media/'+randomUUID();
