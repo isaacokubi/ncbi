@@ -666,3 +666,16 @@ p{line-height:1.65}
 .public-state[role="alert"]{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .public-state-error .public-retry-button{flex:0 0 auto}
 @media(max-width:520px){.public-state[role="alert"]{align-items:flex-start;flex-direction:column}}
+
+/* Controlled public registration and account approval */
+.public-register-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:43px;padding:0 16px;border:1px solid #d9bd72;border-radius:7px;background:#f8f1dc;color:#321842;font-size:12px;font-weight:850;cursor:pointer}
+.public-register-button:hover{background:#efe0b5}
+.registration-card{max-height:calc(100vh - 36px);overflow:auto}
+.registration-card form{display:grid;gap:9px}
+.registration-card form label{margin-top:5px}
+.registration-card form input,.registration-card form select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #dcd3e1;border-radius:7px;background:#fff;color:#2b1635;font:inherit}
+.registration-card .field-help{display:block;margin-top:-4px}
+.registration-success{padding:18px;border:1px solid #d7e8da;border-radius:10px;background:#f4faf5;color:#285c37}
+.registration-success p{line-height:1.65}
+.registration-success .auth-submit{width:100%;margin-top:12px}
+@media(max-width:760px){.public-register-button{width:100%;margin-top:8px}.registration-card{max-height:none}}
