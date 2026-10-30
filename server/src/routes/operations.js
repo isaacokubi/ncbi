@@ -319,6 +319,7 @@ router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
     if (!['pending','in_progress','completed'].includes(status)) return res.status(400).json({ message: 'Status must be pending, in_progress or completed' });
     let assignedTo = record.assignedTo || [];
     if (entity === 'communications' && req.body.data?.approvalStatus !== undefined && req.body.data.approvalStatus !== record.data?.approvalStatus) { const approvalError = communicationApprovalError(req.user.role, record.data?.approvalStatus, req.body.data.approvalStatus); if (approvalError) return res.status(approvalError.status).json({ message: approvalError.message }); }
+    if (entity === 'communications' && req.body.data?.approvalStatus === 'rejected' && !String(req.body.data?.approvalNotes || '').trim()) return res.status(400).json({ message: 'Add a review note explaining why this communication was rejected' });
     if (req.body.assignedTo !== undefined) {
       if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid pastoral assignee' });
       const pastor = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean();
@@ -703,6 +704,9 @@ router.post('/:entity', async (req, res, next) => {
       if (!payload.memberId || !String(payload.programmeName || '').trim() || !['discipleship','membership','baptism','leadership','other'].includes(payload.programmeType)) return res.status(400).json({ message: 'Select a member, programme name and valid programme type' });
       const duplicate = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_enrolment', status: { $ne: 'archived' }, 'data.memberId': String(payload.memberId), 'data.programmeName': String(payload.programmeName).trim() }).select('_id').lean();
       if (duplicate) return res.status(409).json({ message: 'This member already has an active enrolment for this programme' });
+      const classRecord = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_class', status: { $ne: 'archived' }, $or: [{ 'data.programmeName': String(payload.programmeName).trim() }, { title: String(payload.programmeName).trim() }] }).select('data.capacity data.enrolledCount').lean();
+      if (!classRecord) return res.status(400).json({ message: 'Select an existing membership or discipleship class programme' });
+      if (Number(classRecord.data?.capacity) > 0) { const currentEnrolments = await OperationsRecord.countDocuments({ organisation: targetOrg, entity: 'member_enrolment', 'data.programmeName': String(payload.programmeName).trim(), status: { $nin: ['archived','rejected','cancelled'] } }); if (currentEnrolments >= Number(classRecord.data.capacity)) return res.status(409).json({ message: 'This class has reached its configured enrolment capacity' }); }
     }
     if (entity === 'communications') { const approvalError = communicationApprovalError(req.user.role, null, payload.approvalStatus); if (approvalError) return res.status(approvalError.status).json({ message: approvalError.message }); }
     if (entity === 'volunteer_schedule' && payload.serviceDate && payload.serviceTime && payload.ministryTeam) {
