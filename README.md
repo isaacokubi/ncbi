@@ -29,6 +29,10 @@ There is intentionally no public sign-up route and no default administrator. Pro
 
 Operations entities include departments, events and event registrations, visitor follow-ups, pastoral and prayer records, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training and ministry reports. Sensitive pastoral, prayer, benevolence, discipline and counselling records are role-gated and private by default; field-level encryption and specialist safeguarding workflows are still required before real sensitive data is stored. Sensitive pastoral records are separately role-gated. Finance entries are submitted first; creator self-approval is prohibited and only confirmed transactions contribute to totals.
 
+## Attendance controls
+
+Attendance submissions are validated before persistence: activity names, dates, category values, member identifiers and visitor names are checked and normalised. A submission must identify either one registered member or one visitor, and a registered member must belong to the exact organisation selected for the attendance record. Attendance history is indexed by organisation and date for the paginated register.
+
 ## Security and delivery notes
 Organisation scopes are resolved server-side from the hierarchy; client-supplied organisation IDs are never accepted without checking the user's permitted subtree. Financial values use Decimal128. Sensitive pastoral data should undergo a privacy impact assessment and field-level access review before production. This codebase is an implementation baseline, not a claim of production certification.
 
