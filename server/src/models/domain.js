@@ -58,7 +58,7 @@ const journalEntrySchema = new Schema({
   sourceType: String,
   sourceId: Schema.Types.ObjectId
 }, { timestamps: true });
-journalEntrySchema.index({ organisation: 1, entryNumber: 1 }, { unique: true });
+journalEntrySchema.index({ organisation: 1, entryNumber: 1 }, { unique: true });\njournalEntrySchema.index({ sourceType: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceType: { $type: 'string' }, sourceId: { $type: 'objectId' } } });
 
 const budgetSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
