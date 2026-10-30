@@ -24,6 +24,8 @@ const userSchema = new Schema({
   active: { type: Boolean, default: true }
 }, timestamps);
 
+userSchema.index({ memberProfile: 1 }, { unique: true, partialFilterExpression: { memberProfile: { $type: 'objectId' } } });
+
 const memberSchema = new Schema({
   membershipNumber: { type: String, trim: true, index: true },
   firstName: { type: String, required: true, trim: true },
