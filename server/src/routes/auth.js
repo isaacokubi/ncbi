@@ -16,13 +16,13 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ message: 'Email or password is incorrect' });
     }
     const token = jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '8h' });
-    res.json({ token, user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, organisation: user.organisation } });
+    res.json({ token, user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, permissions: user.permissions || [], organisation: user.organisation } });
   } catch (error) { next(error); }
 });
 
 router.get('/me', requireAuth, async (req, res) => {
   await req.user.populate('organisation', 'name code level');
-  res.json({ user: { id: req.user.id, fullName: req.user.fullName, email: req.user.email, role: req.user.role, organisation: req.user.organisation } });
+  res.json({ user: { id: req.user.id, fullName: req.user.fullName, email: req.user.email, role: req.user.role, permissions: req.user.permissions || [], organisation: req.user.organisation } });
 });
 
 export default router;
