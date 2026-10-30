@@ -1,56 +1,56 @@
 import { Router } from 'express';
 import { Organisation, Member, Attendance, FinanceTransaction } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
+import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 
-const router = Router();
-router.use(requireAuth);
-
-router.get('/organisations', async (req, res, next) => {
-  try {
-    const elevated = ['super_admin', 'international_executive'].includes(req.user.role);
-    const query = elevated ? {} : { _id: req.user.organisation._id ?? req.user.organisation };
-    const organisations = await Organisation.find(query).sort({ level: 1, name: 1 }).lean();
-    res.json({ organisations });
-  } catch (error) { next(error); }
+const router = Router(); router.use(requireAuth);
+router.get('/organisations', async (req,res,next)=>{
+  try { const ids=await accessibleOrganisationIds(req.user); const organisations=await Organisation.find({_id:{$in:ids}}).sort({level:1,name:1}).lean(); res.json({organisations}); }
+  catch(e){next(e);}
 });
-
-router.post('/organisations', allowRoles('super_admin', 'international_executive'), async (req, res, next) => {
-  try {
-    const { name, code, level, parent, country, currency, contactEmail, phone } = req.body;
-    if (!name || !code || !level) return res.status(400).json({ message: 'Name, code and level are required' });
-    if (level !== 'international' && !parent) return res.status(400).json({ message: 'A parent organisation is required' });
-    const organisation = await Organisation.create({ name, code, level, parent: parent || null, country, currency, contactEmail, phone, status: 'pending' });
-    res.status(201).json({ organisation });
-  } catch (error) { next(error); }
+router.post('/organisations',allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor'),async(req,res,next)=>{
+  try{
+    const {name,code,level,parent,country,currency,contactEmail,phone}=req.body;
+    const levels=['international','national','regional','district','branch'];
+    if(!name||!code||!levels.includes(level)) return res.status(400).json({message:'Name, code and valid level are required'});
+    if(level==='international'&& !['super_admin','international_executive'].includes(req.user.role)) return res.status(403).json({message:'Only international leadership can create the top organisation'});
+    if(level!=='international'){
+      if(!parent||!(await assertOrganisationAccess(req.user,parent))) return res.status(403).json({message:'Parent organisation outside your authorised scope'});
+      const parentOrg=await Organisation.findById(parent);
+      const expected=levels[levels.indexOf(level)-1];
+      if(!parentOrg||parentOrg.level!==expected) return res.status(400).json({message:`${level} must be created under a ${expected} organisation`});
+    }
+    const organisation=await Organisation.create({name,code,level,parent:parent||null,country,currency,contactEmail,phone,status:'pending'});
+    res.status(201).json({organisation});
+  }catch(e){next(e);}
 });
-
-router.get('/members', async (req, res, next) => {
-  try {
-    const query = ['super_admin', 'international_executive'].includes(req.user.role) ? {} : { homeOrganisation: req.user.organisation._id ?? req.user.organisation };
-    const members = await Member.find(query).sort({ createdAt: -1 }).limit(100).lean();
-    res.json({ members });
-  } catch (error) { next(error); }
+router.patch('/organisations/:id/status',allowRoles('super_admin','international_executive','national_admin'),async(req,res,next)=>{
+  try{
+    if(!['active','suspended','archived'].includes(req.body.status)) return res.status(400).json({message:'Invalid organisation status'});
+    if(!(await assertOrganisationAccess(req.user,req.params.id))) return res.status(403).json({message:'Organisation outside your authorised scope'});
+    const organisation=await Organisation.findByIdAndUpdate(req.params.id,{status:req.body.status},{new:true,runValidators:true});
+    if(!organisation) return res.status(404).json({message:'Organisation not found'});
+    res.json({organisation});
+  }catch(e){next(e);}
 });
-
-router.post('/members', async (req, res, next) => {
-  try {
-    const { firstName, lastName, phone, email, status } = req.body;
-    if (!firstName || !lastName) return res.status(400).json({ message: 'First and last name are required' });
-    const member = await Member.create({ firstName, lastName, phone, email, status, homeOrganisation: req.user.organisation._id ?? req.user.organisation });
-    res.status(201).json({ member });
-  } catch (error) { next(error); }
+router.get('/members',async(req,res,next)=>{
+  try{const ids=await accessibleOrganisationIds(req.user);const page=Math.max(1,Number(req.query.page)||1),limit=Math.min(100,Math.max(1,Number(req.query.limit)||25));const filter={homeOrganisation:{$in:ids}};if(req.query.status)filter.status=req.query.status;const [members,total]=await Promise.all([Member.find(filter).sort({createdAt:-1}).skip((page-1)*limit).limit(limit).lean(),Member.countDocuments(filter)]);res.json({members,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});}
+  catch(e){next(e);}
 });
-
-router.get('/attendance/summary', async (req, res, next) => {
-  try {
-    const org = req.user.organisation._id ?? req.user.organisation;
-    const [members, attendance, transactions] = await Promise.all([
-      Member.countDocuments({ homeOrganisation: org, status: { $in: ['member', 'worker', 'minister'] } }),
-      Attendance.countDocuments({ organisation: org, heldAt: { $gte: new Date(new Date().setDate(1)) } }),
-      FinanceTransaction.aggregate([{ $match: { organisation: org, status: 'confirmed', direction: 'income' } }, { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } }])
-    ]);
-    res.json({ members, attendanceRecordsThisMonth: attendance, confirmedIncomeThisMonth: transactions[0]?.total || 0 });
-  } catch (error) { next(error); }
+router.post('/members',async(req,res,next)=>{
+  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership registration permission required'});const {firstName,lastName,phone,email,status}=req.body;if(!firstName||!lastName)return res.status(400).json({message:'First and last name are required'});const member=await Member.create({firstName,lastName,phone,email,status,homeOrganisation:req.user.organisation._id??req.user.organisation});res.status(201).json({member});}
+  catch(e){next(e);}
 });
-
+router.post('/members/:id/transfer',allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'),async(req,res,next)=>{
+  try{const {toOrganisation,note}=req.body;if(!(await assertOrganisationAccess(req.user,toOrganisation)))return res.status(403).json({message:'Destination outside your authorised scope'});const member=await Member.findById(req.params.id);if(!member||!(await assertOrganisationAccess(req.user,member.homeOrganisation)))return res.status(404).json({message:'Member not found'});if(String(member.homeOrganisation)===String(toOrganisation))return res.status(409).json({message:'Member already belongs to this organisation'});member.transferHistory.push({from:member.homeOrganisation,to:toOrganisation,approvedBy:req.user._id,transferredAt:new Date(),note});member.homeOrganisation=toOrganisation;member.status='member';await member.save();res.json({member});}
+  catch(e){next(e);}
+});
+router.post('/attendance',async(req,res,next)=>{
+  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','department_leader'].includes(req.user.role))return res.status(403).json({message:'Attendance recording permission required'});const {activityName,category,heldAt,member,visitorName,organisation}=req.body;const org=organisation||req.user.organisation._id;if(!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});if(!activityName||!heldAt||(!member&&!visitorName))return res.status(400).json({message:'Activity, date and member or visitor are required'});const attendance=await Attendance.create({organisation:org,activityName,category,heldAt,member:member||null,visitorName,recordedBy:req.user._id});res.status(201).json({attendance});}
+  catch(e){next(e);}
+});
+router.get('/attendance/summary',async(req,res,next)=>{
+  try{const ids=await accessibleOrganisationIds(req.user);const month=new Date();month.setDate(1);month.setHours(0,0,0,0);const [members,attendance,transactions]=await Promise.all([Member.countDocuments({homeOrganisation:{$in:ids},status:{$in:['member','worker','minister']}}),Attendance.countDocuments({organisation:{$in:ids},heldAt:{$gte:month}}),FinanceTransaction.aggregate([{$match:{organisation:{$in:ids},status:'confirmed',direction:'income',occurredAt:{$gte:month}}},{$group:{_id:'$currency',total:{$sum:{$toDouble:'$amount'}}}}])]);res.json({members,attendanceRecordsThisMonth:attendance,confirmedIncomeThisMonth:transactions});}
+  catch(e){next(e);}
+});
 export default router;
