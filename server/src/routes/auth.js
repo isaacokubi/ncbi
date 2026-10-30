@@ -7,7 +7,7 @@ import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
 import { passwordChangeError, passwordLengthError, phoneNumberError } from '../domain/authPolicy.js';
 import { accountActionUrl, sendAccountEmail } from '../services/email.js';
-import { registrationDecisionError, registrationScopeError } from '../domain/registrationPolicy.js';
+import { registrationDecisionError, registrationScopeError, registrationIdentityMatches } from '../domain/registrationPolicy.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
 const router = Router();
@@ -124,24 +124,13 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
         ? await Member.findOne({ homeOrganisation: target.organisation, membershipNumber: suppliedNumber, status: { $in: eligibleStatuses } }).select('_id membershipNumber').lean()
         : null;
 
-      const normalizePhone = value => {
-        const digits = String(value || '').replace(/\D/g, '');
-        if (digits.startsWith('254')) return digits.slice(3);
-        if (digits.startsWith('0')) return digits.slice(1);
-        return digits;
-      };
       if (!verifiedMember && target.registrationPhone) {
         const candidates = await Member.find({
           homeOrganisation: target.organisation,
           status: { $in: eligibleStatuses },
           phone: { $exists: true, $ne: '' }
         }).select('_id firstName lastName phone membershipNumber').lean();
-        const applicantName = target.fullName.toLocaleLowerCase().replace(/\s+/g, ' ').trim();
-        const phone = normalizePhone(target.registrationPhone);
-        const matches = candidates.filter(member =>
-          normalizePhone(member.phone) === phone &&
-          (member.firstName + ' ' + member.lastName).toLocaleLowerCase().replace(/\s+/g, ' ').trim() === applicantName
-        );
+        const matches = candidates.filter(member => registrationIdentityMatches(member, target.fullName, target.registrationPhone));
         if (matches.length > 1) return res.status(409).json({ message: 'More than one member matches this name and phone number. Ask the applicant for their membership number or resolve the duplicate member records before approving.' });
         if (matches.length === 1) verifiedMember = matches[0];
       }
