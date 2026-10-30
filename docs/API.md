@@ -109,3 +109,10 @@ The generic operations register is available to senior, district and branch mana
 - Pastoral prayer-request follow-up is managed through the dedicated follow-up route; the portal exposes only the short member-visible update, not internal pastoral notes.
 - The Documents register allows a manager to assign a document to a member profile before uploading files. Only the exact assigned member account can download its private file versions.
 - The Member Notifications workspace resolves the selected member to one active portal account and sends an in-app notification. This is not an email/SMS provider integration.
+
+
+## Public website CMS
+- `GET /api/public/content` returns only active branches, explicitly public upcoming events, active public announcements and the currently published public website copy. Website copy is returned as `siteContent.pages`, `siteContent.navigation` and `siteContent.footer`.
+- `GET /api/site-content` requires an authenticated super_admin or national_admin account and returns the editable global website content document.
+- `PUT /api/site-content` requires an authenticated super_admin or national_admin account. Send `{ content: { pages, navigation, footer } }`. Only the supported public page keys are accepted and the complete content payload is limited to 100 KB. The API never accepts HTML for execution; public copy is rendered as ordinary React text.
+- `PUT /api/branding/logo` remains the separate authorised logo replacement endpoint. Public branch, event and announcement records continue to be managed in their respective workspaces rather than duplicated in the CMS.
