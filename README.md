@@ -12,11 +12,11 @@ NCBI-CMS is a MERN monorepo for New Church Believers International. It is design
 2. Copy `server/.env.example` to `server/.env`; set a MongoDB URI and a random JWT secret (32+ characters).
 3. Run `npm install`, then `npm run dev`.
 4. Client: http://localhost:5173; API health: http://localhost:5000/api/health.
-5. Sign in with an administrator provisioned through the one-time bootstrap procedure below; there is no public registration.
+5. Sign in with an administrator provisioned through the one-time bootstrap procedure below. Public registration is available for basic member-portal requests, but every application remains inactive until approved.
 
 The React client uses `VITE_API_URL` when set; otherwise it calls `/api`. Vite proxies `/api` to `http://localhost:5000` during development (override with `API_PROXY_TARGET`); production deployments must provide a same-origin reverse proxy or set `VITE_API_URL`. The dashboard obtains its KPIs, upcoming events and organisation directory from authenticated API endpoints. The reporting workspace reads consolidated trend and branch-performance data from the reporting API. The public NCBI website reads only active branch details and records explicitly published with public visibility. Member accounts can be linked to a member profile and use a restricted self-service portal for attendance, branch events, registrations and public notices. Several advanced capabilities remain explicitly gated in the implementation status document.
 
-There is intentionally no public sign-up route and no default administrator. Provision the first administrator once from a trusted terminal after setting the required variables in `server/.env`: `BOOTSTRAP_NAME`, `BOOTSTRAP_EMAIL`, `BOOTSTRAP_PASSWORD` (at least 6 characters), `BOOTSTRAP_ORG_NAME` and `BOOTSTRAP_ORG_CODE`. Optional variables are `BOOTSTRAP_COUNTRY` and `BOOTSTRAP_CURRENCY`. Then run `npm run bootstrap-admin -w server`. The script refuses to overwrite an existing account or organisation and never prints the password. Do not commit `.env` or share bootstrap credentials.
+There is no default administrator. Public registration creates only an inactive, pending basic member-portal request; applicants cannot choose or assign privileged roles. Provision the first administrator once from a trusted terminal after setting the required variables in `server/.env`: `BOOTSTRAP_NAME`, `BOOTSTRAP_EMAIL`, `BOOTSTRAP_PASSWORD` (at least 6 characters), `BOOTSTRAP_ORG_NAME` and `BOOTSTRAP_ORG_CODE`. Optional variables are `BOOTSTRAP_COUNTRY` and `BOOTSTRAP_CURRENCY`. Then run `npm run bootstrap-admin -w server`. The script refuses to overwrite an existing account or organisation and never prints the password. Do not commit `.env` or share bootstrap credentials.
 
 ## Implemented API foundations
 - `POST /api/auth/login`, `GET /api/auth/me`
@@ -37,6 +37,20 @@ There is intentionally no public sign-up route and no default administrator. Pro
 - `GET/POST /api/operations/safeguarding/consents`, `PATCH /api/operations/safeguarding/consents/:id/revoke` (restricted minor consent capture and immutable revocation history)
 
 Event registration supports authenticated self-service, duplicate-safe submissions, cancellation/re-registration, and leadership-managed registration status. Member accounts can only list their own registration records; the leadership register is role-restricted. Operations entities include departments, events and event registrations, visitor follow-ups, pastoral and prayer records, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training and ministry reports. Sensitive pastoral, prayer, benevolence, discipline and counselling records are role-gated and private by default; field-level encryption and specialist safeguarding workflows are still required before real sensitive data is stored. Sensitive pastoral records are separately role-gated. Finance entries are submitted first; creator self-approval is prohibited and only confirmed transactions contribute to totals.
+
+
+## Controlled public registration and approvals
+
+The public website exposes a **Register** action and a registration form for existing members and non-members/visitors. Applicants must provide their name, email, phone, password and select an active NCBI branch. Member applicants must also provide their existing membership number for verification. Public registration can only request the basic member-portal role; it cannot create staff, pastor, administrator or superadmin accounts.
+
+- `GET /api/auth/registration/branches` lists active branches available for registration.
+- `POST /api/auth/register` creates an inactive `pending` account request. Duplicate email addresses are rejected and the endpoint inherits the authentication rate limit.
+- `GET /api/auth/registrations/pending` returns only the pending queue the caller is authorised to review.
+- `PATCH /api/auth/registrations/:id/decision` approves or rejects a pending request; rejection requires a reason.
+
+Existing-member applications are visible only to the pastor assigned to the selected branch. Before approval, the server verifies that the supplied membership number belongs to an eligible member record in that same branch and that the member does not already have a portal account. A successful approval links the portal account to that member record. Non-member/visitor applications are approved by an authorised administrator; branch administrators are restricted to their own branch, while national and super administrators have wider oversight. An approved visitor receives a visitor member record for the member portal.
+
+All new requests are inactive and cannot sign in while pending or rejected. Approval and rejection are written to the audit log. Existing provisioned accounts retain the default approved status. Account creation through authenticated user administration remains role-hierarchy constrained and is separate from public registration. No public registration action can grant privileged roles.
 
 ## Attendance controls
 
