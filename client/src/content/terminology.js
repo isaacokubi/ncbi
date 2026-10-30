@@ -121,16 +121,79 @@ export const SUCCESS_MESSAGES = Object.freeze({
 });
 
 export const DEFAULT_SITE_CONTENT = {
-  navigation: { about: 'About NCBI', mission: 'Our mission', ministries: 'Ministries', branches: 'Find a branch', programmes: 'Programmes', news: 'News and notices', contact: 'Contact', register: 'Connect with NCBI', signIn: 'Member and staff sign in' },
+  navigation: { about: 'About NCBI', mission: 'Our mission', ministries: 'Ministries', branches: 'Our branches', programmes: 'Programmes and events', news: 'News and announcements', contact: 'Contact us', register: 'Become part of NCBI', signIn: 'Member and staff portal' },
   pages: {
-    home: { kicker: 'NEW CHURCH BELIEVERS INTERNATIONAL', titleLine1: 'One Church.', titleLine2: 'One Vision.', description: 'A Christian community serving God and neighbours through worship, fellowship, discipleship and practical care. Discover an NCBI congregation and find a place to connect.', branchesCta: 'Find an NCBI branch', registerCta: 'Connect with NCBI', workspaceCta: 'Member and staff sign in', motto: 'A CALL TO SERVE', heroCaptionTitle: 'Faith expressed in service.', heroCaptionText: 'Worship, grow and serve with your local congregation.', strapline: ['GROWING IN FAITH', 'SERVING WITH COMPASSION', 'CONNECTED IN COMMUNITY'] },
-    about: { eyebrow: 'WHO WE ARE', titleLine1: 'A church family,', titleLine2: 'united in faith and service.', body: 'New Church Believers International is a Christian church community with congregations serving in their local contexts. NCBI brings people together for worship, fellowship, biblical learning and practical service. Our shared identity is expressed in the call to serve God and care for our neighbours.' },
-    mission: { eyebrow: 'OUR SHARED PURPOSE', title: 'Faith that forms a life of service.', subtitle: 'Worship, discipleship and care for our communities shape the way we serve together.', cards: [{ eyebrow: '01 / WORSHIP', title: 'Worship together', body: 'Gather as a church family for prayer, praise, teaching and fellowship.' }, { eyebrow: '02 / DISCIPLESHIP', title: 'Grow in faith', body: 'Encourage learning, spiritual formation and faithful service throughout life.' }, { eyebrow: '03 / COMMUNITY', title: 'Care for our neighbours', body: 'Put compassion into practice through local ministry, outreach and support.' }] },
-    ministries: { eyebrow: 'LIFE TOGETHER', titleLine1: 'Many ways to worship,', titleLine2: 'learn and serve.', body: 'NCBI congregations bring people together through worship, discipleship, pastoral care and community outreach. Contact a local branch to learn which ministries and programmes are available in your area.', cta: 'Find a local congregation', cards: [{ title: 'Worship and fellowship', body: 'Gather with a congregation for worship, encouragement and shared life.' }, { title: 'Discipleship and teaching', body: 'Build a foundation for Christian life through learning and mentoring.' }, { title: 'Pastoral care', body: 'Offer prayer, practical support and compassionate care within the church community.' }, { title: 'Outreach and service', body: 'Serve local communities and share the Christian message with care and respect.' }] },
-    branches: { eyebrow: 'FIND YOUR CHURCH FAMILY', title: 'NCBI congregations', subtitle: 'Explore active branches and connect with a local congregation.', empty: 'The branch directory is being updated. Please contact the NCBI office for help finding a congregation.' },
-    programmes: { eyebrow: 'GATHER · LEARN · SERVE', title: 'Church programmes and events', subtitle: 'See programmes published by NCBI branches and ministry teams.', empty: 'No public programmes are listed at present. Check again later or contact a local branch for its programme schedule.' },
-    news: { eyebrow: 'CHURCH NEWS AND NOTICES', title: 'Updates from NCBI', subtitle: 'Read notices that NCBI branches and authorised leaders have chosen to publish.', empty: 'There are no public notices at present.' },
-    contact: { eyebrow: 'CONNECT WITH NCBI', titleLine1: 'Find a place', titleLine2: 'to worship and serve.', body: 'Contact a local congregation to ask about worship, programmes, membership or ways to get involved. For account access, use the member and staff sign-in.', branchesCta: 'Find a branch', signInCta: 'Member and staff sign in' }
+    home: {
+      kicker: 'NEW CHURCH BELIEVERS INTERNATIONAL',
+      titleLine1: 'One Church.',
+      titleLine2: 'One Vision.',
+      description: 'A Christ-centred church family committed to proclaiming the Gospel, nurturing believers and serving communities with faith, integrity and compassion. Discover our work and connect with an NCBI congregation.',
+      branchesCta: 'Explore our branches',
+      registerCta: 'Connect with NCBI',
+      workspaceCta: 'Member and staff portal',
+      motto: 'FAITH IN ACTION. SERVICE WITH PURPOSE.',
+      heroCaptionTitle: 'Rooted in faith. United in purpose.',
+      heroCaptionText: 'Growing together in Christ and serving people with compassion.',
+      strapline: ['GROUNDED IN THE WORD', 'UNITED IN CHRIST', 'COMMITTED TO SERVICE']
+    },
+    about: {
+      eyebrow: 'ABOUT NEW CHURCH BELIEVERS INTERNATIONAL',
+      titleLine1: 'A people of faith,',
+      titleLine2: 'called to make a difference.',
+      body: 'New Church Believers International (NCBI) is a Christian church family bringing congregations together in a shared commitment to faith in Jesus Christ, biblical teaching and service to others. Across our church community, we seek to create places where people can worship, grow as disciples, build meaningful relationships and put Christian faith into practice. We value servant-hearted leadership, strong local congregations and a united vision for sharing the love and hope of Christ.'
+    },
+    mission: {
+      eyebrow: 'OUR MISSION AND VALUES',
+      title: 'Faith in Christ. A life of purpose. A commitment to serve.',
+      subtitle: 'Our calling is expressed through biblical worship, intentional discipleship, compassionate ministry and responsible service in the communities where God has placed us.',
+      cards: [
+        { eyebrow: '01 / WORSHIP', title: 'Worship centred on Christ', body: 'We gather to honour God through prayer, praise, the teaching of Scripture and fellowship, cultivating a faith that shapes every part of life.' },
+        { eyebrow: '02 / DISCIPLESHIP', title: 'Forming mature disciples', body: 'We encourage every believer to grow in the knowledge of God, develop Christlike character and use their gifts faithfully in the service of others.' },
+        { eyebrow: '03 / COMMUNITY', title: 'Compassion in action', body: 'We respond to the needs of our neighbours with dignity, practical care and a commitment to strengthen families and communities.' },
+        { eyebrow: '04 / LEADERSHIP', title: 'Serving with integrity', body: 'We pursue accountable, transparent and servant-hearted leadership that equips people and strengthens the mission of the Church.' }
+      ]
+    },
+    ministries: {
+      eyebrow: 'MINISTRIES AND CONGREGATIONAL LIFE',
+      titleLine1: 'Discover your place.',
+      titleLine2: 'Grow, belong and serve.',
+      body: 'NCBI provides opportunities for people at every stage of their faith journey to worship, learn, build relationships and serve. Our branches coordinate ministry activities in response to the needs of their congregations and communities. Speak with your local church to learn about current teams, ministry opportunities and programmes.',
+      cta: 'Explore our branches',
+      cards: [
+        { title: 'Worship and fellowship', body: 'Participate in meaningful worship, prayer and fellowship that encourage believers and strengthen the life of the congregation.' },
+        { title: 'Biblical teaching and discipleship', body: 'Develop a lasting foundation for Christian living through Scripture, mentoring, learning and spiritual formation.' },
+        { title: 'Pastoral care and family support', body: 'Find prayer, guidance and compassionate support through the pastoral ministry and care structures of the local church.' },
+        { title: 'Evangelism and community outreach', body: 'Share the message of Christ and demonstrate God’s love through outreach, mission and practical service to our neighbours.' },
+        { title: 'Children, youth and family ministry', body: 'Encourage the faith, wellbeing and participation of children, young people and families through age-appropriate ministry.' },
+        { title: 'Leadership and volunteer development', body: 'Identify, equip and support people to serve responsibly in ministry, leadership and the wider life of the Church.' }
+      ]
+    },
+    branches: {
+      eyebrow: 'OUR CHURCH NETWORK',
+      title: 'Find an NCBI congregation',
+      subtitle: 'Connect with a local church for worship, fellowship, pastoral support and opportunities to serve. Branch information shown here is maintained by authorised NCBI administrators.',
+      empty: 'Our public branch directory is currently being updated. Please use the contact or registration options to express your interest, and the NCBI team will help direct your enquiry to the appropriate congregation.'
+    },
+    programmes: {
+      eyebrow: 'UPCOMING GATHERINGS AND ACTIVITIES',
+      title: 'Programmes, events and training',
+      subtitle: 'Explore conferences, worship gatherings, leadership development, discipleship programmes and community activities officially published by NCBI branches and ministry teams.',
+      empty: 'There are no upcoming public programmes currently listed. New events will appear here when they have been confirmed and published by an authorised NCBI office. For local service times and ministry schedules, please contact your nearest congregation.'
+    },
+    news: {
+      eyebrow: 'OFFICIAL NCBI COMMUNICATIONS',
+      title: 'News, announcements and notices',
+      subtitle: 'Stay informed about official church announcements, ministry developments, important notices and updates published by NCBI leadership and local branches.',
+      empty: 'There are no public announcements available at this time. Official updates will be published here when they are approved for public release. Please check back for the latest information.'
+    },
+    contact: {
+      eyebrow: 'WE WOULD BE GLAD TO HEAR FROM YOU',
+      titleLine1: 'Connect with our church family.',
+      titleLine2: 'There is a place for you.',
+      body: 'Whether you are looking for a congregation, seeking prayer, enquiring about membership or wishing to learn more about our ministries, we welcome your enquiry. Explore the branch directory to connect with a local church, or use the member and staff portal if you already have an NCBI account.',
+      branchesCta: 'Find a congregation',
+      signInCta: 'Access the NCBI portal'
+    }
   },
-  footer: { brand: 'NEW CHURCH BELIEVERS INTERNATIONAL', strapline: 'ONE CHURCH. ONE VISION. A CALL TO SERVE.', motto: 'A CALL TO SERVE' }
+  footer: { brand: 'NEW CHURCH BELIEVERS INTERNATIONAL', strapline: 'ONE CHURCH. ONE VISION. UNITED IN CHRIST AND COMMITTED TO SERVICE.', motto: 'FAITH IN ACTION. SERVICE WITH PURPOSE.' }
 };
