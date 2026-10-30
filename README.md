@@ -65,7 +65,7 @@ Organisation scopes are resolved server-side from the hierarchy; client-supplied
 
 Run `npm run check` and `npm run build` before deployment. Integration, migration, backup/restore, security, accessibility and user acceptance testing remain required.
 
-The client terminology and public fallback-copy checks run with `npm test -w client`. GitHub Actions runs this client test in addition to server tests and production builds.
+The client terminology and public fallback-copy checks run with `npm test -w client`. Dashboard policy tests cover role-specific KPI and approval visibility, department-leader attendance ownership, upcoming-event visibility and treasurer report redaction. Run the full server suite with `npm run check -w server`; run client tests and production compilation with `npm test -w client && npm run build -w client`. GitHub Actions is expected to validate the same server tests, client tests and production build.
 
 
 ## Public website content management
