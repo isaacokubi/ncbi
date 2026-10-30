@@ -28,6 +28,7 @@ router.post('/users',async(req,res,next)=>{
   const org=await Organisation.findById(organisation);
   const allowedLevels={international_executive:['international'],national_admin:['national'],regional_overseer:['regional'],district_pastor:['district'],branch_pastor:['branch'],branch_admin:['branch'],treasurer:['branch','district','regional','national'],department_leader:['branch','district','regional','national'],member:['branch','district','regional','national']};
   if(allowedLevels[role]&&!allowedLevels[role].includes(org?.level))return res.status(400).json({message:'The selected role is not valid at this organisation level'});
+  if(role==='member'&&!memberProfile)return res.status(400).json({message:'A member account must be linked to an existing member profile'});
   if(memberProfile){
     if(role!=='member')return res.status(400).json({message:'Only member accounts can be linked to a member profile'});
     const linked=await Member.findOne({_id:memberProfile,homeOrganisation:organisation}).select('_id').lean();
