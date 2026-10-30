@@ -31,7 +31,7 @@ const signatures = {
  'audio/ogg': b => b.length>4 && b.subarray(0,4).toString()==='OggS',
  'application/pdf': b => b.length>5 && b.subarray(0,5).toString()==='%PDF-'
 };
-const extensions = {'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','video/mp4':'.mp4','video/webm':'.webm'};
+const extensions = {'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','video/mp4':'.mp4','video/webm':'.webm','audio/mpeg':'.mp3','audio/mp4':'.m4a','audio/wav':'.wav','audio/ogg':'.ogg','application/pdf':'.pdf'};
 function safeName(value,ext){const base=path.basename(String(value||'church-media')).replace(/[\r\n"]/g,'').replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,110);return (base.replace(/\.[^.]*$/,'')||'church-media')+ext;}
 export function parseByteRange(header,size){
  if(!header)return null;
