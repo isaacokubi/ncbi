@@ -3,7 +3,9 @@ function required(){
  const keys=['MPESA_CONSUMER_KEY','MPESA_CONSUMER_SECRET','MPESA_SHORTCODE','MPESA_PASSKEY','MPESA_CALLBACK_URL','MPESA_CALLBACK_SECRET'];
  const missing=keys.filter(key=>!process.env[key]);
  if(missing.length)throw new Error('M-Pesa is not configured. Missing: '+missing.join(', '));
- if(!/^https:\/\//i.test(process.env.MPESA_CALLBACK_URL))throw new Error('MPESA_CALLBACK_URL must be a public HTTPS URL');\n if(process.env.MPESA_CALLBACK_SECRET.length<32)throw new Error('MPESA_CALLBACK_SECRET must be at least 32 characters');\n const callbackPath=new URL(process.env.MPESA_CALLBACK_URL).pathname;if(!callbackPath.endsWith('/mpesa/callback/'+process.env.MPESA_CALLBACK_SECRET))throw new Error('MPESA_CALLBACK_URL must end with /mpesa/callback/ followed by MPESA_CALLBACK_SECRET');
+ if(!/^https:\/\//i.test(process.env.MPESA_CALLBACK_URL))throw new Error('MPESA_CALLBACK_URL must be a public HTTPS URL');
+ if(process.env.MPESA_CALLBACK_SECRET.length<32)throw new Error('MPESA_CALLBACK_SECRET must be at least 32 characters');
+ const callbackPath=new URL(process.env.MPESA_CALLBACK_URL).pathname;if(!callbackPath.endsWith('/mpesa/callback/'+process.env.MPESA_CALLBACK_SECRET))throw new Error('MPESA_CALLBACK_URL must end with /mpesa/callback/ followed by MPESA_CALLBACK_SECRET');
 }
 export function normalizeKenyanPhone(value){
  const digits=String(value||'').replace(/\D/g,'');
