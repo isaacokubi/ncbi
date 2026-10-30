@@ -23,6 +23,9 @@ router.put('/', requireAuth, allowRoles(...editors), async (req, res, next) => {
     if (Buffer.byteLength(encoded, 'utf8') > 100 * 1024) return res.status(413).json({ message: 'Website content must be 100 KB or smaller.' });
     const allowedPages = ['home', 'about', 'mission', 'ministries', 'branches', 'programmes', 'news', 'contact'];
     if (Object.keys(content.pages).some(key => !allowedPages.includes(key))) return res.status(400).json({ message: 'Website content contains an unsupported page.' });
+    if (Object.values(content.pages).some(page => !page || typeof page !== 'object' || Array.isArray(page))) return res.status(400).json({ message: 'Each website page must be an object of editable fields.' });
+    if (content.navigation != null && (typeof content.navigation !== 'object' || Array.isArray(content.navigation))) return res.status(400).json({ message: 'Navigation content must be an object.' });
+    if (content.footer != null && (typeof content.footer !== 'object' || Array.isArray(content.footer))) return res.status(400).json({ message: 'Footer content must be an object.' });
     const saved = await SiteContent.findOneAndUpdate(
       { key: 'global' },
       { $set: { pages: content.pages, navigation: content.navigation || {}, footer: content.footer || {}, updatedBy: req.user._id } },
