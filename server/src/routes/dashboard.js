@@ -3,7 +3,7 @@ import { Member, Attendance, FinanceTransaction, Organisation } from '../models/
 import { OperationsRecord } from '../models/domain.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
-import { attendanceDashboardFilter, canSeeUpcomingEvents } from '../domain/dashboardPolicy.js';
+import { attendanceDashboardFilter, canSeeUpcomingEvents, dashboardMetricsForRole } from '../domain/dashboardPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -21,7 +21,7 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
       (canSeeUpcomingEvents(req.user) ? OperationsRecord.find({ organisation: { $in: ids }, entity: 'event', status: { $in: ['scheduled','active'] }, startAt: { $gte: new Date() } }).sort({ startAt: 1 }).limit(6).select('title startAt organisation').populate('organisation','name').lean() : Promise.resolve([])),
       OperationsRecord.countDocuments({ organisation: { $in: ids }, status: 'pending' })
     ]);
-    const metrics = req.user.role === 'department_leader' ? { attendanceRecordsThisMonth: attendance } : { branches, members, visitors, attendanceRecordsThisMonth: attendance, confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals: pendingRecords };
+    const metrics = dashboardMetricsForRole(req.user.role, { branches, members, visitors, attendanceRecordsThisMonth: attendance, confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals: pendingRecords });
     res.json({ scope: ids.length, asOf: new Date().toISOString(), metrics, upcomingEvents });
   } catch (error) { next(error); }
 });

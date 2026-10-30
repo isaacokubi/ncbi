@@ -3,6 +3,7 @@ import { Attendance, FinanceTransaction, Member, Organisation } from '../models/
 import { OperationsRecord } from '../models/domain.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
+import { reportPayloadForRole } from '../domain/dashboardPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -91,7 +92,7 @@ router.get('/overview', allowRoles('super_admin','international_executive','nati
       attendanceRecords: attendanceByMonth.get(key) || 0,
       finance: financeByMonth.get(key) || {}
     }));
-    res.json({
+    res.json(reportPayloadForRole(req.user.role, {
       generatedAt: new Date().toISOString(),
       period: { months, from: start.toISOString(), to: now.toISOString() },
       scope: { organisationUnits: ids.length, branches: branches },
@@ -99,7 +100,7 @@ router.get('/overview', allowRoles('super_admin','international_executive','nati
       trend,
       ministryActivity: ministry.map(row => ({ entity: row._id, count: row.count })),
       branchPerformance
-    });
+    }));
   } catch (error) { next(error); }
 });
 
