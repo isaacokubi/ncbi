@@ -148,7 +148,7 @@ router.post('/reconciliations/:id/reconcile',async(req,res,next)=>{try{
  const ids=await accessibleOrganisationIds(req.user);const reconciliation=await BankReconciliation.findOne({_id:req.params.id,organisation:{$in:ids}});
  if(!reconciliation)return res.status(404).json({message:'Reconciliation not found'});
  if(reconciliation.status==='reconciled')return res.status(409).json({message:'This statement is already reconciled'});
- const journals=await JournalEntry.find({organisation:reconciliation.organisation,status:'posted',entryDate:{$lte:reconciliation.statementDate},'lines.account':reconciliation.bankAccount}).select('lines').lean();
+ const cutoff=new Date(reconciliation.statementDate);cutoff.setUTCHours(23,59,59,999);const journals=await JournalEntry.find({organisation:reconciliation.organisation,status:'posted',entryDate:{$lte:cutoff},'lines.account':reconciliation.bankAccount}).select('lines').lean();
  let book=0n;
  for(const journal of journals)for(const line of journal.lines)if(String(line.account)===String(reconciliation.bankAccount)){book+=(cents(line.debit)||0n)-(cents(line.credit)||0n);}
  const statement=cents(reconciliation.statementBalance);
