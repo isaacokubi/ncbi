@@ -176,3 +176,77 @@ const safeguardingConsentSchema = new Schema({
 },{timestamps:true});
 safeguardingConsentSchema.index({organisation:1,child:1,status:1,validUntil:1});
 export const SafeguardingConsent = mongoose.models.SafeguardingConsent || model('SafeguardingConsent', safeguardingConsentSchema);
+
+
+const supplierSchema = new Schema({
+ organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
+ name:{type:String,required:true,trim:true,maxlength:160},
+ contactName:{type:String,trim:true,maxlength:120},
+ email:{type:String,trim:true,lowercase:true,maxlength:180},
+ phone:{type:String,trim:true,maxlength:40},
+ taxPin:{type:String,trim:true,maxlength:40},
+ address:{type:String,trim:true,maxlength:300},
+ notes:{type:String,trim:true,maxlength:1000},
+ status:{type:String,enum:['active','suspended'],default:'active',index:true},
+ createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
+ updatedBy:{type:Schema.Types.ObjectId,ref:'User',required:true}
+},{timestamps:true});
+supplierSchema.index({organisation:1,name:1});
+
+const purchaseRequestSchema=new Schema({
+ organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
+ requestNumber:{type:String,required:true,trim:true,maxlength:40},
+ supplier:{type:Schema.Types.ObjectId,ref:'Supplier',required:true},
+ description:{type:String,required:true,trim:true,maxlength:500},
+ currency:{type:String,required:true,default:'KES',uppercase:true,match:/^[A-Z]{3}$/},
+ amount:{type:Schema.Types.Decimal128,required:true},
+ status:{type:String,enum:['submitted','approved','rejected','cancelled'],default:'submitted',index:true},
+ decisionNote:{type:String,maxlength:500},
+ createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
+ approvedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ approvedAt:Date,
+ decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null}
+},{timestamps:true});
+purchaseRequestSchema.index({organisation:1,requestNumber:1},{unique:true});
+
+const supplierInvoiceSchema=new Schema({
+ organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
+ supplier:{type:Schema.Types.ObjectId,ref:'Supplier',required:true},
+ purchaseRequest:{type:Schema.Types.ObjectId,ref:'PurchaseRequest',default:null},
+ invoiceNumber:{type:String,required:true,trim:true,maxlength:80},
+ invoiceDate:{type:Date,required:true},
+ dueDate:Date,
+ currency:{type:String,required:true,default:'KES',uppercase:true,match:/^[A-Z]{3}$/},
+ amount:{type:Schema.Types.Decimal128,required:true},
+ status:{type:String,enum:['submitted','approved','rejected','partially_paid','paid'],default:'submitted',index:true},
+ decisionNote:{type:String,maxlength:500},
+ createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
+ approvedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ approvedAt:Date,
+ decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null}
+},{timestamps:true});
+supplierInvoiceSchema.index({organisation:1,supplier:1,invoiceNumber:1},{unique:true});
+
+const supplierPaymentSchema=new Schema({
+ organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
+ invoice:{type:Schema.Types.ObjectId,ref:'SupplierInvoice',required:true},
+ amount:{type:Schema.Types.Decimal128,required:true},
+ currency:{type:String,required:true,uppercase:true,match:/^[A-Z]{3}$/},
+ paymentMethod:{type:String,enum:['bank_transfer','cash','cheque','mpesa','other'],default:'bank_transfer'},
+ reference:{type:String,trim:true,maxlength:100},
+ status:{type:String,enum:['submitted','approved','rejected','paid'],default:'submitted',index:true},
+ decisionNote:{type:String,maxlength:500},
+ createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
+ approvedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ approvedAt:Date,
+ confirmedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ confirmedAt:Date,
+ journalEntry:{type:Schema.Types.ObjectId,ref:'JournalEntry',default:null}
+},{timestamps:true});
+supplierPaymentSchema.index({organisation:1,createdAt:-1});
+supplierPaymentSchema.index({reference:1},{sparse:true,unique:true});
+
+export const Supplier=mongoose.models.Supplier||model('Supplier',supplierSchema);
+export const PurchaseRequest=mongoose.models.PurchaseRequest||model('PurchaseRequest',purchaseRequestSchema);
+export const SupplierInvoice=mongoose.models.SupplierInvoice||model('SupplierInvoice',supplierInvoiceSchema);
+export const SupplierPayment=mongoose.models.SupplierPayment||model('SupplierPayment',supplierPaymentSchema);
