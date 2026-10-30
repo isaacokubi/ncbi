@@ -731,3 +731,6 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .public-page-view.public-ministries-section{width:100%;}
 .public-page-view.public-contact-section{width:100%;}
 @media(max-width:760px){.public-page-view{min-height:calc(100vh - 74px);}.public-page-view>.public-section-shell{width:calc(100% - 40px);}}
+
+/* Keep the home hero's original stacked composition inside its page view. */
+.public-page-view.public-hero{display:block;}
