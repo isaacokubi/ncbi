@@ -26,6 +26,9 @@ function privateRecordScope(user) {
 function scopedRecordFilter(entity, ids, user) {
   const filter = { entity, organisation: { $in: ids }, status: { $ne: 'archived' } };
   if (sensitiveEntities.has(entity)) filter.$and = [privateRecordScope(user)];
+  // Attendee contact details are not a public member directory. Members can
+  // read their own registration only; leadership uses the dedicated register.
+  if (entity === 'event_registration' && user.role === 'member') filter.createdBy = user._id;
   return filter;
 }
 
