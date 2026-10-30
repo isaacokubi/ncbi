@@ -1755,3 +1755,19 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
   .app .scope-bar { align-items: flex-start; }
   .app .dashboard-section-heading h2 { font-size: 19px; }
 }
+
+
+/* Public leadership portrait: use the available hero photo as a large feature, not a small emblem. */
+.public-hero-inner{grid-template-columns:minmax(0,1fr) minmax(420px,.92fr);gap:clamp(28px,4vw,64px)}
+.public-hero-art{min-height:560px;width:100%;}
+.public-art-frame{position:relative;z-index:1;width:min(100%,520px);display:flex;flex-direction:column;align-items:center;gap:13px}
+.public-art-emblem.bishop-portrait{width:100%;height:clamp(430px,62vh,590px);min-height:430px;border-radius:48% 48% 16px 16px!important;padding:0;background:#160b28!important;}
+.public-art-emblem.bishop-portrait::before{inset:10px;border-radius:inherit;pointer-events:none;z-index:1}
+.bishop-portrait img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block}
+.bishop-photo-placeholder{display:grid;place-items:center;width:100%;height:100%;color:#ead58c;font-size:14px;letter-spacing:.08em}
+.bishop-name{color:#fff;text-align:center;font:600 clamp(17px,1.8vw,22px) 'Playfair Display',Georgia,serif;letter-spacing:.02em;text-shadow:0 2px 12px #09040d70}
+.public-art-caption{z-index:2;right:0;bottom:65px;}
+.public-site-shortcut{color:#dfcc80;text-decoration:none;}
+.public-site-shortcut:hover{background:#ffffff12;color:#fff;}
+@media(max-width:900px){.public-hero-inner{grid-template-columns:minmax(0,1fr) minmax(300px,.85fr);gap:25px}.public-art-emblem.bishop-portrait{height:460px;min-height:390px}}
+@media(max-width:720px){.public-hero-inner{grid-template-columns:1fr}.public-hero-art{min-height:420px;margin-top:22px}.public-art-frame{width:min(100%,430px)}.public-art-emblem.bishop-portrait{height:440px;min-height:360px}.public-art-caption{right:0;bottom:64px;max-width:80%}}

@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { ACTION_TERMS, DEFAULT_SITE_CONTENT, mergeSiteContent, EMPTY_STATES, MODULE_PRESENTATION, NAVIGATION_TERMS, ROLE_LABELS, ROLE_PRESENTATION, SUCCESS_MESSAGES } from "./content/terminology.js";
-import QrAttendancePanel from './components/QrAttendancePanel.jsx';
-import SupplierWorkspace from './components/SupplierWorkspace.jsx';
-import MediaWorkspace from './components/MediaWorkspace.jsx';
-import SermonResourcesWorkspace from './components/SermonResourcesWorkspace.jsx';
+const QrAttendancePanel = lazy(() => import('./components/QrAttendancePanel.jsx'));
+const SupplierWorkspace = lazy(() => import('./components/SupplierWorkspace.jsx'));
+const MediaWorkspace = lazy(() => import('./components/MediaWorkspace.jsx'));
+const SermonResourcesWorkspace = lazy(() => import('./components/SermonResourcesWorkspace.jsx'));
 import { OperationalModuleFields, buildOperationalModuleData } from './components/OperationalModuleFields.jsx';
-import InventoryStockWorkspace from './components/InventoryStockWorkspace.jsx';
-import OperationalWorkflowWorkspace from './components/OperationalWorkflowWorkspace.jsx';
-import ClassEnrolmentPanel from './components/ClassEnrolmentPanel.jsx';
-import BudgetApprovalPolicies from './components/BudgetApprovalPolicies.jsx';
-import VisitorFollowUpWorkspace from './components/VisitorFollowUpWorkspace.jsx';
-import AnnouncementWorkspace from './components/AnnouncementWorkspace.jsx';
-import ProgrammeRegistrationWorkspace from './components/ProgrammeRegistrationWorkspace.jsx';
-import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, UserRound, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X, MapPin } from 'lucide-react';
+const InventoryStockWorkspace = lazy(() => import('./components/InventoryStockWorkspace.jsx'));
+const OperationalWorkflowWorkspace = lazy(() => import('./components/OperationalWorkflowWorkspace.jsx'));
+const ClassEnrolmentPanel = lazy(() => import('./components/ClassEnrolmentPanel.jsx'));
+const BudgetApprovalPolicies = lazy(() => import('./components/BudgetApprovalPolicies.jsx'));
+const VisitorFollowUpWorkspace = lazy(() => import('./components/VisitorFollowUpWorkspace.jsx'));
+const AnnouncementWorkspace = lazy(() => import('./components/AnnouncementWorkspace.jsx'));
+const ProgrammeRegistrationWorkspace = lazy(() => import('./components/ProgrammeRegistrationWorkspace.jsx'));
+import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, UserRound, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X, MapPin, ExternalLink } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -286,7 +286,7 @@ function PublicHome({onLogin,onRegister,brandLogo,heroImage:initialHeroImage,aut
      <div className="public-hero-actions"><button className="public-primary-cta" onClick={()=>navigate('branches')}>{pageCopy.home.branchesCta} <ArrowUpRight size={17}/></button><button className="public-secondary-cta" onClick={onRegister}>{pageCopy.home.registerCta}</button><button className="public-secondary-cta" onClick={onLogin}>{pageCopy.home.workspaceCta}</button></div>
      <div className="public-hero-motto"><span/> {pageCopy.home.motto}</div>
     </div>
-    <div className="public-hero-art" aria-label="NCBI church community"><div className="public-art-orbit orbit-one"/><div className="public-art-orbit orbit-two"/><div className="public-art-emblem bishop-portrait"><img src={heroImage||"/ncbi-logo.jpg"} alt="NCBI emblem placeholder; replace with the Bishop’s official portrait" onError={e=>{e.currentTarget.style.visibility="hidden";}}/></div><div className="public-art-caption"><b>{pageCopy.home.heroCaptionTitle}</b><span>{pageCopy.home.heroCaptionText}</span></div></div>
+    <div className="public-hero-art" aria-label="NCBI church community"><div className="public-art-orbit orbit-one"/><div className="public-art-orbit orbit-two"/><div className="public-art-frame"><div className="public-art-emblem bishop-portrait">{heroImage?<img src={heroImage} alt="Bishop Dr Andre G. Cannon" onError={e=>{e.currentTarget.style.visibility="hidden";}}/>:<div className="bishop-photo-placeholder">Bishop’s portrait</div>}</div><div className="bishop-name">Bishop Dr Andre G. Cannon</div></div><div className="public-art-caption"><b>{pageCopy.home.heroCaptionTitle}</b><span>{pageCopy.home.heroCaptionText}</span></div></div>
    </div>
    <div className="public-hero-bottom">{(pageCopy.home.strapline||[]).map((item,i)=><span key={i}>{item}</span>)}</div>
   </section>}
@@ -485,7 +485,7 @@ function App(){
     {(!collapsed||mobileNavOpen)&&moreNavItems.length>0&&<section className="nav-group"><button type="button" className="nav-group-toggle" onClick={()=>setExpandedNav(current=>({...current,['MORE MODULES']:!(current['MORE MODULES']??true)}))} aria-expanded={navSearch.trim()|| (expandedNav['MORE MODULES']??true)}><small className="nav-heading">MORE MODULES</small><ChevronDown size={14} className={(expandedNav['MORE MODULES']??true)?'group-chevron open':'group-chevron'}/></button>{(navSearch.trim()||(expandedNav['MORE MODULES']??true))&&moreNavItems.map(([key,label])=><button type="button" key={key} title={NAVIGATION_TERMS[key]||label} aria-current={page===key?'page':undefined} className={page===key?'nav-item selected':'nav-item'} onClick={()=>{navigateTo(key);setMobileNavOpen(false);}}><BookOpen size={18} aria-hidden="true"/><span>{NAVIGATION_TERMS[key]||label}</span></button>)}</section>}
     {navSearch.trim()&&!visibleNavGroups.length&&!moreNavItems.length&&<div className="nav-no-results">No matching modules found.</div>}
    </nav>
-   <div className="sidebar-bottom"><button type="button" className="nav-item" onClick={()=>setDark(value=>!value)}><ShieldCheck size={18}/>{(!collapsed||mobileNavOpen)&&<span>{dark?'Light appearance':'Dark appearance'}</span>}</button><button type="button" className="nav-item logout-link" onClick={logout}><LogOut size={18}/>{(!collapsed||mobileNavOpen)&&<span>Sign out</span>}</button>{(!collapsed||mobileNavOpen)&&<div className="profile"><div className="profile-avatar profile-brand-avatar" aria-label="NCBI account" title="NCBI account">NC</div><div><b>{user.fullName}</b><small>{user.email}</small></div></div>}</div>
+   <div className="sidebar-bottom"><button type="button" className="nav-item" onClick={()=>setDark(value=>!value)}><ShieldCheck size={18}/>{(!collapsed||mobileNavOpen)&&<span>{dark?'Light appearance':'Dark appearance'}</span>}</button><a className="nav-item public-site-shortcut" href="/" target="_blank" rel="noopener noreferrer" title="Open the public NCBI website"><ExternalLink size={18}/>{(!collapsed||mobileNavOpen)&&<span>Public website</span>}</a><button type="button" className="nav-item logout-link" onClick={logout}><LogOut size={18}/>{(!collapsed||mobileNavOpen)&&<span>Sign out</span>}</button>{(!collapsed||mobileNavOpen)&&<div className="profile"><div className="profile-avatar profile-brand-avatar" aria-label="NCBI account" title="NCBI account">NC</div><div><b>{user.fullName}</b><small>{user.email}</small></div></div>}</div>
   </aside>
   <main className="main">
    <header className="topbar"><div className="topbar-heading"><button type="button" className="mobile-nav-trigger" aria-label="Open navigation" aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(true)}><Menu size={20}/></button><span className="crumb">NCBI /</span> <b>{title}</b></div><div className="top-actions"><span className="period-label">{dateNow.toUpperCase()}</span><button type="button" className="top-user" onClick={logout} title="Sign out" aria-label={`Sign out of ${user.fullName}`}><span className="top-avatar" aria-hidden="true"><UserRound size={17} strokeWidth={2}/></span><LogOut size={15}/></button></div></header>
