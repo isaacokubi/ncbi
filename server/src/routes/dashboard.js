@@ -3,6 +3,7 @@ import { Member, Attendance, FinanceTransaction, Organisation } from '../models/
 import { OperationsRecord } from '../models/domain.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
+import { attendanceDashboardFilter, canSeeUpcomingEvents } from '../domain/dashboardPolicy.js';
 
 const router = Router();
 router.use(requireAuth);

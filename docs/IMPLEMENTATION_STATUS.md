@@ -3,6 +3,7 @@
 This document distinguishes working code from planned work. A module is not production-ready merely because a navigation item or model exists.
 
 ## Implemented in this delivery
+- Department-leader dashboard and attendance data are narrowed to attendance records personally recorded by that account; department leaders do not receive executive financial, membership or branch metrics or organisation-wide upcoming-event cards. These rules are enforced in server-side query filters and covered by focused unit tests.
 - Consolidated reporting API (`GET /api/reports/overview`) with validated hierarchy scope, 3–24 month membership and attendance trends, confirmed finance totals grouped by currency, ministry activity counts and branch comparison. Unconfirmed financial entries are excluded.
 - Aggregate CSV export (`GET /api/reports/overview.csv`) with matching server-derived organisation scope, confirmed-only finance aggregates, no personal member data, no-store headers and spreadsheet-formula neutralisation. Corrected the branch membership `$filter` variable reference.
 - React sign-in against the API, authenticated session restoration, sign-out and role-scoped live dashboard KPIs/events/organisation directory.

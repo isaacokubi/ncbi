@@ -5,6 +5,7 @@ import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateAttendanceInput } from '../domain/attendancePolicy.js';
 import { SequenceCounter, AuditLog } from '../models/domain.js';
+import { attendanceWorkspaceFilter } from '../domain/dashboardPolicy.js';
 
 const router = Router(); router.use(requireAuth);
 const roleRank={super_admin:100,international_executive:90,national_admin:80,regional_overseer:70,district_pastor:60,branch_pastor:50,branch_admin:45,treasurer:35,department_leader:25,member:10};
