@@ -449,6 +449,12 @@ router.patch('/:entity/:id', async (req, res, next) => {
     const filter = scopedRecordFilter(entity, ids, req.user); filter._id = id;
     const record = await OperationsRecord.findOne(filter);
     if (!record) return res.status(404).json({ message: 'Record not found' });
+    if (req.body.assignedTo !== undefined) {
+      const assignees = req.body.assignedTo;
+      if (!Array.isArray(assignees) || assignees.length > 10 || assignees.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ message: 'Assignees must be valid user identifiers' });
+      const eligibleAssignees = await User.countDocuments({ _id: { $in: assignees }, organisation: record.organisation, active: true });
+      if (eligibleAssignees !== assignees.length) return res.status(400).json({ message: 'Every assignee must be an active user in the same church organisation' });
+    }
     for (const key of ['title','reference','status','startAt','endAt','assignedTo','visibility']) if (req.body[key] !== undefined) record[key] = req.body[key];
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
