@@ -24,7 +24,7 @@ app.disable('x-powered-by');
 app.use(helmet());
 const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map(v => v.trim());
 app.use(cors({ origin: (origin, callback) => !origin || allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('Origin not allowed by CORS')) }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '5mb' }));
 if (process.env.NODE_ENV !== 'test') app.use(morgan('tiny'));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'ncbi-api', timestamp: new Date().toISOString() }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }), authRoutes);
