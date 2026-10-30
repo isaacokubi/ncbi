@@ -37,7 +37,32 @@ function safeData(data) {
 }
 
 function validateStructuredOperationData(entity, data) {
+  const requiredTextFields = {
+    property: ['location'],
+    prayer_request: ['requestSummary'],
+    children_ministry: ['programmeName'],
+    youth_ministry: ['programmeName'],
+    family_ministry: ['programmeName'],
+    small_group: ['leaderName'],
+    wedding: ['partnerOne','partnerTwo'],
+    funeral: ['deceasedName'],
+    facility_booking: ['facilityName']
+  };
+  for (const field of requiredTextFields[entity] || []) {
+    if (typeof data[field] !== 'string' || !data[field].trim()) return field + ' is required';
+  }
   const textFields = {
+    property: ['location','parcelNumber','ownershipStatus','size','condition','custodian','maintenanceNotes'],
+    prayer_request: ['prayerCategory','requestSummary'],
+    children_ministry: ['programmeName','ageGroup','className','leaderName','meetingSchedule','room','objectives'],
+    youth_ministry: ['programmeName','ageGroup','coordinatorName','mentorshipFocus','meetingSchedule','venue','programmePlan'],
+    family_ministry: ['programmeName','programmeType','coordinatorName','targetGroup','meetingSchedule','venue','description'],
+    small_group: ['groupType','leaderName','assistantLeader','meetingSchedule','location','studyFocus'],
+    baptism: ['ceremonyType','officiant','preparationStatus','venue','certificateReference'],
+    wedding: ['partnerOne','partnerTwo','officiant','preparationStatus','venue','certificateReference'],
+    funeral: ['deceasedName','familyContactName','familyContactPhone','officiant','venue','serviceNotes'],
+    benevolence: ['assistanceType','priority','coordinationSummary'],
+    facility_booking: ['facilityName','bookingType','requestedBy','setupRequirements','bookingApproval'],
     church_plant: ['location','targetCommunity','teamLeader','progressUpdate'],
     sponsorship: ['sponsorName','purpose','currency','sponsorContact','fulfilmentNotes'],
     donation_pledge: ['pledgerName','givingPurpose','currency','frequency','pledgeNotes'],
