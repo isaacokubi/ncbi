@@ -58,7 +58,7 @@ export default function ProgrammeRegistrationWorkspace({ token, onError, onSucce
   const exportCsv = () => {
     const quote = value => {
       let text = String(value ?? '');
-      if (/^[\\s]*[=+\\-@]/.test(text)) text = "'" + text;
+      if (/^[\s]*[=+\-@]/.test(text)) text = "'" + text;
       return '"' + text.replaceAll('"','""') + '"';
     };
     const rows = [['Programme','Church / branch','Participant','Email','Registration date','Status','Notes'], ...filtered.map(x => [x.eventTitle,x.eventOrganisation,x.data?.attendeeName,x.data?.email,x.createdAt,x.status,x.data?.notes])];
