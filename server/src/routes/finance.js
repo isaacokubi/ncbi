@@ -2,52 +2,13 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { FinanceTransaction } from '../models/index.js';
 import { AuditLog } from '../models/domain.js';
+import { financeTransition, isValidPositiveAmount } from '../domain/financePolicy.js';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
-
-const router = Router(); router.use(requireAuth);
-const financeRoles = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer']);
-const approverRoles = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor']);
-const money = value => Number.isFinite(Number(value)) && Number(value) > 0 && Number(value) <= 100000000000;
-
-router.get('/transactions', async (req,res,next) => {
-  try {
-    if (!financeRoles.has(req.user.role)) return res.status(403).json({message:'Finance access denied'});
-    const ids=await accessibleOrganisationIds(req.user);
-    const page=Math.max(1,Number(req.query.page)||1), limit=Math.min(100,Math.max(1,Number(req.query.limit)||25));
-    const filter={organisation:{$in:ids}};
-    if(req.query.status) filter.status=req.query.status;
-    if(req.query.direction) filter.direction=req.query.direction;
-    const [transactions,total]=await Promise.all([FinanceTransaction.find(filter).sort({occurredAt:-1}).skip((page-1)*limit).limit(limit).populate('organisation','name code').populate('createdBy','fullName').populate('approvedBy','fullName').lean(),FinanceTransaction.countDocuments(filter)]);
-    res.json({transactions,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});
-  } catch(e){next(e);}
-});
-router.post('/transactions', async(req,res,next)=>{
-  try{
-    if(!financeRoles.has(req.user.role)) return res.status(403).json({message:'Finance access denied'});
-    const {organisation,direction,category,amount,currency='KES',occurredAt,paymentMethod='other',reference,description}=req.body;
-    const org=organisation||(req.user.organisation?._id??req.user.organisation);
-    if(!mongoose.isValidObjectId(org)||!(await assertOrganisationAccess(req.user,org))) return res.status(403).json({message:'Organisation outside your authorised scope'});
-    if(!['income','expense'].includes(direction)||!String(category||'').trim()||!money(amount)) return res.status(400).json({message:'Valid direction, category and positive amount are required'});
-    const transaction=await FinanceTransaction.create({organisation:org,direction,category,amount:String(amount),currency,occurredAt:occurredAt||new Date(),paymentMethod,reference,description,createdBy:req.user._id,status:'submitted'});
-    await AuditLog.create({organisation:org,actor:req.user._id,action:'submit',entity:'finance_transaction',recordId:transaction._id,summary:`Submitted ${direction} ${currency} ${amount}`});
-    res.status(201).json({transaction});
-  }catch(e){next(e);}
-});
-router.post('/transactions/:id/decision',async(req,res,next)=>{
-  try{
-    if(!approverRoles.has(req.user.role)) return res.status(403).json({message:'Finance approval permission required'});
-    if(!['approve','reject','confirm','void'].includes(req.body.decision)) return res.status(400).json({message:'Unsupported decision'});
-    const ids=await accessibleOrganisationIds(req.user);
-    const transaction=await FinanceTransaction.findOne({_id:req.params.id,organisation:{$in:ids}});
-    if(!transaction) return res.status(404).json({message:'Transaction not found'});
-    if(transaction.createdBy.equals(req.user._id)) return res.status(403).json({message:'The creator cannot approve their own transaction'});
-    const transitions={approve:['submitted','approved'],reject:['submitted','rejected'],confirm:['approved','confirmed'],void:['submitted','approved','confirmed']};
-    if(!transitions[req.body.decision].includes(transaction.status)) return res.status(409).json({message:`Cannot ${req.body.decision} a transaction in ${transaction.status} state`});
-    transaction.status={approve:'approved',reject:'rejected',confirm:'confirmed',void:'voided'}[req.body.decision];
-    transaction.approvedBy=req.user._id; transaction.approvedAt=new Date(); await transaction.save();
-    await AuditLog.create({organisation:transaction.organisation,actor:req.user._id,action:req.body.decision,entity:'finance_transaction',recordId:transaction._id,summary:`Finance transaction ${transaction.status}`});
-    res.json({transaction});
-  }catch(e){next(e);}
-});
+const router=Router(); router.use(requireAuth);
+const financeRoles=new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer']);
+const approverRoles=new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor']);
+router.get('/transactions',async(req,res,next)=>{try{if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Finance access denied'});const ids=await accessibleOrganisationIds(req.user);const page=Math.max(1,Number(req.query.page)||1),limit=Math.min(100,Math.max(1,Number(req.query.limit)||25));const filter={organisation:{$in:ids}};if(req.query.status)filter.status=req.query.status;if(req.query.direction)filter.direction=req.query.direction;const [transactions,total]=await Promise.all([FinanceTransaction.find(filter).sort({occurredAt:-1}).skip((page-1)*limit).limit(limit).populate('organisation','name code').populate('createdBy','fullName').populate('approvedBy','fullName').lean(),FinanceTransaction.countDocuments(filter)]);res.json({transactions,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});}catch(e){next(e);}});
+router.post('/transactions',async(req,res,next)=>{try{if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Finance access denied'});const {organisation,direction,category,amount,currency='KES',occurredAt,paymentMethod='other',reference,description}=req.body;const org=organisation||(req.user.organisation?._id??req.user.organisation);if(!mongoose.isValidObjectId(org)||!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});if(!['income','expense'].includes(direction)||!String(category||'').trim()||!isValidPositiveAmount(amount))return res.status(400).json({message:'Valid direction, category and positive amount are required'});const transaction=await FinanceTransaction.create({organisation:org,direction,category,amount:String(amount),currency,occurredAt:occurredAt||new Date(),paymentMethod,reference,description,createdBy:req.user._id,status:'submitted'});await AuditLog.create({organisation:org,actor:req.user._id,action:'submit',entity:'finance_transaction',recordId:transaction._id,summary:`Submitted ${direction} ${currency} ${amount}`});res.status(201).json({transaction});}catch(e){next(e);}});
+router.post('/transactions/:id/decision',async(req,res,next)=>{try{if(!approverRoles.has(req.user.role))return res.status(403).json({message:'Finance approval permission required'});const ids=await accessibleOrganisationIds(req.user);const transaction=await FinanceTransaction.findOne({_id:req.params.id,organisation:{$in:ids}});if(!transaction)return res.status(404).json({message:'Transaction not found'});if(transaction.createdBy.equals(req.user._id))return res.status(403).json({message:'The creator cannot approve their own transaction'});const transition=financeTransition(transaction.status,req.body.decision);if(!transition.allowed)return res.status(409).json({message:`Cannot ${req.body.decision} a transaction in ${transaction.status} state`});transaction.status=transition.status;transaction.approvedBy=req.user._id;transaction.approvedAt=new Date();await transaction.save();await AuditLog.create({organisation:transaction.organisation,actor:req.user._id,action:req.body.decision,entity:'finance_transaction',recordId:transaction._id,summary:`Finance transaction ${transaction.status}`});res.json({transaction});}catch(e){next(e);}});
 export default router;
