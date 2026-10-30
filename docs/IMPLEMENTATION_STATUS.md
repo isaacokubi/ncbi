@@ -3,6 +3,8 @@
 This document distinguishes working code from planned work. A module is not production-ready merely because a navigation item or model exists.
 
 ## Implemented in this delivery
+- React sign-in against the API, authenticated session restoration, sign-out and role-scoped live dashboard KPIs/events/organisation directory.
+- Client loading, empty, retry and API error states; no illustrative dashboard figures are represented as live data.
 - Hierarchical organisation creation with parent-level validation and pending/active/suspended/archived lifecycle.
 - Server-derived organisation subtree scopes for headquarters, national, regional and district oversight.
 - Member registration, scoped listing and transfer history.
