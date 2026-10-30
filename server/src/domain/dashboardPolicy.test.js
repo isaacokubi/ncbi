@@ -109,3 +109,23 @@ test('treasurer report payload excludes non-financial trend and scope detail', (
   });
   assert.equal(reportPayloadForRole('national_admin', payload), payload);
 });
+
+
+test('platform, international and national dashboards receive distinct indicators', () => {
+  const metrics = {
+    organisationUnits: 42, activeOrganisations: 38, activeUsers: 120, pendingAccounts: 4,
+    nationalOffices: 5, regionalUnits: 12, districtUnits: 24, branches: 90,
+    members: 2400, visitors: 120, attendanceRecordsThisMonth: 850,
+    confirmedIncomeThisMonth: [{ _id: 'KES', total: 500000 }],
+    confirmedExpensesThisMonth: [{ _id: 'KES', total: 200000 }], pendingApprovals: 9
+  };
+  const platform = dashboardMetricsForRole('super_admin', metrics);
+  const international = dashboardMetricsForRole('international_executive', metrics);
+  const national = dashboardMetricsForRole('national_admin', metrics);
+  assert.deepEqual(Object.keys(platform), ['organisationUnits','activeOrganisations','activeUsers','pendingAccounts','branches']);
+  assert.ok(Object.hasOwn(international, 'nationalOffices'));
+  assert.ok(!Object.hasOwn(international, 'activeUsers'));
+  assert.ok(Object.hasOwn(national, 'regionalUnits'));
+  assert.ok(!Object.hasOwn(national, 'nationalOffices'));
+  assert.ok(!Object.hasOwn(national, 'organisationUnits'));
+});
