@@ -7,5 +7,5 @@
   "display": "standalone",
   "background_color": "#220031",
   "theme_color": "#220031",
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [{ "src": "/ncbi-logo.jpg", "sizes": "any", "type": "image/jpeg", "purpose": "any maskable" }]
 }
