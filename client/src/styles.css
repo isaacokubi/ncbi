@@ -734,3 +734,7 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 
 /* Keep the home hero's original stacked composition inside its page view. */
 .public-page-view.public-hero{display:block;}
+
+
+/* Public website CMS editor */
+.website-content-workspace{max-width:1180px}.website-content-card{padding:25px;display:grid;gap:20px}.website-content-card .panel-heading h2{margin:6px 0 8px;font-family:'Playfair Display',serif;font-size:25px}.website-content-card .panel-heading p{max-width:760px;color:var(--muted);line-height:1.65;margin:0}.website-content-help{display:grid;gap:7px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:#fbfafc}.website-content-help b{color:var(--purple);font-size:13px}.website-content-help span{font-size:13px;font-weight:600}.website-content-help small{color:var(--muted);line-height:1.55}.website-json-field{display:grid;gap:9px}.website-content-json{width:100%;min-height:560px;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;tab-size:2}.website-content-card .field-help{color:var(--muted)}@media(max-width:700px){.website-content-card{padding:16px}.website-content-json{min-height:440px;font-size:11px}}
