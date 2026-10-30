@@ -12,9 +12,9 @@ function configured(){
 
 export function uploadChurchMedia(buffer,{mimeType,isVideo,originalName}){
  const client=configured();
- const resourceType=isVideo?'video':'image';
+ const resourceType=isDocument?'raw':(isVideo||isAudio)?'video':'image';
  const publicId='ncbi/church-media/'+randomUUID();
- const transformation=isVideo
+ const transformation=isDocument||isAudio?[]:isVideo
   ?[{quality:'auto:good',video_codec:'h264',width:1920,height:1080,crop:'limit',format:'mp4'}]
   :[{quality:'auto:good',width:1920,height:1920,crop:'limit',format:'webp'}];
  return new Promise((resolve,reject)=>{
@@ -39,10 +39,10 @@ export function uploadChurchMedia(buffer,{mimeType,isVideo,originalName}){
 
 export function churchMediaDeliveryUrl(asset){
  const client=configured();
+ const isRaw=asset.cloudinaryResourceType==='raw'||asset.mimeType==='application/pdf';
  const isVideo=asset.cloudinaryResourceType==='video'||String(asset.mimeType||'').startsWith('video/');
- const resourceType=isVideo?'video':'image';
- const transformations=isVideo
-  ?[{quality:'auto:good',video_codec:'h264',width:1920,height:1080,crop:'limit',format:'mp4'}]
-  :[{quality:'auto:good',fetch_format:'auto',width:1920,height:1920,crop:'limit'}];
+ const isAudio=String(asset.mimeType||'').startsWith('audio/');
+ const resourceType=isRaw?'raw':(isVideo||isAudio)?'video':'image';
+ const transformations=isRaw||isAudio?[]:isVideo?[{quality:'auto:good',video_codec:'h264',width:1920,height:1080,crop:'limit',format:'mp4'}]:[{quality:'auto:good',fetch_format:'auto',width:1920,height:1920,crop:'limit'}];
  return client.url(asset.cloudinaryPublicId,{secure:true,resource_type:resourceType,transformation:transformations,format:isVideo?'mp4':undefined});
 }
