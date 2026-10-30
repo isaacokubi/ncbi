@@ -279,3 +279,101 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .qr-image-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px;background:#fff;border:1px solid var(--line);border-radius:10px;width:fit-content;max-width:100%}.qr-image{display:block;width:220px;height:220px;max-width:65vw;object-fit:contain;image-rendering:pixelated}.qr-image-actions{display:flex;flex-direction:column;gap:8px}.qr-image-actions button{justify-content:center;min-height:38px}.dark .qr-image-wrap{background:#fff;color:#24152a}@media(max-width:520px){.qr-image-wrap{width:100%;justify-content:center}.qr-image-actions{width:100%;flex-direction:row;flex-wrap:wrap}.qr-image-actions button{flex:1}}
 
 .security-workspace{display:flex;flex-direction:column;gap:20px}.security-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.security-card{padding:22px;display:flex;flex-direction:column;gap:14px;align-items:stretch}.security-card .panel-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.security-card .panel-heading h3{margin:0 0 6px}.security-card .panel-heading p,.security-warning{font-size:13px;color:var(--muted);line-height:1.6}.security-card .field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600}.security-card input{width:100%;min-width:0;padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--surface,#fff);color:inherit;font:inherit}.security-card button{align-self:flex-start;min-height:40px}.security-warning{padding:12px;border-radius:8px;background:#fff7e8;color:#795b24}.dark .security-warning{background:#352d20;color:#e5ce91}.danger-button{border:1px solid #b44b4b;border-radius:8px;padding:10px 14px;background:#fff;color:#a12f2f;font-weight:700;cursor:pointer}.danger-button:disabled,.security-card button:disabled{opacity:.6;cursor:not-allowed}@media(max-width:760px){.security-grid{grid-template-columns:1fr}.security-card{padding:17px}}
+
+
+/* Navigation reliability: keep the complete sidebar above adjacent content and
+   make every navigation target a real, keyboard/touch accessible hit area. */
+.app{isolation:isolate;align-items:stretch}
+.sidebar{position:sticky;top:0;height:100vh;max-height:100vh;min-height:100vh;z-index:30;overflow:hidden;isolation:isolate}
+.sidebar nav{position:relative;z-index:2;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#80658b transparent}
+.sidebar nav section{position:relative;z-index:1}
+.sidebar .nav-item{position:relative;z-index:1;pointer-events:auto;touch-action:manipulation;user-select:none;min-height:44px;line-height:1.35}
+.sidebar .nav-item svg{pointer-events:none;flex:0 0 19px}
+.sidebar .nav-item span{pointer-events:none}
+.sidebar .nav-item:focus-visible,.sidebar .collapse:focus-visible{outline:3px solid var(--champagne);outline-offset:2px}
+.sidebar .nav-item.selected{background:linear-gradient(90deg,#ffffff24,#ffffff12);color:#f5df91;box-shadow:inset 3px 0 #e4ca75}
+.sidebar .nav-item:hover{background:#ffffff1b;color:#fff}
+.sidebar-bottom{position:relative;z-index:3;flex-shrink:0;background:var(--purple)}
+.sidebar .brand{position:relative;z-index:3;flex-shrink:0}
+.main{position:relative;z-index:0;min-width:0}
+.topbar{z-index:2}
+.content{width:100%}
+button{ -webkit-tap-highlight-color:transparent }
+button:disabled{cursor:not-allowed}
+@media(max-width:720px){
+ .sidebar{position:sticky;left:0;width:72px;min-width:72px;height:100dvh;padding:14px 8px;z-index:40}
+ .sidebar.collapsed{width:72px;min-width:72px;padding-inline:8px}
+ .sidebar .brand{height:44px;margin-bottom:14px;justify-content:center;padding:0}
+ .sidebar .brand-mark{width:39px;height:39px}
+ .sidebar .collapse{display:none}
+ .sidebar nav{padding-bottom:10px}
+ .sidebar .nav-item{min-height:46px;margin:3px 0;border-radius:9px}
+ .sidebar-bottom{padding-top:9px}
+ .sidebar-bottom .nav-item{min-height:44px}
+ .sidebar .profile{display:none}
+}
+@media(min-width:721px){
+ .sidebar.collapsed{width:78px;min-width:78px}
+ .sidebar:not(.collapsed) .nav-item{padding-inline:12px}
+}
+
+/* NCBI visual system: clearer hierarchy, stronger contrast and consistent rhythm. */
+:root{
+ --purple:#281038;
+ --plum:#351b43;
+ --gold:#9a742d;
+ --champagne:#ead58c;
+ --muted:#706778;
+ --line:#e7e0e9;
+ --grid:#eee8f0;
+ --surface:#fff;
+ --text:#2d2533;
+ color:var(--text);
+}
+body{font-family:'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-size:15px;line-height:1.6}
+h1,h2,h3,h4{letter-spacing:-.025em}
+p{line-height:1.65}
+.eyebrow{color:#805c20;font-weight:700;letter-spacing:.095em}
+.nav-heading{font-weight:700;letter-spacing:.11em;color:#c4b2cc}
+.nav-item{font-weight:600;letter-spacing:.005em}
+.workspace-switch b,.profile b,.topbar b{font-weight:700}
+.dashboard-hero h1,.module-heading h1{letter-spacing:-.04em;line-height:1.15}
+.dashboard-section-heading h2{letter-spacing:-.025em}
+.panel,.stat-card{border-color:#e8e1eb;box-shadow:0 5px 18px #24152a0a}
+.gold-button{background:linear-gradient(135deg,#2b1238,#3b1e49);border-color:#b08a43;color:#f2dfa0}
+.gold-button:hover{background:#42244f;box-shadow:0 5px 16px #28103824}
+.text-button,.row-action{color:#806022}
+.text-button:hover,.row-action:hover{text-decoration:underline;text-underline-offset:3px}
+.table-wrap th{font-size:11px;font-weight:700;letter-spacing:.07em;color:#655b6b}
+.table-wrap td{font-size:13px;line-height:1.5}
+.table-wrap td b{font-size:13px}
+.empty-state{font-size:13px;line-height:1.6}
+.field{font-size:13px}
+.field input,.field select,.field textarea,.table-search input,.toolbar-right select,.inline-select{font-size:13px}
+.stat-top{font-size:13px;font-weight:600}
+.stat-card>strong{letter-spacing:-.035em}
+.portal-profile h2{letter-spacing:-.035em}
+.portal-meta span{font-size:13px}
+.portal-meta b{font-size:14px}
+.dark{
+ --purple:#1e1426;
+ --plum:#2c1d35;
+ --gold:#d1b16a;
+ --champagne:#f0dda0;
+ --muted:#b9adbf;
+ --line:#44364c;
+ --surface:#241b2b;
+ --text:#f2edf4;
+ background:#17121b;
+ color:var(--text)
+}
+.dark .sidebar{background:#1e1426}
+.dark .eyebrow{color:#e2c77f}
+.dark .table-wrap th{background:#302439;color:#e0d5e5}
+.dark .table-wrap td{border-color:#44364c;color:#d6cbdc}
+.dark .table-wrap td b{color:#f4edf6}
+.dark .empty-state{color:#b9adbf}
+.dark .field{color:#d9cedf}
+.dark .field input,.dark .field select,.dark .field textarea{background:#241b2b;border-color:#51415b;color:#f4edf6}
+.dark .portal-meta b{color:#f4edf6}
+.dark .dashboard-link:hover{border-color:#d1b16a}
