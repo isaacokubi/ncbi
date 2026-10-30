@@ -22,6 +22,15 @@ const userSchema = new Schema({
   memberProfile: { type: Schema.Types.ObjectId, ref: 'Member', default: null, index: true },
   permissions: [{ type: String }],
   active: { type: Boolean, default: true },
+  accountApproval: { type: String, enum: ['approved','pending','rejected'], default: 'approved', index: true },
+  registrationCategory: { type: String, enum: ['member','non_member'], default: null },
+  registrationPhone: { type: String, trim: true, maxlength: 40 },
+  claimedMembershipNumber: { type: String, trim: true, maxlength: 80 },
+  approvalNote: { type: String, trim: true, maxlength: 500 },
+  approvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  approvedAt: Date,
+  rejectedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  rejectedAt: Date,
   tokenVersion: { type: Number, default: 0, select: true }
 }, timestamps);
 
