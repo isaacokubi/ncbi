@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw } from 'lucide-react';
 
-const API = (import.meta.env.VITE_API_URL || '/api').replace(/\\/$/, '');
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API;
 const navigation = [
   { title: 'OVERVIEW', items: [{ label: 'Executive dashboard', icon: LayoutDashboard }, { label: 'Organisation structure', icon: Network }] },
   { title: 'CHURCH MANAGEMENT', items: [{ label: 'Branches', icon: Church }, { label: 'Membership', icon: Users }, { label: 'Visitors & follow-up', icon: HeartHandshake }, { label: 'Attendance', icon: ClipboardList }, { label: 'Departments & ministries', icon: BookOpen }] },
@@ -79,8 +80,8 @@ function App() {
       if (!alive) return;
       setUser(data.user);
       await loadWorkspace(token);
-    }).catch(() => {
-      if (alive) logout();
+    }).catch(err => {
+      if (!alive) return; if (err.status === 401) logout(); else setPageError(err.message || 'Unable to load your workspace.');
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [token, loadWorkspace, logout]);
@@ -120,7 +121,7 @@ function App() {
           <div className="welcome"><div><div className="eyebrow">{currentDate.toUpperCase()} <span>•</span> {orgName.toUpperCase()}</div><h1>Welcome, {user.fullName.split(' ')[0]}</h1><p>Your authorised view of NCBI people, stewardship and ministry activity.</p></div><button className="gold-button" onClick={() => setActive('Organisation structure')}><Network size={16}/> View organisation</button></div>
           <div className="scope-bar"><ShieldCheck size={16}/><span>Authorised scope</span><b>{orgName}</b><span className="scope-dot">•</span><span>{number(summary?.scope)} organisation units accessible</span><button onClick={() => setActive('Organisation structure')}>View structure <ArrowUpRight size={14}/></button></div>
           {pageError && <div className="page-error" role="alert">{pageError} <button onClick={() => loadWorkspace(token).catch(() => {})}><RefreshCw size={14}/> Retry</button></div>}
-          <div className="section-title"><div><h2>Church at a glance</h2><p>Live indicators from the NCBI database · current month</p></div><button className="refresh-button" onClick={() => loadWorkspace(token)}><RefreshCw size={14}/> Refresh data</button></div>
+          <div className="section-title"><div><h2>Church at a glance</h2><p>Live indicators from the NCBI database · current month</p></div><button className="refresh-button" onClick={() => loadWorkspace(token).catch(() => {})}><RefreshCw size={14}/> Refresh data</button></div>
           <div className="stats-grid">
             <article className="stat-card"><div className="stat-top"><span>Active branches</span><div className="stat-icon"><Church size={19}/></div></div><strong>{number(metrics.branches)}</strong><small>Within your authorised scope</small></article>
             <article className="stat-card"><div className="stat-top"><span>Registered members</span><div className="stat-icon"><Users size={19}/></div></div><strong>{number(metrics.members)}</strong><small>Members, workers and ministers</small></article>
