@@ -200,8 +200,20 @@ function PublicHome({onLogin,onRegister,brandLogo,heroImage:initialHeroImage,aut
    <a className="public-brand" href="#home" aria-label="NCBI home" onClick={e=>{e.preventDefault();navigate('home');}}><div className="brand-mark"><img src={brandLogo||"/ncbi-logo.jpg"} onError={e=>{if(!e.currentTarget.dataset.fallback){e.currentTarget.dataset.fallback="true";e.currentTarget.src="/ncbi-logo.jpg";}else{e.currentTarget.style.visibility="hidden";}}} alt="NCBI emblem"/></div><div><b>NCBI</b><small>NEW CHURCH BELIEVERS INTERNATIONAL</small></div></a>
    <button className="public-menu-toggle" type="button" aria-label={menuOpen?'Close navigation':'Open navigation'} aria-expanded={menuOpen} onClick={()=>setMenuOpen(v=>!v)}>{menuOpen?<X size={21}/>:<Menu size={21}/>}</button>
    <nav className={`public-nav ${menuOpen?'is-open':''}`} aria-label="Main navigation">
-    {pageLink('home','Home')}{publicLinks.map(([id,label])=>pageLink(id,label))}
-    <button className="public-register-button" onClick={()=>{closeMenu();onRegister();}}>{siteContent.navigation.register} <Plus size={15}/></button><button className="public-login-button" onClick={()=>{closeMenu();onLogin();}}>{siteContent.navigation.signIn} <ArrowUpRight size={16}/></button>
+    {pageLink('home','Home','public-top-link')}
+    <details className="public-nav-group">
+     <summary>About NCBI <ChevronDown size={14}/></summary>
+     <div className="public-nav-dropdown">{publicLinks.filter(([id])=>['about','mission','ministries'].includes(id)).map(([id,label])=>pageLink(id,label))}</div>
+    </details>
+    <details className="public-nav-group">
+     <summary>Church life <ChevronDown size={14}/></summary>
+     <div className="public-nav-dropdown">{publicLinks.filter(([id])=>['branches','programmes','news','gallery'].includes(id)).map(([id,label])=>pageLink(id,label))}</div>
+    </details>
+    {pageLink('contact',publicLinks.find(([id])=>id==='contact')?.[1]||'Contact us','public-top-link')}
+    <div className="public-nav-actions">
+     <button className="public-register-button" onClick={()=>{closeMenu();onRegister();}}>{siteContent.navigation.register} <Plus size={15}/></button>
+     <button className="public-login-button" onClick={()=>{closeMenu();onLogin();}}>{siteContent.navigation.signIn} <ArrowUpRight size={16}/></button>
+    </div>
    </nav>
   </header>
   {activePage==='home'&&<section className="public-hero public-page-view" id="home">
