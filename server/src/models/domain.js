@@ -267,6 +267,7 @@ const mediaAssetSchema = new Schema({
   originalName: { type: String, required: true, maxlength: 140 },
   mimeType: { type: String, enum: ['image/jpeg','image/png','image/webp','video/mp4','video/webm'], required: true },
   size: { type: Number, required: true, min: 1, max: 104857600 },
+  optimizedSize: { type: Number, min: 1, default: null },
   checksum: { type: String, required: true, match: /^[a-f0-9]{64}$/ },
   uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['active','archived'], default: 'active', index: true }
