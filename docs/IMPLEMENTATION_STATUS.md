@@ -67,3 +67,10 @@ A dedicated safeguarding-consent API records explicit guardian authority, purpos
 
 ## QR attendance API
 Attendance officers can issue a signed, organisation-bound QR session token for a named activity. Tokens use HS256 with issuer/audience/purpose validation and expire after ten minutes. Member check-in verifies the token, organisation access and active member status. Only attendance officers or the member account linked to the exact member profile may submit a check-in; finance and unrelated roles are denied. It records checkInMethod=qr and relies on the attendance uniqueness constraint to make repeated or concurrent scans idempotent. QR tokens are not reusable as login credentials. A camera/scanner UI with a local QR encoder and browser print workflow is implemented; end-to-end device testing remains outstanding; the API is ready for that client integration.
+
+
+## Member self-service portal improvements
+- Expanded the member portal into a responsive personal workspace with membership identity, branch, contact details, membership status, ministry connections, attendance totals and recent check-ins, upcoming programmes, the member's own event registrations and branch announcements.
+- Members can update only their own contact and emergency-contact fields. The server resolves the member profile from the authenticated account and rejects changes to membership number, status, branch, ministry assignments and other staff-managed fields.
+- Portal attendance totals are derived from attendance records attached to the exact linked member profile; no sample or estimated values are shown.
+- Giving statements, contribution receipts, prayer-request submission, small-group enrolment, discipleship progress, personal notifications and member document access remain future modules because the current data model does not yet provide safe, member-linked workflows for them.
