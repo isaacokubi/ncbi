@@ -201,7 +201,7 @@ const purchaseRequestSchema=new Schema({
  description:{type:String,required:true,trim:true,maxlength:500},
  currency:{type:String,required:true,default:'KES',uppercase:true,match:/^[A-Z]{3}$/},
  amount:{type:Schema.Types.Decimal128,required:true},
- status:{type:String,enum:['submitted','approved','rejected','cancelled'],default:'submitted',index:true},
+ status:{type:String,enum:['submitted','approved','ordered','rejected','cancelled'],default:'submitted',index:true},
  decisionNote:{type:String,maxlength:500},
  createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
  approvedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
@@ -211,6 +211,25 @@ const purchaseRequestSchema=new Schema({
 },{timestamps:true, optimisticConcurrency: true });
 purchaseRequestSchema.index({organisation:1,requestNumber:1},{unique:true});
 
+const purchaseQuoteSchema=new Schema({
+ organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
+ purchaseRequest:{type:Schema.Types.ObjectId,ref:'PurchaseRequest',required:true,index:true},
+ supplier:{type:Schema.Types.ObjectId,ref:'Supplier',required:true},
+ quoteNumber:{type:String,required:true,trim:true,maxlength:80},
+ currency:{type:String,required:true,uppercase:true,match:/^[A-Z]{3}$/},
+ amount:{type:Schema.Types.Decimal128,required:true},
+ deliveryDays:{type:Number,required:true,min:0,max:3650},
+ validUntil:{type:Date,required:true},
+ terms:{type:String,trim:true,maxlength:1000},
+ documentReference:{type:String,trim:true,maxlength:300},
+ status:{type:String,enum:['submitted','selected','rejected'],default:'submitted',index:true},
+ decisionNote:{type:String,maxlength:300},
+ createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
+ decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ decidedAt:Date
+},{timestamps:true,optimisticConcurrency:true});
+purchaseQuoteSchema.index({organisation:1,purchaseRequest:1,supplier:1},{unique:true});
+purchaseQuoteSchema.index({organisation:1,purchaseRequest:1,status:1});
 const supplierInvoiceSchema=new Schema({
  organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
  supplier:{type:Schema.Types.ObjectId,ref:'Supplier',required:true},
@@ -255,6 +274,7 @@ supplierPaymentSchema.index({organisation:1,reference:1},{unique:true,partialFil
 
 export const Supplier=mongoose.models.Supplier||model('Supplier',supplierSchema);
 export const PurchaseRequest=mongoose.models.PurchaseRequest||model('PurchaseRequest',purchaseRequestSchema);
+export const PurchaseQuote=mongoose.models.PurchaseQuote||model('PurchaseQuote',purchaseQuoteSchema);
 export const SupplierInvoice=mongoose.models.SupplierInvoice||model('SupplierInvoice',supplierInvoiceSchema);
 export const SupplierPayment=mongoose.models.SupplierPayment||model('SupplierPayment',supplierPaymentSchema);
 

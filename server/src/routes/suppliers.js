@@ -2,7 +2,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
-import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseRequest, SupplierInvoice, SupplierPayment, FinanceApprovalPolicy } from '../models/domain.js';
+import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseRequest, PurchaseQuote, SupplierInvoice, SupplierPayment, FinanceApprovalPolicy } from '../models/domain.js';
 import { approvalProgress } from '../domain/approvalMatrix.js';
 import { budgetPeriodRange, selectApplicableBudget, budgetPostingDecision } from '../domain/budgetControl.js';
 import { supplierNameError, supplierInvoiceError, supplierPaymentError, supplierDecisionError, invoicePaymentStatus, moneyToMinor } from '../domain/supplierWorkflow.js';
@@ -62,9 +62,47 @@ router.get('/purchase-requests',async(req,res,next)=>{try{
  if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Procurement access denied'});
  const ids=await scopedIds(req),filter={organisation:{$in:ids}};
  if(req.query.status)filter.status=String(req.query.status);
- const requests=await PurchaseRequest.find(filter).populate('supplier','name').populate('createdBy','fullName').populate('approvedBy','fullName').sort({createdAt:-1}).lean();
+ const requests=await PurchaseRequest.find(filter).populate('supplier','name').populate('createdBy','fullName').populate('approvedBy','fullName').populate('selectedQuote').sort({createdAt:-1}).lean();
  res.json({purchaseRequests:requests});
 }catch(e){next(e);}});
+router.get('/purchase-requests/:id/quotes',async(req,res,next)=>{try{
+ if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Procurement quotation access denied'});
+ const ids=await scopedIds(req),purchaseRequest=await PurchaseRequest.findOne({_id:req.params.id,organisation:{$in:ids}}).select('_id organisation selectedQuote purchaseOrderNumber status');
+ if(!purchaseRequest)return res.status(404).json({message:'Purchase request not found'});
+ const quotes=await PurchaseQuote.find({organisation:purchaseRequest.organisation,purchaseRequest:purchaseRequest._id}).populate('supplier','name').populate('createdBy','fullName').populate('decidedBy','fullName').sort({amount:1,createdAt:1}).lean();
+ res.json({quotes,purchaseRequest});
+}catch(e){next(e);}});
+router.post('/purchase-requests/:id/quotes',async(req,res,next)=>{try{
+ if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Procurement quotation access denied'});
+ const ids=await scopedIds(req),purchaseRequest=await PurchaseRequest.findOne({_id:req.params.id,organisation:{$in:ids}});
+ if(!purchaseRequest)return res.status(404).json({message:'Purchase request not found'});
+ if(!['submitted','approved'].includes(purchaseRequest.status)||purchaseRequest.selectedQuote)return res.status(409).json({message:'Quotes can only be added before a purchase order is issued'});
+ const {supplier,quoteNumber,amount,currency=purchaseRequest.currency,deliveryDays,validUntil,terms,documentReference}=req.body;
+ const minor=moneyToMinor(amount),days=Number(deliveryDays),expiry=new Date(validUntil);
+ if(!mongoose.isValidObjectId(supplier)||!String(quoteNumber||'').trim()||String(quoteNumber).length>80||minor===null||minor<=0n||String(currency).toUpperCase()!==purchaseRequest.currency||!Number.isInteger(days)||days<0||days>3650||Number.isNaN(expiry.getTime())||expiry<new Date(new Date().toISOString().slice(0,10)))return res.status(400).json({message:'Supplier, quote reference, positive amount, matching currency, valid delivery period and future validity date are required'});
+ const vendor=await Supplier.findOne({_id:supplier,organisation:purchaseRequest.organisation,status:'active'}).select('_id');
+ if(!vendor)return res.status(400).json({message:'Select an active supplier in this organisation'});
+ const quote=await PurchaseQuote.create({organisation:purchaseRequest.organisation,purchaseRequest:purchaseRequest._id,supplier,quoteNumber:String(quoteNumber).trim(),currency:String(currency).toUpperCase(),amount:asAmount(amount),deliveryDays:days,validUntil:expiry,terms:String(terms||'').slice(0,1000),documentReference:String(documentReference||'').slice(0,300),createdBy:req.user._id});
+ await audit(req,purchaseRequest.organisation,'purchase_quote_submit','purchase_quote',quote,'Submitted supplier quotation',{purchaseRequest:purchaseRequest.requestNumber,amount:asAmount(amount),currency});
+ res.status(201).json({quote});
+}catch(e){if(e?.code===11000)return res.status(409).json({message:'A quotation from this supplier is already registered for this purchase request'});next(e);}});
+router.post('/purchase-requests/:id/select-quote',async(req,res,next)=>{try{
+ if(!approverRoles.has(req.user.role))return res.status(403).json({message:'Independent procurement approval permission required to select a quotation'});
+ const ids=await scopedIds(req),session=await mongoose.startSession();let result;
+ try{await session.withTransaction(async()=>{
+  const purchaseRequest=await PurchaseRequest.findOne({_id:req.params.id,organisation:{$in:ids},status:'approved',selectedQuote:null}).session(session);
+  if(!purchaseRequest)throw Object.assign(new Error('Purchase request must be approved and have no purchase order before selecting a quotation'),{status:409});
+  const quote=await PurchaseQuote.findOne({_id:req.body.quote,organisation:purchaseRequest.organisation,purchaseRequest:purchaseRequest._id,status:'submitted'}).session(session);
+  if(!quote)throw Object.assign(new Error('Quotation not found or already decided'),{status:404});
+  if(String(quote.currency)!==purchaseRequest.currency||moneyToMinor(String(quote.amount))>moneyToMinor(String(purchaseRequest.amount)))throw Object.assign(new Error('Selected quotation exceeds the approved request amount or uses a different currency; obtain a revised approval first'),{status:409});
+  purchaseRequest.supplier=quote.supplier;purchaseRequest.selectedQuote=quote._id;purchaseRequest.status='ordered';purchaseRequest.purchaseOrderNumber='PO-'+purchaseRequest.requestNumber;purchaseRequest.orderedAt=new Date();await purchaseRequest.save({session});
+  quote.status='selected';quote.decidedBy=req.user._id;quote.decidedAt=new Date();await quote.save({session});
+  await PurchaseQuote.updateMany({organisation:purchaseRequest.organisation,purchaseRequest:purchaseRequest._id,status:'submitted',_id:{$ne:quote._id}},{$set:{status:'rejected',decisionNote:'Another quotation was selected'}},{session});
+  result={purchaseRequest,quote};
+ });}finally{await session.endSession();}
+ await audit(req,result.purchaseRequest.organisation,'purchase_order_created','purchase_request',result.purchaseRequest,'Selected supplier quotation and generated purchase order',{purchaseOrderNumber:result.purchaseRequest.purchaseOrderNumber,quote:result.quote._id});
+ res.json(result);
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'Another approver changed this purchase request. Reload and retry.'});if(e?.status)return res.status(e.status).json({message:e.message});next(e);}});
 router.post('/purchase-requests',async(req,res,next)=>{try{
  if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Procurement access denied'});
  const org=orgFor(req,req.body.organisation),{supplier,requestNumber,description,currency='KES',amount}=req.body;
@@ -117,9 +155,9 @@ router.post('/invoices',async(req,res,next)=>{try{
  if(!expense||expense.type!=='expense'||!payable||payable.type!=='liability')return res.status(400).json({message:'Invoice posting requires an active expense account and an active liability account from this organisation'});
  if(purchaseRequest){
   if(!mongoose.isValidObjectId(purchaseRequest))return res.status(400).json({message:'Invalid purchase request'});
-  const po=await PurchaseRequest.findOne({_id:purchaseRequest,organisation:org,supplier,status:'approved'});
+  const po=await PurchaseRequest.findOne({_id:purchaseRequest,organisation:org,supplier,status:{$in:['approved','ordered']}}).populate('selectedQuote');
   if(!po)return res.status(400).json({message:'Linked purchase request must be approved and belong to this supplier'});
-  if(String(po.currency)!==String(currency).toUpperCase()||moneyToMinor(amount)>moneyToMinor(String(po.amount)))return res.status(400).json({message:'Invoice currency and amount must not exceed the approved purchase request'});
+  if(String(po.currency)!==String(currency).toUpperCase()||moneyToMinor(amount)>moneyToMinor(String(po.selectedQuote?.amount||po.amount)))return res.status(400).json({message:'Invoice currency and amount must not exceed the approved purchase request'});
  }
  const invoice=await SupplierInvoice.create({organisation:org,supplier,purchaseRequest:purchaseRequest||null,invoiceNumber:String(invoiceNumber).trim(),invoiceDate:new Date(invoiceDate),dueDate:dueDate?new Date(dueDate):null,currency:String(currency).toUpperCase(),amount:asAmount(amount),expenseAccount,payableAccount,createdBy:req.user._id});
  await audit(req,org,'supplier_invoice_submit','supplier_invoice',invoice,'Submitted supplier invoice',{invoiceNumber,amount:asAmount(amount),currency});
