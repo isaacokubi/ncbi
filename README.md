@@ -33,6 +33,7 @@ There is no default administrator. Public registration creates only an inactive,
 - `/api/payments/mpesa/stk-push` and secret-protected Daraja callback; credentials and deployed callback URL are required for live collections
 - `GET/POST /api/workspace/users`, `PATCH /api/workspace/users/:id/status` (role-hierarchy constrained user administration)
 - `GET /api/documents/:id/files`, `POST /api/documents/:id/files`, `GET /api/documents/files/:fileId/download` — authenticated private document files and append-only version history (10 MiB maximum)
+- `GET /api/documents/:id/files`, `POST /api/documents/:id/files`, `GET /api/documents/files/:fileId/download` — authenticated private document files and append-only version history (10 MiB maximum)
 - `POST /api/operations/attendance/qr-session`, `POST /api/operations/attendance/qr-checkin` (10-minute signed, organisation-bound QR attendance sessions; duplicate-safe member check-in)
 - `GET/POST /api/operations/safeguarding/consents`, `PATCH /api/operations/safeguarding/consents/:id/revoke` (restricted minor consent capture and immutable revocation history)
 

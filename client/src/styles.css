@@ -679,3 +679,5 @@ p{line-height:1.65}
 .registration-success p{line-height:1.65}
 .registration-success .auth-submit{width:100%;margin-top:12px}
 @media(max-width:760px){.public-register-button{width:100%;margin-top:8px}.registration-card{max-height:none}}
+
+.document-files-panel{margin-top:22px}.document-files-panel .panel-heading{margin-bottom:18px}.document-upload-form{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:12px 0 20px;padding:16px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.45)}.document-upload-form .field{flex:1;min-width:240px}.document-upload-form input[type=file]{width:100%;max-width:100%;font:inherit;font-size:13px}.document-upload-form .gold-button{white-space:nowrap}.document-files-panel .table-wrap{margin-top:12px}

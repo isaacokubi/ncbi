@@ -38,7 +38,7 @@ const configs = {
  leadership:{title:'Leadership & HR',entity:'leadership_appointment',description:'Record appointments, responsibilities, training and leadership terms.'},
  assets:{title:'Assets & property',entity:'asset',description:'Maintain church asset registers, custody, condition and maintenance records.'},
  projects:{title:'Projects',entity:'project',description:'Track church projects, milestones, budgets, owners and delivery status.'},
- documents:{title:'Documents',entity:'document',description:'Register important documents and their metadata. Secure file storage is not configured yet.'},
+ documents:{title:'Documents',entity:'document',description:'Register documents, upload private files, download authorised copies and review version history.'},
  memberEnrolments:{title:'Member programme enrolments',entity:'member_enrolment',description:'Review member requests to join small groups and discipleship programmes.'},
  memberNotifications:{title:'Personal member notifications',entity:'member_notification',description:'Address branch notices and reminders to individual member accounts.'},
  announcements:{title:'Announcements',entity:'announcement',description:'Manage internal church notices and communications.'},
@@ -401,6 +401,7 @@ function App(){
        </tr>)}
        {!filteredRows.length&&<tr><td colSpan="8" className="empty-cell">{page==='registrations'?'No pending registrations.':'No records found. Add a record or adjust your search.'}</td></tr>}
       </tbody></table><div className="table-footer"><span>Showing {filteredRows.length} of {pagination.total||filteredRows.length} records</span><div><button disabled={pagination.page<=1} onClick={()=>loadPage(token,page,pagination.page-1)}><ChevronLeft size={15}/></button><span>Page {pagination.page||1} of {pagination.pages||1}</span><button disabled={pagination.page>=(pagination.pages||1)} onClick={()=>loadPage(token,page,pagination.page+1)}><ChevronRight size={15}/></button></div></div></div>
+     {page==='documents'&&<DocumentFilesPanel token={token} documents={rows} onError={setError} onSuccess={setSuccess}/>}
      </>}
     </>}
     <footer><b>NCBI</b> · ONE CHURCH. ONE VISION. <span>A CALL TO SERVE</span></footer>
