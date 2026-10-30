@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 const recordSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
-  entity: { type: String, required: true, enum: ['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property'], index: true },
+  entity: { type: String, required: true, enum: ['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','transport','compliance','member_class','volunteer_schedule'], index: true },
   title: { type: String, required: true, trim: true, maxlength: 180 },
   reference: { type: String, trim: true, maxlength: 80 },
   status: { type: String, enum: ['draft','pending','active','scheduled','in_progress','completed','cancelled','archived','closed'], default: 'active', index: true },
