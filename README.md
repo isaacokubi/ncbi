@@ -12,6 +12,9 @@ NCBI-CMS is a MERN monorepo for New Church Believers International. It is design
 2. Copy `server/.env.example` to `server/.env`; set a MongoDB URI and a random JWT secret (32+ characters).
 3. Run `npm install`, then `npm run dev`.
 4. Client: http://localhost:5173; API health: http://localhost:5000/api/health.
+5. Sign in with an administrator provisioned through the one-time bootstrap procedure below; there is no public registration.
+
+The React client uses `VITE_API_URL` when set; otherwise it calls `/api` (configure the development proxy or same-origin reverse proxy for deployments). The dashboard obtains its KPIs, upcoming events and organisation directory from authenticated API endpoints. Other navigation modules are not yet complete data-entry screens.
 
 There is intentionally no public sign-up route and no default administrator. Provision the first administrator through a reviewed, one-time operational procedure; never commit credentials.
 
