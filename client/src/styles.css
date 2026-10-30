@@ -1773,7 +1773,22 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 @media(max-width:720px){.public-hero-inner{grid-template-columns:1fr}.public-hero-art{min-height:420px;margin-top:22px}.public-art-frame{width:min(100%,430px)}.public-art-emblem.bishop-portrait{height:440px;min-height:360px}.public-art-caption{right:0;bottom:64px;max-width:80%}}
 
 
-/* Give the bishop portrait substantially more horizontal presence on the public home hero. */
+/* Widen the bishop portrait without changing any existing portrait heights. */
+.public-hero-inner{
+  grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr);
+  gap:clamp(22px,2.6vw,42px);
+}
+.public-art-frame{width:min(100%,900px)}
+@media(max-width:900px){
+  .public-hero-inner{
+    grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);
+    gap:18px;
+  }
+}
+@media(max-width:720px){
+  .public-hero-inner{grid-template-columns:minmax(0,1fr)}
+  .public-art-frame{width:100%;max-width:640px;margin-inline:auto}
+}
 .public-hero-inner{
   grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);
   gap:clamp(22px,3vw,48px);
