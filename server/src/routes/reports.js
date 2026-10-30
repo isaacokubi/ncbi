@@ -62,7 +62,7 @@ router.get('/overview', async (req, res, next) => {
         { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', as: 'attendance' } },
         { $project: {
           name: 1, code: 1, status: 1,
-          members: { $size: '$members' },
+          members: { $size: { $filter: { input: '$members', as: 'member', cond: { $in: ['$member.status', ['member','worker','minister']] } } } },
           attendanceRecords: { $size: '$attendance' }
         } },
         { $sort: { members: -1, name: 1 } },
