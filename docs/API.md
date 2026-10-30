@@ -45,6 +45,13 @@ Supported entity keys: `department`, `event`, `pastoral_case`, `prayer_request`,
 
 A record accepts `title`, optional `organisation`, `reference`, `status`, `startAt`, `endAt`, `assignedTo`, `visibility` and a JSON object `data` (maximum 30 KB). The API validates organisation scope on create and derives scope on reads/updates. Pastoral cases and prayer requests are restricted and cannot be organisation-wide.
 
+## Private document files
+- `GET /api/documents/:id/files` — lists metadata and version history for an authorised document record.
+- `POST /api/documents/:id/files` — uploads a new version as a raw `application/octet-stream` request body with `X-File-Name` and `X-File-Type` headers. Maximum size is 10 MiB; accepted types are PDF, JPEG, PNG, WebP, DOCX and XLSX. File signatures are checked and SHA-256 checksums are recorded.
+- `GET /api/documents/files/:fileId/download` — authenticated attachment download; organisation scope and document status are rechecked for every request.
+
+Set `DOCUMENT_STORAGE_DIR` to an absolute path on a private persistent disk outside the public web root. Files are not exposed as static URLs. Document management is limited to management roles within their organisation scope. Uploads create append-only version records; prior versions remain available. Malware scanning, content disarm/reconstruction, retention automation and external object-storage replication are not included and must be added before accepting high-risk files.
+
 ## Finance
 - `GET /api/finance/transactions`
 - `POST /api/finance/transactions` — creates a submitted entry, not confirmed income.

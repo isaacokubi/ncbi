@@ -120,6 +120,21 @@ const sequenceSchema = new Schema({
 export const SequenceCounter = mongoose.models.SequenceCounter || model('SequenceCounter', sequenceSchema);
 
 
+const documentFileSchema = new Schema({
+  organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
+  document: { type: Schema.Types.ObjectId, ref: 'OperationsRecord', required: true, index: true },
+  storageKey: { type: String, required: true, unique: true, select: false },
+  originalName: { type: String, required: true, maxlength: 140 },
+  mimeType: { type: String, required: true, enum: ['application/pdf','image/jpeg','image/png','image/webp','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'] },
+  size: { type: Number, required: true, min: 1, max: 10485760 },
+  checksum: { type: String, required: true, match: /^[a-f0-9]{64}$/ },
+  version: { type: Number, required: true, min: 1 },
+  uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['active','archived'], default: 'active', index: true }
+}, { timestamps: true });
+documentFileSchema.index({ organisation: 1, document: 1, version: 1 }, { unique: true });
+export const DocumentFile = mongoose.models.DocumentFile || model('DocumentFile', documentFileSchema);
+
 const safeguardingConsentSchema = new Schema({
  organisation:{type:Schema.Types.ObjectId,ref:'Organisation',required:true,index:true},
  child:{type:Schema.Types.ObjectId,ref:'Member',required:true,index:true},

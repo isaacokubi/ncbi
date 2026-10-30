@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
 import operationsRoutes from './routes/operations.js';
+import documentRoutes from './routes/documents.js';
 import dashboardRoutes from './routes/dashboard.js';
 import financeRoutes from './routes/finance.js';
 import accountingRoutes from './routes/accounting.js';
@@ -25,6 +26,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'ncbi-ap
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }), authRoutes);
 app.use('/api/workspace', workspaceRoutes);
 app.use('/api/operations', operationsRoutes);
+app.use('/api/documents', documentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/accounting', accountingRoutes);
@@ -34,6 +36,8 @@ app.use('/api/portal', portalRoutes);
 app.use('/api/public', publicRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' }));
 app.use((error, _req, res, _next) => {
+  if (error.type === 'entity.too.large') return res.status(413).json({ message: 'File exceeds the 10 MiB upload limit' });
+  if (error.status === 503) return res.status(503).json({ message: error.message });
   console.error(error);
   if (error.code === 11000) return res.status(409).json({ message: 'A record with that unique value already exists' });
   if (error.name === 'ValidationError') return res.status(400).json({ message: error.message });
