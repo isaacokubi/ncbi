@@ -83,3 +83,7 @@ Set `MPESA_ENV`, consumer key/secret, shortcode, passkey, callback URL and a ran
 ## Member self-service profile
 - `GET /api/portal/summary` — returns the authenticated member's linked profile, own attendance history and totals, own event registrations, upcoming branch events and branch announcements.
 - `PATCH /api/portal/profile` — members may update only their own phone, residential location and emergency-contact details. Sign-in email is read-only in this workflow. The server derives the member profile from the authenticated account; membership identity, status, branch and ministry assignments cannot be changed through this endpoint.
+
+
+## Role-based operations access
+The generic operations register is available to senior, district and branch management roles within their server-derived organisation scope. Department leaders receive read-only access to department, event, discipleship-course and service-plan records. Member accounts use the dedicated member portal and event-registration endpoints; treasurers use finance and accounting endpoints. Other roles are denied access to the generic operations register. Sensitive pastoral records retain additional role restrictions.
