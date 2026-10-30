@@ -90,3 +90,10 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Members can request enrolment in active branch small groups and discipleship courses. Duplicate requests are prevented by a deterministic programme/member reference.
 - Member notifications can be addressed with `member_notification` records using `data.recipientUserId`; members can read only their own and mark them read.
 - Member document metadata is visible only when `data.memberId` exactly matches the linked profile. Downloads remain disabled until private object storage, malware scanning, expiring access and audit logging are implemented.
+
+
+## Member portal upgrade follow-through
+- Approved course enrolments have member-specific lesson checklists and server-calculated progress. Pending requests cannot mark lessons complete.
+- Member-specific document files can be downloaded through authenticated endpoints after a fresh assignment and checksum check.
+- Prayer request follow-up supports assignment to an active pastor in the same branch, a controlled workflow status and a member-visible progress update. Internal prayer text is not included in the member-facing update.
+- Branch managers can create and edit in-app notifications for a member's linked portal account. The recipient account is resolved and pinned by the API; notification records are not a substitute for external SMS/email delivery.
