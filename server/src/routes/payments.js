@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
+import { timingSafeEqual } from 'node:crypto';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { LedgerAccount, PaymentIntent, JournalEntry, AuditLog } from '../models/domain.js';
@@ -12,7 +13,7 @@ const approvers=new Set(['super_admin','international_executive','national_admin
 const moneyCents=value=>{const text=String(value??'');if(!/^\d+(?:\.\d{1,2})?$/.test(text))return null;const [w,d='']=text.split('.');return BigInt(w)*100n+BigInt((d+'00').slice(0,2));};
 const moneyText=value=>(value/100n).toString()+'.'+(value%100n).toString().padStart(2,'0');
 
-router.post('/mpesa/callback',async(req,res)=>{
+router.post('/mpesa/callback/:secret',async(req,res)=>{\n const expected=Buffer.from(process.env.MPESA_CALLBACK_SECRET||'');const supplied=Buffer.from(String(req.params.secret||''));if(!expected.length||expected.length!==supplied.length||!timingSafeEqual(expected,supplied))return res.status(404).json({message:'Not found'});
  const callback=req.body?.Body?.stkCallback;
  if(!callback?.CheckoutRequestID)return res.status(200).json({ResultCode:0,ResultDesc:'Callback received'});
  try{
