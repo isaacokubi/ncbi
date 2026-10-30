@@ -18,7 +18,7 @@ import { communicationApprovalError, validateAttendanceSessions, rosterTimeConfl
 
 const router = Router();
 router.use(requireAuth);
-const entities = new Set(['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','transport','compliance','member_class','volunteer_schedule','event_registration','sermon','church_plant','sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit','discipline_case','counselling_case']);
+const entities = new Set(['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','transport','vehicle_maintenance','compliance','member_class','volunteer_schedule','event_registration','sermon','church_plant','sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit','discipline_case','counselling_case']);
 const sensitiveEntities = new Set(['pastoral_case','prayer_request','benevolence','welfare_visit','discipline_case','counselling_case']);
 const managers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin']);
 const canManageSensitive = new Set(['super_admin','international_executive','national_admin','branch_pastor']);
@@ -67,7 +67,8 @@ function validateStructuredOperationData(entity, data) {
     procurement: { required: ['requestedBy','itemDescription'], numbers: ['quantity','estimatedCost'], dates: ['requiredBy'], enums: { approvalStage: ['draft','submitted','under_review','approved','rejected','ordered','received'] } },
     communications: { required: ['campaignType','audience','channels','messageSummary','plannedDate'], dates: ['plannedDate','publishedAt'], enums: { campaignType: ['announcement','pastoral_notice','event_promotion','fundraising','outreach','newsletter','other'], approvalStatus: ['draft','pending','approved','rejected','published'] } },
     media: { required: ['projectType','producer'], dates: ['scheduledAt'], enums: { projectType: ['photography','video','audio','livestream','graphic_design','publication','other'], productionStage: ['planned','recording','editing','review','approved','published','archived'] } },
-    transport: { required: ['driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost','maintenanceCost'], dates: ['departureAt','returnAt','nextServiceAt'], enums: { vehicleStatus: ['available','in_use','under_maintenance','out_of_service'] } },
+    transport: { required: ['vehicleRegistration','driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost','maintenanceCost'], dates: ['departureAt','returnAt','nextServiceAt'], enums: { vehicleStatus: ['available','in_use','under_maintenance','out_of_service'] } },
+    vehicle_maintenance: { required: ['vehicleRegistration','serviceType','serviceDate','maintenanceProvider','workDescription'], numbers: ['odometer','cost'], dates: ['serviceDate','nextServiceAt'], enums: { serviceStatus: ['scheduled','in_progress','completed','deferred'] } },
     compliance: { required: ['recordType','responsibleOfficer','complianceArea','requirement'], dates: ['reviewDate','completedAt'], enums: { recordType: ['policy','governance_resolution','compliance_action','meeting','risk','other'], actionStatus: ['not_started','in_progress','awaiting_evidence','completed','overdue'] } },
     member_class: { required: ['programmeName','classLevel','facilitator','curriculum','startDate'], numbers: ['capacity','enrolledCount'], dates: ['startDate','endDate'], enums: { classLevel: ['new_believer','foundation','membership','baptism_preparation','discipleship','leadership','other'] } },
     volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','serviceTime','serviceEndTime'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
@@ -768,6 +769,45 @@ router.post('/:entity', async (req, res, next) => {
   } catch (error) { if (error?.code === 11000 && req.params.entity === 'member_enrolment') return res.status(409).json({ message: 'This member already has an active enrolment for this programme' }); next(error); }
 });
 
+router.post('/member-enrolments/:id/attendance', async (req, res, next) => {
+  try {
+    if (!attendanceManagers.has(req.user.role)) return res.status(403).json({ message: 'Class attendance permission required' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Enrolment not found' });
+    const session = { sessionDate: req.body.sessionDate, sessionTitle: String(req.body.sessionTitle || '').trim(), attendanceStatus: req.body.attendanceStatus, recordedAt: new Date(), recordedBy: req.user._id };
+    const validation = validateAttendanceSessions([session]);
+    if (validation) return res.status(400).json({ message: validation });
+    const ids = await accessibleOrganisationIds(req.user);
+    const filter = { _id: req.params.id, entity: 'member_enrolment', organisation: { $in: ids }, status: 'active' };
+    const enrolment = await OperationsRecord.findOne(filter).select('data title organisation');
+    if (!enrolment) return res.status(404).json({ message: 'Approved class enrolment not found' });
+    const duplicate = (enrolment.data?.attendanceSessions || []).some(entry => String(entry.sessionDate).slice(0,10) === String(session.sessionDate).slice(0,10) && String(entry.sessionTitle).toLowerCase() === session.sessionTitle.toLowerCase());
+    if (duplicate) return res.status(409).json({ message: 'Attendance for this learner and session has already been recorded' });
+    const updated = await OperationsRecord.findOneAndUpdate(filter, { $push: { 'data.attendanceSessions': { $each: [session], $slice: -100 } }, $set: { updatedBy: req.user._id } }, { new: true, runValidators: true });
+    if (!updated) return res.status(409).json({ message: 'Enrolment changed while attendance was being recorded. Refresh and retry.' });
+    await audit(req, 'class-attendance-recorded', 'member_enrolment', updated, 'Recorded learner attendance for ' + session.sessionTitle);
+    res.status(201).json({ enrolment: updated });
+  } catch (error) { next(error); }
+});
+
+router.post('/member-enrolments/:id/approve', async (req, res, next) => {
+  try {
+    const approverRoles = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor']);
+    if (!approverRoles.has(req.user.role)) return res.status(403).json({ message: 'Class enrolment approval permission required' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Enrolment not found' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const filter = { _id: req.params.id, entity: 'member_enrolment', organisation: { $in: ids }, status: 'pending', createdBy: { $ne: req.user._id } };
+    const enrolment = await OperationsRecord.findOneAndUpdate(filter, { $set: { status: 'active', updatedBy: req.user._id } }, { new: true, runValidators: true });
+    if (!enrolment) {
+      const own = await OperationsRecord.findOne({ _id: req.params.id, entity: 'member_enrolment', organisation: { $in: ids } }).select('status createdBy').lean();
+      if (!own) return res.status(404).json({ message: 'Enrolment not found' });
+      if (String(own.createdBy) === String(req.user._id)) return res.status(403).json({ message: 'You cannot approve an enrolment you submitted' });
+      return res.status(409).json({ message: 'Only a pending enrolment can be approved' });
+    }
+    await audit(req, 'class-enrolment-approved', 'member_enrolment', enrolment, 'Approved class enrolment: ' + enrolment.title);
+    res.json({ enrolment });
+  } catch (error) { next(error); }
+});
+
 router.patch('/:entity/:id', async (req, res, next) => {
   try {
     const { entity, id } = req.params;
@@ -784,6 +824,8 @@ router.patch('/:entity/:id', async (req, res, next) => {
       const eligibleAssignees = await User.countDocuments({ _id: { $in: assignees }, organisation: record.organisation, active: true });
       if (eligibleAssignees !== assignees.length) return res.status(400).json({ message: 'Every assignee must be an active user in the same church organisation' });
     }
+    if (entity === 'member_enrolment' && req.body.status !== undefined && req.body.status !== record.status) return res.status(400).json({ message: 'Use the dedicated enrolment approval action to change enrolment status' });
+    if (entity === 'member_enrolment' && req.body.data?.attendanceSessions !== undefined) return res.status(400).json({ message: 'Attendance history is append-only; use the dedicated attendance action' });
     for (const key of ['title','reference','status','startAt','endAt','assignedTo','visibility']) if (req.body[key] !== undefined) record[key] = req.body[key];
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);

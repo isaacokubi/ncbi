@@ -284,3 +284,12 @@ Automated Node policy tests cover headquarters communication approval, approval-
 - Supplier invoices can be linked to an approved request or issued purchase order. Once a quote is selected, the invoice amount is capped at the selected quote amount, and the selected supplier must match the invoice supplier.
 - The transaction-backed quote-selection operation requires MongoDB transaction support (Atlas or a replica set). Weighted scoring, quote-document binary uploads, delivery notes and goods-received reconciliation remain future enhancements.
 - Automated policy tests cover quote amount/currency/delivery/validity validation and volunteer-shift overlap rules. GitHub Actions run [41071148491](https://github.com/isaacokubi/ncbi/actions/runs/41071148491) is running for the combined procurement and roster changes; verify its final result before treating this revision as CI-verified.
+
+
+## Operational workflow completion updates (30 October 2026)
+
+- Class enrolment approvals now use a dedicated server action restricted to senior leadership approvers. A user cannot approve their own submitted enrolment, and generic record edits cannot bypass the approval action.
+- Class attendance now uses a dedicated append-only endpoint. It validates each session, prevents duplicate learner/session entries, retains the latest 100 sessions and writes an audit event. Attendance can only be recorded against an approved enrolment.
+- Transport now has a separate vehicle maintenance register for routine service, inspections, repairs, licensing, costs, odometer readings and next-service dates, in addition to trip scheduling.
+- Vehicle maintenance records are stored as organisation-scoped operational records and use the existing role checks, validation and audit trail.
+- These workflows still require live role-based acceptance testing with the deployed MongoDB environment; CI checks validate source, policy and client build, not production data or permissions.
