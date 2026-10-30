@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 const recordSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
-  entity: { type: String, required: true, enum: ['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','transport','compliance','member_class','volunteer_schedule','event_registration','sermon','church_plant','sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit','discipline_case','counselling_case'], index: true },
+  entity: { type: String, required: true, enum: ['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','church_media','transport','compliance','member_class','volunteer_schedule','event_registration','sermon','church_plant','sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit','discipline_case','counselling_case'], index: true },
   title: { type: String, required: true, trim: true, maxlength: 180 },
   reference: { type: String, trim: true, maxlength: 80 },
   status: { type: String, enum: ['draft','pending','active','scheduled','in_progress','completed','cancelled','archived','closed'], default: 'active', index: true },
@@ -253,3 +253,18 @@ export const Supplier=mongoose.models.Supplier||model('Supplier',supplierSchema)
 export const PurchaseRequest=mongoose.models.PurchaseRequest||model('PurchaseRequest',purchaseRequestSchema);
 export const SupplierInvoice=mongoose.models.SupplierInvoice||model('SupplierInvoice',supplierInvoiceSchema);
 export const SupplierPayment=mongoose.models.SupplierPayment||model('SupplierPayment',supplierPaymentSchema);
+
+
+const mediaAssetSchema = new Schema({
+  organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
+  record: { type: Schema.Types.ObjectId, ref: 'OperationsRecord', required: true, unique: true },
+  storageKey: { type: String, required: true, unique: true, select: false },
+  originalName: { type: String, required: true, maxlength: 140 },
+  mimeType: { type: String, enum: ['image/jpeg','image/png','image/webp','video/mp4','video/webm'], required: true },
+  size: { type: Number, required: true, min: 1, max: 52428800 },
+  checksum: { type: String, required: true, match: /^[a-f0-9]{64}$/ },
+  uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['active','archived'], default: 'active', index: true }
+}, { timestamps: true });
+mediaAssetSchema.index({ organisation: 1, record: 1, status: 1 });
+export const MediaAsset = mongoose.models.MediaAsset || model('MediaAsset', mediaAssetSchema);
