@@ -16,6 +16,8 @@ NCBI-CMS is a MERN monorepo for New Church Believers International. It is design
 
 The React client uses `VITE_API_URL` when set; otherwise it calls `/api`. Vite proxies `/api` to `http://localhost:5000` during development (override with `API_PROXY_TARGET`); production deployments must provide a same-origin reverse proxy or set `VITE_API_URL`. The dashboard obtains its KPIs, upcoming events and organisation directory from authenticated API endpoints. The reporting workspace reads consolidated trend and branch-performance data from the reporting API. The public NCBI website reads only active branch details and records explicitly published with public visibility. Member accounts can be linked to a member profile and use a restricted self-service portal for attendance, branch events, registrations and public notices. Several advanced capabilities remain explicitly gated in the implementation status document.
 
+The interface copy resource is `client/src/content/terminology.js`. It holds displayed governance role labels, page-specific workspace labels and descriptions, contextual register empty states, action labels and public website fallback content. Official role identifiers, routes, API fields and permission keys remain unchanged. Public-site defaults provide fallback copy; saved website CMS content remains authoritative and is never overwritten by application defaults.
+
 There is no default administrator. Public registration creates only an inactive, pending basic member-portal request; applicants cannot choose or assign privileged roles. Provision the first administrator once from a trusted terminal after setting the required variables in `server/.env`: `BOOTSTRAP_NAME`, `BOOTSTRAP_EMAIL`, `BOOTSTRAP_PASSWORD` (at least 6 characters), `BOOTSTRAP_ORG_NAME` and `BOOTSTRAP_ORG_CODE`. Optional variables are `BOOTSTRAP_COUNTRY` and `BOOTSTRAP_CURRENCY`. Then run `npm run bootstrap-admin -w server`. The script refuses to overwrite an existing account or organisation and never prints the password. Do not commit `.env` or share bootstrap credentials.
 
 ## Implemented API foundations
@@ -62,6 +64,8 @@ Attendance submissions are validated before persistence: activity names, dates, 
 Organisation scopes are resolved server-side from the hierarchy; client-supplied organisation IDs are never accepted without checking the user's permitted subtree. Financial values use Decimal128. Sensitive pastoral data should undergo a privacy impact assessment and field-level access review before production. This codebase is an implementation baseline, not a claim of production certification.
 
 Run `npm run check` and `npm run build` before deployment. Integration, migration, backup/restore, security, accessibility and user acceptance testing remain required.
+
+The client terminology and public fallback-copy checks run with `npm test -w client`. GitHub Actions runs this client test in addition to server tests and production builds.
 
 
 ## Public website content management

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { FinanceTransaction, Member } from '../models/index.js';
 import { AuditLog, LedgerAccount, JournalEntry } from '../models/domain.js';
-import { financeTransition, isValidPositiveAmount, financeDecisionError } from '../domain/financePolicy.js';
+import { financeTransition, isValidPositiveAmount, financeDecisionError, financeDecisionNoteError } from '../domain/financePolicy.js';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 
@@ -59,6 +59,9 @@ router.post('/transactions/:id/decision', async (req, res, next) => {
   try {
     const decision = String(req.body.decision || '');
     if (!['approve','reject','confirm','void'].includes(decision)) return res.status(400).json({ message: 'Unsupported finance decision' });
+    const decisionNote = String(req.body.note || '').trim().slice(0, 500);
+    const noteError = financeDecisionNoteError(decision, decisionNote);
+    if (noteError) return res.status(400).json({ message: noteError });
     const isApproval = decision === 'approve' || decision === 'reject';
     if (isApproval ? !approverRoles.has(req.user.role) : !financeRoles.has(req.user.role)) return res.status(403).json({ message: isApproval ? 'Finance approval permission required' : 'Finance permission required' });
     const ids = await accessibleOrganisationIds(req.user);
@@ -94,10 +97,11 @@ router.post('/transactions/:id/decision', async (req, res, next) => {
     }
 
     if (decision === 'approve') { transaction.approvedBy = req.user._id; transaction.approvedAt = new Date(); }
+    if (decision === 'reject') transaction.decisionNote = decisionNote;
     if (decision === 'void') { transaction.voidedBy = req.user._id; transaction.voidedAt = new Date(); }
     transaction.status = transition.status;
     await transaction.save();
-    await AuditLog.create({ organisation: transaction.organisation, actor: req.user._id, action: decision, entity: 'finance_transaction', recordId: transaction._id, summary: `Finance transaction ${transaction.status}`, metadata: { journalEntry: transaction.journalEntry || null, reversalJournalEntry: transaction.reversalJournalEntry || null } });
+    await AuditLog.create({ organisation: transaction.organisation, actor: req.user._id, action: decision, entity: 'finance_transaction', recordId: transaction._id, summary: `Finance transaction ${transaction.status}`, metadata: { journalEntry: transaction.journalEntry || null, reversalJournalEntry: transaction.reversalJournalEntry || null, decisionNote: decisionNote || null } });
     res.json({ transaction });
   } catch (error) { next(error); }
 });

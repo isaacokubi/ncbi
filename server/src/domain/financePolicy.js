@@ -25,6 +25,12 @@ export function financeDecisionError(transaction, decision, actorId) {
   return null;
 }
 
+export function financeDecisionNoteError(decision, note) {
+  return decision === 'reject' && !String(note || '').trim()
+    ? 'Provide an explanation when declining a financial request'
+    : null;
+}
+
 export function budgetTransition(currentStatus, decision) {
   if (currentStatus !== 'submitted' || !['approve', 'reject'].includes(decision)) {
     return { allowed: false, status: currentStatus };

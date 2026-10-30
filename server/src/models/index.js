@@ -86,7 +86,8 @@ const financeSchema = new Schema({
   confirmedAt: Date,
   voidedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   voidedAt: Date,
-  reversalJournalEntry: { type: Schema.Types.ObjectId, ref: 'JournalEntry', default: null }
+  reversalJournalEntry: { type: Schema.Types.ObjectId, ref: 'JournalEntry', default: null },
+  decisionNote: { type: String, maxlength: 500 }
 }, timestamps);
 financeSchema.index({ organisation: 1, reference: 1 }, { unique: true, sparse: true });
 

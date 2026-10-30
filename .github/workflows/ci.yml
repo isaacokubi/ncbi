@@ -21,5 +21,7 @@ jobs:
         run: npm install
       - name: Check server and client
         run: npm run check
+      - name: Test client terminology resources
+        run: npm test -w client
       - name: Build client
         run: npm run build

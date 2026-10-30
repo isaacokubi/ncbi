@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { financeTransition, financeDecisionError, budgetTransition, budgetDecisionError, isValidPositiveAmount } from '../src/domain/financePolicy.js';
+import { financeTransition, financeDecisionError, financeDecisionNoteError, budgetTransition, budgetDecisionError, isValidPositiveAmount } from '../src/domain/financePolicy.js';
 
 test('finance workflow requires approval before confirmation', () => {
   assert.deepEqual(financeTransition('submitted','confirm'), { allowed: false, status: 'submitted' });
@@ -35,4 +35,10 @@ test('budget approval is a one-way decision and the requester cannot decide it',
   assert.equal(budgetTransition('submitted', 'void').allowed, false);
   assert.match(budgetDecisionError({ createdBy: 'requester' }, 'requester'), /requester cannot approve/);
   assert.equal(budgetDecisionError({ createdBy: 'requester' }, 'independent_approver'), null);
+});
+test('declining a financial request requires a meaningful explanation', () => {
+  assert.match(financeDecisionNoteError('reject', ''), /Provide an explanation/);
+  assert.match(financeDecisionNoteError('reject', '   '), /Provide an explanation/);
+  assert.equal(financeDecisionNoteError('reject', 'Outside approved scope'), null);
+  assert.equal(financeDecisionNoteError('approve', ''), null);
 });
