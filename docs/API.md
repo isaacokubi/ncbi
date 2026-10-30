@@ -78,3 +78,8 @@ Set `MPESA_ENV`, consumer key/secret, shortcode, passkey, callback URL and a ran
 ## QR attendance
 - `POST /api/operations/attendance/qr-session` — attendance officers create a signed QR session for an activity, category, organisation and date. The returned token expires in 10 minutes.
 - `POST /api/operations/attendance/qr-checkin` — authenticated users submit the session token and member ID. Members may only check in their own linked profile; staff must have access to the token's organisation. Repeated scans return the existing attendance record.
+
+
+## Member self-service profile
+- `GET /api/portal/summary` — returns the authenticated member's linked profile, own attendance history and totals, own event registrations, upcoming branch events and branch announcements.
+- `PATCH /api/portal/profile` — members may update only their own phone, email, residential location and emergency-contact details. The server derives the member profile from the authenticated account; membership identity, status, branch and ministry assignments cannot be changed through this endpoint.
