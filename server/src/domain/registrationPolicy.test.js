@@ -28,3 +28,9 @@ test('official role approval still enforces role hierarchy', () => {
   assert.equal(registrationDecisionError({ role: 'district_pastor' }, target('branch-a', 'official', 'branch_pastor')), null);
   assert.match(registrationDecisionError({ role: 'branch_admin' }, target('branch-a', 'official', 'national_admin')), /not authorised/);
 });
+
+test('registration identity matching normalises Kenyan phone formats and whitespace', async () => {
+  const { registrationIdentityMatches } = await import('./registrationPolicy.js');
+  assert.equal(registrationIdentityMatches({ firstName: 'Isaac', lastName: 'Ogubi', phone: '0707 476 586' }, ' Isaac   Ogubi ', '+254707476586'), true);
+  assert.equal(registrationIdentityMatches({ firstName: 'Isaac', lastName: 'Ogubi', phone: '0707476586' }, 'Isaac Other', '0707476586'), false);
+});
