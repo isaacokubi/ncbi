@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import QrAttendancePanel from './components/QrAttendancePanel.jsx';
-import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X } from 'lucide-react';
+import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X, MapPin } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -100,8 +100,76 @@ function Field({label,children}) { return <label className="field"><span>{label}
 function PublicHome({onLogin}) {
  const [content,setContent]=useState({branches:[],events:[],announcements:[]});
  const [loading,setLoading]=useState(true); const [error,setError]=useState('');
+ const [menuOpen,setMenuOpen]=useState(false);
+ const publicLinks=[['about','About NCBI'],['mission','Our mission'],['ministries','Ministries'],['branches','Branches'],['programmes','Programmes'],['news','News']];
  useEffect(()=>{let alive=true;api('/public/content','').then(data=>{if(alive)setContent(data);}).catch(e=>{if(alive)setError(e.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[]);
- return <main className="public-site"><header className="public-header"><div className="public-brand"><div className="brand-mark"><Church size={24}/></div><div><b>NCBI</b><small>NEW CHURCH BELIEVERS INTERNATIONAL</small></div></div><button className="gold-button" onClick={onLogin}>Staff & member sign in</button></header><section className="public-hero"><div className="eyebrow">NEW CHURCH BELIEVERS INTERNATIONAL</div><h1>One Church.<br/>One Vision.</h1><p>A connected church family committed to serving communities, strengthening believers and advancing the Gospel.</p><strong>A CALL TO SERVE</strong></section><section className="public-section"><div className="section-title"><div><h2>Our church branches</h2><p>Find an active NCBI congregation</p></div></div>{loading?<div className="empty-state">Loading public church information…</div>:error?<div className="page-error">{error}</div>:<div className="public-branches">{content.branches.map(b=><article className="panel" key={b._id}><h3>{b.name}</h3><p>{[b.country,b.address].filter(Boolean).join(' · ')||'NCBI local congregation'}</p>{b.phone&&<a href={'tel:'+b.phone}>{b.phone}</a>}</article>)}</div>}{!loading&&!error&&!content.branches.length&&<div className="empty-state">Branch directory is being prepared.</div>}</section><section className="public-section"><div className="section-title"><div><h2>Upcoming programmes</h2><p>Events publicly published by NCBI branches</p></div></div><div className="public-cards">{content.events.map(e=><article className="panel" key={e._id}><div className="eyebrow">{e.organisation?.name||'NCBI'}</div><h3>{e.title}</h3><p>{fmt(e.startAt)}{e.endAt?' – '+fmt(e.endAt):''}</p></article>)}</div>{!loading&&!content.events.length&&<div className="empty-state">No public events have been announced.</div>}</section><section className="public-section"><div className="section-title"><div><h2>News & announcements</h2><p>Official public notices</p></div></div><div className="public-cards">{content.announcements.map(a=><article className="panel" key={a._id}><h3>{a.title}</h3><p>{a.data?.message||a.data?.summary||''}</p><small>{a.organisation?.name||'NCBI'} · {fmt(a.createdAt)}</small></article>)}</div>{!loading&&!content.announcements.length&&<div className="empty-state">No public announcements have been published.</div>}</section><footer className="public-footer"><b>NEW CHURCH BELIEVERS INTERNATIONAL</b><span>ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM.</span><small>A Call to Serve</small></footer></main>;
+ const closeMenu=()=>setMenuOpen(false);
+ return <main className="public-site">
+  <header className="public-header">
+   <a className="public-brand" href="#home" aria-label="NCBI home" onClick={closeMenu}><div className="brand-mark"><Church size={24}/></div><div><b>NCBI</b><small>NEW CHURCH BELIEVERS INTERNATIONAL</small></div></a>
+   <button className="public-menu-toggle" type="button" aria-label={menuOpen?'Close navigation':'Open navigation'} aria-expanded={menuOpen} onClick={()=>setMenuOpen(v=>!v)}>{menuOpen?<X size={21}/>:<Menu size={21}/>}</button>
+   <nav className={`public-nav ${menuOpen?'is-open':''}`} aria-label="Main navigation">
+    {publicLinks.map(([id,label])=><a key={id} href={`#${id}`} onClick={closeMenu}>{label}</a>)}
+    <button className="public-login-button" onClick={()=>{closeMenu();onLogin();}}>Staff & member sign in <ArrowUpRight size={16}/></button>
+   </nav>
+  </header>
+  <section className="public-hero" id="home">
+   <div className="public-hero-glow" aria-hidden="true"/>
+   <div className="public-hero-inner">
+    <div className="public-hero-copy">
+     <div className="public-kicker"><span/> NEW CHURCH BELIEVERS INTERNATIONAL</div>
+     <h1>One Church.<br/><em>One Vision.</em></h1>
+     <p>A connected church family committed to serving communities, strengthening believers and advancing the Gospel.</p>
+     <div className="public-hero-actions"><a className="public-primary-cta" href="#branches">Explore our branches <ArrowUpRight size={17}/></a><button className="public-secondary-cta" onClick={onLogin}>Access your workspace</button></div>
+     <div className="public-hero-motto"><span/> A CALL TO SERVE</div>
+    </div>
+    <div className="public-hero-art" aria-label="NCBI church community">
+     <div className="public-art-orbit orbit-one"/><div className="public-art-orbit orbit-two"/>
+     <div className="public-art-emblem"><Church size={76} strokeWidth={1.1}/><span>NCBI</span><small>ONE CHURCH · ONE VISION</small></div>
+     <div className="public-art-caption"><b>Faith in action.</b><span>Serving God. Strengthening communities.</span></div>
+    </div>
+   </div>
+   <div className="public-hero-bottom"><span>UNITED IN FAITH</span><span>GROWING IN PURPOSE</span><span>SERVING OUR COMMUNITIES</span></div>
+  </section>
+  <section className="public-intro-band" id="about"><div className="public-section-shell public-intro-grid">
+   <div><div className="public-eyebrow">WHO WE ARE</div><h2>A church family,<br/><em>connected by purpose.</em></h2></div>
+   <p>New Church Believers International brings congregations together in a shared commitment to faith, fellowship and service. Across our church family, we seek to nurture believers, equip leaders and make a meaningful difference in the communities we serve.</p>
+  </div></section>
+  <section className="public-section public-mission-section" id="mission"><div className="public-section-shell">
+   <div className="public-section-heading"><div><div className="public-eyebrow">OUR SHARED PURPOSE</div><h2>One vision. Many ways to serve.</h2></div><p>Rooted in faith and expressed through practical service, care and community.</p></div>
+   <div className="public-purpose-grid">
+    <article className="public-purpose-card"><span className="public-purpose-icon"><Church size={23}/></span><div className="public-eyebrow">01 / FAITH</div><h3>Grow in faith</h3><p>Encouraging worship, biblical learning, fellowship and a lifelong walk with Christ.</p></article>
+    <article className="public-purpose-card"><span className="public-purpose-icon"><HeartHandshake size={23}/></span><div className="public-eyebrow">02 / SERVICE</div><h3>Serve with compassion</h3><p>Putting faith into action through care, outreach and practical support for our communities.</p></article>
+    <article className="public-purpose-card"><span className="public-purpose-icon"><Users size={23}/></span><div className="public-eyebrow">03 / LEADERSHIP</div><h3>Equip people</h3><p>Supporting leaders, volunteers and ministry teams to serve with integrity and purpose.</p></article>
+   </div>
+  </div></section>
+  <section className="public-ministries-section" id="ministries"><div className="public-section-shell public-ministry-layout">
+   <div className="public-ministry-intro"><div className="public-eyebrow">LIFE TOGETHER</div><h2>Faith that reaches<br/><em>beyond the walls.</em></h2><p>Church life is more than a gathering. It is a shared journey of worship, learning, care and service in our local communities.</p><a href="#branches" className="public-text-link">Connect with a congregation <ArrowUpRight size={16}/></a></div>
+   <div className="public-ministry-list">
+    <article><span>01</span><div><h3>Worship & fellowship</h3><p>Gathering as one church family to worship, encourage and grow together.</p></div><Church size={21}/></article>
+    <article><span>02</span><div><h3>Discipleship & teaching</h3><p>Building a strong foundation through learning, mentoring and spiritual growth.</p></div><BookOpen size={21}/></article>
+    <article><span>03</span><div><h3>Pastoral care & community</h3><p>Walking alongside people and responding to the needs of our communities.</p></div><HeartHandshake size={21}/></article>
+    <article><span>04</span><div><h3>Leadership & outreach</h3><p>Equipping people to lead, serve and share the Gospel with compassion.</p></div><Network size={21}/></article>
+   </div>
+  </div></section>
+  <section className="public-section public-branches-section" id="branches"><div className="public-section-shell">
+   <div className="public-section-heading"><div><div className="public-eyebrow">FIND YOUR CHURCH FAMILY</div><h2>Our church branches</h2><p>Find an active NCBI congregation and connect locally.</p></div><span className="public-section-mark"><MapPin size={22}/></span></div>
+   {loading?<div className="public-state">Loading public church information…</div>:error?<div className="public-state public-state-error">{error}</div>:<div className="public-branches">{content.branches.map(b=><article className="public-branch-card" key={b._id}><div className="public-branch-icon"><Church size={22}/></div><div className="public-branch-country">{b.country||'NCBI congregation'}</div><h3>{b.name}</h3><p>{[b.address,b.country].filter(Boolean).join(' · ')||'Local NCBI congregation'}</p>{b.phone&&<a href={'tel:'+b.phone}>{b.phone}</a>}<span className="public-branch-status"><i/> Active congregation</span></article>)}</div>}
+   {!loading&&!error&&!content.branches.length&&<div className="public-state">Our public branch directory is being updated. Please check back soon.</div>}
+  </div></section>
+  <section className="public-section public-programmes-section" id="programmes"><div className="public-section-shell">
+   <div className="public-section-heading"><div><div className="public-eyebrow">GATHER · LEARN · SERVE</div><h2>Upcoming programmes</h2><p>Events publicly published by NCBI branches.</p></div><span className="public-section-mark"><CalendarDays size={22}/></span></div>
+   {loading?<div className="public-state">Loading programmes…</div>:<div className="public-cards">{content.events.map(e=><article className="public-event-card" key={e._id}><div className="public-event-date"><CalendarDays size={19}/><span>{fmt(e.startAt)}</span></div><div className="public-eyebrow">{e.organisation?.name||'NCBI'}</div><h3>{e.title}</h3><p>{e.endAt?'Through '+fmt(e.endAt):'Join us for this NCBI programme.'}</p></article>)}</div>}
+   {!loading&&!content.events.length&&<div className="public-state">No public programmes have been announced yet. New events will appear here when published by a branch.</div>}
+  </div></section>
+  <section className="public-section public-news-section" id="news"><div className="public-section-shell">
+   <div className="public-section-heading"><div><div className="public-eyebrow">STAY CONNECTED</div><h2>News & announcements</h2><p>Official public notices from across the NCBI family.</p></div><span className="public-section-mark"><Activity size={22}/></span></div>
+   {loading?<div className="public-state">Loading public announcements…</div>:<div className="public-cards">{content.announcements.map(a=><article className="public-news-card" key={a._id}><div className="public-eyebrow">{a.organisation?.name||'NCBI'} · {fmt(a.createdAt)}</div><h3>{a.title}</h3><p>{a.data?.message||a.data?.summary||'An official announcement from NCBI.'}</p></article>)}</div>}
+   {!loading&&!content.announcements.length&&<div className="public-state">There are no public announcements at the moment. Please visit again for the latest NCBI updates.</div>}
+  </div></section>
+  <section className="public-contact-section" id="contact"><div className="public-section-shell public-contact-inner"><div><div className="public-eyebrow">TAKE YOUR NEXT STEP</div><h2>There is a place<br/>for you in the family.</h2><p>Connect with an NCBI congregation, take part in a programme or access your church workspace.</p></div><div className="public-contact-actions"><a className="public-primary-cta" href="#branches">Find a branch <ArrowUpRight size={17}/></a><button className="public-secondary-cta" onClick={onLogin}>Staff & member sign in</button></div></div></section>
+  <footer className="public-footer"><div className="public-footer-main"><div className="public-footer-brand"><div className="brand-mark"><Church size={23}/></div><div><b>NEW CHURCH BELIEVERS INTERNATIONAL</b><span>ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM.</span></div></div><div className="public-footer-links">{publicLinks.map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}<a href="#contact">Contact</a><button onClick={onLogin}>Sign in <ArrowUpRight size={14}/></button></div></div><div className="public-footer-bottom"><span>A CALL TO SERVE</span><span>© {new Date().getFullYear()} New Church Believers International</span></div></footer>
+ </main>;
 }
 
 function App(){
