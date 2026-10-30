@@ -51,9 +51,13 @@ export default function SupplierWorkspace({token,onError,onSuccess}) {
   await request('/suppliers/'+type+'/'+row._id+'/decision',token,{method:'POST',body:JSON.stringify({decision,note})});
  },decision==='approve'?'Request approved.':'Request rejected with reason.');
  const confirmPayment=row=>{
-  const bankAccount=window.prompt('Enter the ID of the bank or cash asset account to use for settlement. Select an asset account shown in the Chart of Accounts.');
-  if(!bankAccount)return;
-  run(async()=>{await request('/suppliers/payments/'+row._id+'/confirm',token,{method:'POST',body:JSON.stringify({bankAccount})});},'Supplier settlement confirmed and posted to the ledger.');
+  if(!assetAccounts.length){onError('Create an active bank or cash asset account in the Chart of Accounts before confirming settlement.');return;}
+  const options=assetAccounts.map((account,index)=>(index+1)+'. '+account.code+' — '+account.name).join('\n');
+  const choice=window.prompt('Choose the bank or cash account used for this completed settlement by entering its number:\n'+options);
+  if(!choice)return;
+  const selected=assetAccounts[Number(choice)-1];
+  if(!selected){onError('Choose a valid account number from the list.');return;}
+  run(async()=>{await request('/suppliers/payments/'+row._id+'/confirm',token,{method:'POST',body:JSON.stringify({bankAccount:selected._id})});},'Supplier settlement confirmed and posted to the ledger.');
  };
  const selectOptions=(items,label='name')=>items.map(item=><option key={item._id} value={item._id}>{item[label]||item.name}</option>);
  return <section className="supplier-workspace">
