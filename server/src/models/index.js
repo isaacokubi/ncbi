@@ -19,7 +19,7 @@ const userSchema = new Schema({
   passwordHash: { type: String, required: true, select: false },
   role: { type: String, enum: ['super_admin', 'international_executive', 'national_admin', 'regional_overseer', 'district_pastor', 'branch_pastor', 'branch_admin', 'treasurer', 'department_leader', 'member'], required: true },
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
-  memberProfile: { type: Schema.Types.ObjectId, ref: 'Member', default: null, index: true },
+  memberProfile: { type: Schema.Types.ObjectId, ref: 'Member', default: null },
   permissions: [{ type: String }],
   active: { type: Boolean, default: true },
   accountApproval: { type: String, enum: ['approved','pending','rejected'], default: 'approved', index: true },
