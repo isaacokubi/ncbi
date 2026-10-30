@@ -275,3 +275,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .dark .report-finance-summary b{color:#e6d8ed}
 .dark .report-finance-controls select{background:#211a26;color:#eee}
 @media(max-width:700px){.report-chart{height:250px;padding:8px 0}.report-finance-summary{grid-template-columns:1fr}.report-finance-summary>div{padding:11px}}
+
+.qr-image-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px;background:#fff;border:1px solid var(--line);border-radius:10px;width:fit-content;max-width:100%}.qr-image{display:block;width:220px;height:220px;max-width:65vw;object-fit:contain;image-rendering:pixelated}.qr-image-actions{display:flex;flex-direction:column;gap:8px}.qr-image-actions button{justify-content:center;min-height:38px}.dark .qr-image-wrap{background:#fff;color:#24152a}@media(max-width:520px){.qr-image-wrap{width:100%;justify-content:center}.qr-image-actions{width:100%;flex-direction:row;flex-wrap:wrap}.qr-image-actions button{flex:1}}
