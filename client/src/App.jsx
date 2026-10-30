@@ -456,7 +456,14 @@ function App(){
   ['confirmedExpensesThisMonth','Confirmed expenditure',Wallet,'Confirmed expense transactions this month'],
   ['pendingApprovals','Pending approvals',ClipboardList,'Records awaiting an authorised decision']
  ];
- const dashboardStats=dashboardStatDefinitions.filter(([key])=>Object.prototype.hasOwnProperty.call(dashboardMetrics,key));
+ const dashboardStats=dashboardStatDefinitions.filter(([key])=>{
+  if(!Object.prototype.hasOwnProperty.call(dashboardMetrics,key))return false;
+  const raw=dashboardMetrics[key];
+  if(key==='confirmedIncomeThisMonth'||key==='confirmedExpensesThisMonth'){
+   return Array.isArray(raw)&&raw.some(item=>Number(item?.total)>0);
+  }
+  return Number(raw)>0;
+ });
  const dashboardQuickLinks=dashboardProfile.quickLinks.filter(([key])=>visibleForRole(key,role)).map(([key,label,Icon])=>[key,NAVIGATION_TERMS[key]||label,Icon]);
 
  const canManageUsers=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(role); const canApproveFinance=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'].includes(role); const canManageSafeguarding=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'].includes(role)||(user?.permissions||[]).includes('safeguarding:manage'); const canWrite=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(role)||(role==='department_leader'&&page==='attendance')||(role==='treasurer'&&['finance','payments','accounts','journals','budgets','reconciliation'].includes(page))||(page==='safeguarding'&&canManageSafeguarding);
