@@ -107,3 +107,5 @@
 
 .module-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .field-help{grid-column:1/-1;color:var(--muted);font-size:10px;line-height:1.6}
+
+.report-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:20px}.report-panels>.panel{min-width:0;overflow:hidden}.report-panels .table-wrap{overflow-x:auto}.report-panels table{min-width:440px}.report-footnote{color:var(--muted,#777);font-size:12px;margin:16px 2px 0}@media(max-width:900px){.report-panels{grid-template-columns:1fr}}

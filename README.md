@@ -14,7 +14,7 @@ NCBI-CMS is a MERN monorepo for New Church Believers International. It is design
 4. Client: http://localhost:5173; API health: http://localhost:5000/api/health.
 5. Sign in with an administrator provisioned through the one-time bootstrap procedure below; there is no public registration.
 
-The React client uses `VITE_API_URL` when set; otherwise it calls `/api`. Vite proxies `/api` to `http://localhost:5000` during development (override with `API_PROXY_TARGET`); production deployments must provide a same-origin reverse proxy or set `VITE_API_URL`. The dashboard obtains its KPIs, upcoming events and organisation directory from authenticated API endpoints. The reporting workspace now reads consolidated trend and branch-performance data from the reporting API. Several advanced capabilities remain explicitly gated in the implementation status document.
+The React client uses `VITE_API_URL` when set; otherwise it calls `/api`. Vite proxies `/api` to `http://localhost:5000` during development (override with `API_PROXY_TARGET`); production deployments must provide a same-origin reverse proxy or set `VITE_API_URL`. The dashboard obtains its KPIs, upcoming events and organisation directory from authenticated API endpoints. Other navigation modules are not yet complete data-entry screens.
 
 There is intentionally no public sign-up route and no default administrator. Provision the first administrator once from a trusted terminal after setting the required variables in `server/.env`: `BOOTSTRAP_NAME`, `BOOTSTRAP_EMAIL`, `BOOTSTRAP_PASSWORD` (14+ characters), `BOOTSTRAP_ORG_NAME` and `BOOTSTRAP_ORG_CODE`. Optional variables are `BOOTSTRAP_COUNTRY` and `BOOTSTRAP_CURRENCY`. Then run `npm run bootstrap-admin -w server`. The script refuses to overwrite an existing account or organisation and never prints the password. Do not commit `.env` or share bootstrap credentials.
 
@@ -24,7 +24,6 @@ There is intentionally no public sign-up route and no default administrator. Pro
 - `GET/POST /api/workspace/members`, authorised membership transfers
 - `POST /api/workspace/attendance`, attendance summary
 - `GET /api/dashboard/summary` — role-scoped, database-backed KPIs
-- `GET /api/reports/overview?months=12&organisation=<id>` — hierarchy-scoped membership and attendance trends, confirmed finance totals by currency, ministry activity and branch comparisons. An optional organisation filter is validated against the caller's accessible subtree.
 - `GET/POST /api/operations/:entity`, `PATCH/DELETE /api/operations/:entity/:id`
 - `POST /api/operations/events/:id/register`, `PATCH /api/operations/events/:id/register/cancel`, `GET /api/operations/events/:id/registrations`, `PATCH /api/operations/event-registrations/:id/status`
 - `GET/POST /api/finance/transactions`, `POST /api/finance/transactions/:id/decision` (confirmation posts a balanced journal to the general ledger)
