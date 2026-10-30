@@ -1,9 +1,49 @@
 import { Router } from 'express';
-import { Organisation, Member, Attendance, FinanceTransaction } from '../models/index.js';
+import bcrypt from 'bcryptjs';
+import { Organisation, Member, Attendance, FinanceTransaction, User } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 
 const router = Router(); router.use(requireAuth);
+const roleRank={super_admin:100,international_executive:90,national_admin:80,regional_overseer:70,district_pastor:60,branch_pastor:50,branch_admin:45,treasurer:35,department_leader:25,member:10};
+const userManagers=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'];
+router.get('/users',async(req,res,next)=>{
+ try{
+  if(!userManagers.includes(req.user.role))return res.status(403).json({message:'User administration permission required'});
+  const ids=await accessibleOrganisationIds(req.user);
+  const users=await User.find({organisation:{$in:ids}}).select('fullName email role organisation active createdAt').populate('organisation','name code level').sort({createdAt:-1}).lean();
+  res.json({users});
+ }catch(e){next(e);}
+});
+router.post('/users',async(req,res,next)=>{
+ try{
+  if(!userManagers.includes(req.user.role))return res.status(403).json({message:'User administration permission required'});
+  const {fullName,email,password,role,organisation}=req.body;
+  if(!fullName||!email||!password||!role||!organisation)return res.status(400).json({message:'Name, email, temporary password, role and organisation are required'});
+  if(String(password).length<14)return res.status(400).json({message:'Temporary password must be at least 14 characters'});
+  if(!Object.hasOwn(roleRank,role)||roleRank[role]>=roleRank[req.user.role])return res.status(403).json({message:'You cannot assign a role equal to or above your own authority'});
+  if(!(await assertOrganisationAccess(req.user,organisation)))return res.status(403).json({message:'Organisation outside your authorised scope'});
+  const org=await Organisation.findById(organisation);
+  const allowedLevels={international_executive:['international'],national_admin:['national'],regional_overseer:['regional'],district_pastor:['district'],branch_pastor:['branch'],branch_admin:['branch'],treasurer:['branch','district','regional','national'],department_leader:['branch','district','regional','national'],member:['branch','district','regional','national']};
+  if(allowedLevels[role]&&!allowedLevels[role].includes(org?.level))return res.status(400).json({message:'The selected role is not valid at this organisation level'});
+  const passwordHash=await bcrypt.hash(String(password),12);
+  const user=await User.create({fullName:String(fullName).trim(),email:String(email).trim().toLowerCase(),passwordHash,role,organisation,active:true});
+  res.status(201).json({user:{id:user.id,fullName:user.fullName,email:user.email,role:user.role,organisation:user.organisation,active:user.active}});
+ }catch(e){next(e);}
+});
+router.patch('/users/:id/status',async(req,res,next)=>{
+ try{
+  if(!userManagers.includes(req.user.role))return res.status(403).json({message:'User administration permission required'});
+  if(typeof req.body.active!=='boolean')return res.status(400).json({message:'Active must be true or false'});
+  const ids=await accessibleOrganisationIds(req.user);
+  const target=await User.findOne({_id:req.params.id,organisation:{$in:ids}});
+  if(!target)return res.status(404).json({message:'User not found'});
+  if(String(target._id)===String(req.user._id))return res.status(409).json({message:'You cannot deactivate your own account'});
+  if(roleRank[target.role]>=roleRank[req.user.role])return res.status(403).json({message:'You cannot change an account at or above your authority'});
+  target.active=req.body.active;await target.save();
+  res.json({user:{id:target.id,fullName:target.fullName,email:target.email,role:target.role,active:target.active}});
+ }catch(e){next(e);}
+});
 router.get('/organisations', async (req,res,next)=>{
   try { const ids=await accessibleOrganisationIds(req.user); const organisations=await Organisation.find({_id:{$in:ids}}).sort({level:1,name:1}).lean(); res.json({organisations}); }
   catch(e){next(e);}
