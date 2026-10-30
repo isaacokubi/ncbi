@@ -46,7 +46,7 @@ router.post('/register', async (req, res, next) => {
     const organisationId = String(req.body.organisation || '').trim();
     const category = String(req.body.category || '');
     const membershipNumber = String(req.body.membershipNumber || '').trim();
-    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member'].includes(category)) {
+    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member'].includes(category)) {
       return res.status(400).json({ message: 'Enter a valid name, email, phone, password (at least 6 characters), account category and church branch.' });
     }
     const branch = await Organisation.findOne({ _id: organisationId, level: 'branch', status: 'active' }).select('_id').lean();
