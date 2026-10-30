@@ -701,6 +701,12 @@ router.post('/:entity', async (req, res, next) => {
       const duplicate = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_enrolment', status: { $ne: 'archived' }, 'data.memberId': String(payload.memberId), 'data.programmeName': String(payload.programmeName).trim() }).select('_id').lean();
       if (duplicate) return res.status(409).json({ message: 'This member already has an active enrolment for this programme' });
     }
+    if (entity === 'communications' && ['approved','published','rejected'].includes(payload.approvalStatus) && !['super_admin','international_executive','national_admin'].includes(req.user.role)) return res.status(403).json({ message: 'Only headquarters leadership may approve, reject or publish church communications' });
+    if (entity === 'communications' && payload.approvalStatus === 'published') return res.status(409).json({ message: 'A communication must be approved before it can be published' });
+    if (entity === 'volunteer_schedule' && payload.serviceDate && payload.serviceTime && payload.ministryTeam) {
+      const duplicateRoster = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'volunteer_schedule', status: { $ne: 'archived' }, 'data.ministryTeam': payload.ministryTeam, 'data.serviceDate': payload.serviceDate, 'data.serviceTime': payload.serviceTime }).select('_id').lean();
+      if (duplicateRoster) return res.status(409).json({ message: 'A roster already exists for this ministry team at that date and time. Edit the existing roster instead.' });
+    }
     const memberLinkError = await validateLinkedMember(entity, payload, targetOrg);
     if (memberLinkError) return res.status(400).json({ message: memberLinkError });
     const structuredDataError = validateStructuredOperationData(entity, payload);
@@ -756,6 +762,10 @@ router.patch('/:entity/:id', async (req, res, next) => {
         for (const session of payload.attendanceSessions) {
           if (!session || typeof session.sessionTitle !== 'string' || !session.sessionTitle.trim() || session.sessionTitle.length > 160 || !['present','late','absent','excused'].includes(session.attendanceStatus) || Number.isNaN(new Date(session.sessionDate).getTime())) return res.status(400).json({ message: 'Each attendance entry needs a valid date, session title and attendance status' });
         }
+      }
+      if (entity === 'volunteer_schedule' && payload.serviceDate && payload.serviceTime && payload.ministryTeam) {
+        const duplicateRoster = await OperationsRecord.findOne({ _id: { $ne: record._id }, organisation: record.organisation, entity: 'volunteer_schedule', status: { $ne: 'archived' }, 'data.ministryTeam': payload.ministryTeam, 'data.serviceDate': payload.serviceDate, 'data.serviceTime': payload.serviceTime }).select('_id').lean();
+        if (duplicateRoster) return res.status(409).json({ message: 'Another roster already exists for this ministry team at that date and time.' });
       }
       const memberLinkError = await validateLinkedMember(entity, payload, record.organisation);
       if (memberLinkError) return res.status(400).json({ message: memberLinkError });
