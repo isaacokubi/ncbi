@@ -227,7 +227,8 @@ const supplierInvoiceSchema=new Schema({
  createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
  approvedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
  approvedAt:Date,
- decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null}
+ decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ approvals:[{actor:{type:Schema.Types.ObjectId,ref:'User',required:true},role:{type:String,required:true},decision:{type:String,enum:['approve','reject'],required:true},note:{type:String,maxlength:500},decidedAt:{type:Date,required:true}}]
 },{timestamps:true});
 supplierInvoiceSchema.index({organisation:1,supplier:1,invoiceNumber:1},{unique:true});
 
