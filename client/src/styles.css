@@ -1541,3 +1541,52 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .visitor-followup-start input,.visitor-followup-start select,.visitor-followup-start textarea{width:100%;min-width:0;border:1px solid var(--border,#ded6e2);border-radius:9px;padding:10px;background:var(--surface,#fff);color:inherit;font:inherit}
 @media(max-width:760px){.visitor-followup-start{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.visitor-followup-start{grid-template-columns:1fr}}
+
+
+/* Dashboard audit upgrades: make operational queues actionable and keep
+   hierarchy, freshness and empty states legible at every viewport size. */
+.dashboard-refresh-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.dashboard-refresh-meta>small{font-size:10px;color:var(--muted);letter-spacing:.02em}
+.dashboard-refresh-meta .refresh-button:disabled{opacity:.7;cursor:wait}
+.dashboard-approvals{padding:20px 22px;border-radius:12px}
+.dashboard-approvals .panel-heading{margin-bottom:14px}
+.dashboard-approvals .panel-heading h3{font-size:17px;margin:4px 0}
+.dashboard-approval-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.dashboard-approval-item{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 13px;border:1px solid var(--line);border-radius:9px;background:#fbfafc}
+.dashboard-approval-item>span{display:grid;gap:3px;min-width:0}
+.dashboard-approval-item b{font-size:19px;color:var(--purple)}
+.dashboard-approval-item small{font-size:11px;color:var(--muted);line-height:1.35}
+.dashboard-approval-item button{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;border:0;background:transparent;color:var(--gold);font:700 11px 'DM Sans';cursor:pointer}
+.dashboard-approval-item button:hover{text-decoration:underline}
+.dashboard-empty-events{display:grid;justify-items:start;gap:8px;padding:8px 0}
+.dashboard-empty-events .empty-state{padding:8px 0;text-align:left}
+.dashboard-empty-events .secondary-button{display:inline-flex;align-items:center;gap:6px}
+.dashboard-org-row>div{min-width:0}
+.dashboard-org-row .org-dot{flex-shrink:0}
+.dashboard-org-row{gap:9px}
+.dashboard-org-row>div b{overflow-wrap:anywhere}
+.dashboard-panel .date-tile{width:46px;height:48px;flex-shrink:0;border:1px solid #e9e0ed;background:#f7f2f8}
+.dashboard-panel .date-tile b{font:700 18px 'Playfair Display',serif;color:var(--purple)}
+.dashboard-panel .date-tile small{font-size:9px;letter-spacing:.6px;color:var(--gold)}
+.dashboard-panel .event-row>div:last-child{min-width:0}
+.dashboard-panel .event-row>div:last-child b{overflow-wrap:anywhere}
+.dashboard-stat-card{transition:transform .16s ease,box-shadow .16s ease}
+.dashboard-stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px #24152a0d}
+.dark .dashboard-approval-item{background:#2a2230;border-color:#44344b}
+.dark .dashboard-approval-item b{color:#f0e8f4}
+.dark .dashboard-approval-item small,.dark .dashboard-refresh-meta>small{color:#b5a9ba}
+.dark .dashboard-panel .date-tile{background:#352a3a;border-color:#51415a}
+.dark .dashboard-panel .date-tile b{color:#f0e8f4}
+@media(max-width:760px){
+ .dashboard-refresh-meta{align-items:stretch;width:100%}
+ .dashboard-refresh-meta>small{text-align:right}
+ .dashboard-approvals{padding:16px}
+ .dashboard-approval-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .dashboard-approval-item{align-items:flex-start;flex-direction:column}
+ .dashboard-approval-item button{padding:2px 0}
+}
+@media(max-width:430px){
+ .dashboard-approval-grid{grid-template-columns:1fr}
+ .dashboard-approval-item{align-items:center;flex-direction:row}
+}
+@media(prefers-reduced-motion:reduce){.dashboard-stat-card{transition:none}.dashboard-stat-card:hover{transform:none}}
