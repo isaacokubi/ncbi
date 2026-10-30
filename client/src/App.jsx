@@ -41,6 +41,7 @@ function formatPublicDate(value) {
 
 const financePageKeys=new Set(['finance','payments','accounts','journals','budgets','reconciliation','suppliers']);
 const seniorRoles=['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'];
+const sensitiveRoles=['super_admin','international_executive','national_admin','branch_pastor'];
 const branchAdminRoles=[...seniorRoles,'branch_admin'];
 function visibleForRole(key,role){
  if(['branding','websiteContent'].includes(key))return ['super_admin','international_executive','national_admin'].includes(role);
@@ -54,7 +55,7 @@ function visibleForRole(key,role){
  if(key==='reports')return branchAdminRoles.includes(role);
  if(key==='audit')return seniorRoles.includes(role);
  if(financePageKeys.has(key))return seniorRoles.includes(role)||role==='treasurer';
- if(['safeguarding','discipline','counselling','benevolence','welfare','prayer'].includes(key))return seniorRoles.includes(role);
+ if(['safeguarding','discipline','counselling','benevolence','welfare','prayer'].includes(key))return sensitiveRoles.includes(role);
  return branchAdminRoles.includes(role);
 }
 const configs = {
