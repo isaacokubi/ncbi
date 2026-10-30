@@ -22,7 +22,7 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
       FinanceTransaction.aggregate([{ $match: { organisation: { $in: ids }, status: 'confirmed', direction: 'expense', occurredAt: { $gte: start } } }, { $group: { _id: '$currency', total: { $sum: { $toDouble: '$amount' } } } }]),
       (canSeeUpcomingEvents(req.user) ? OperationsRecord.find({ organisation: { $in: ids }, entity: 'event', status: { $in: ['scheduled','active'] }, startAt: { $gte: now } }).sort({ startAt: 1 }).limit(6).select('title startAt organisation').populate('organisation','name').lean() : Promise.resolve([])),
       OperationsRecord.countDocuments({ organisation: { $in: ids }, status: 'pending' }),
-      User.countDocuments({ organisation: { $in: ids }, accountApproval: 'pending' }),
+      User.countDocuments({ organisation: { $in: ids }, accountApproval: 'pending', ...(req.user.role === 'branch_admin' ? { registrationCategory: { $in: ['non_member','official'] } } : {}) }),
       Organisation.countDocuments({ _id: { $in: ids }, status: 'pending' }),
       FinanceTransaction.countDocuments({ organisation: { $in: ids }, status: { $in: ['submitted','approved'] } }),
       Budget.countDocuments({ organisation: { $in: ids }, status: 'submitted' })
@@ -42,7 +42,9 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
     });
     const visibleApprovalBreakdown = req.user.role === 'treasurer'
       ? { finance: pendingFinance, budgets: pendingBudgets }
-      : req.user.role === 'department_leader' ? {} : approvalBreakdown;
+      : req.user.role === 'department_leader' ? {}
+      : req.user.role === 'branch_admin' ? { registrations: pendingRegistrations, operations: pendingOperational }
+      : approvalBreakdown;
     res.json({ scope: ids.length, asOf: now.toISOString(), metrics, approvalBreakdown: visibleApprovalBreakdown, upcomingEvents });
   } catch (error) { next(error); }
 });
