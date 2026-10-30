@@ -34,6 +34,13 @@ router.put('/', requireAuth, allowRoles(...editors), async (req, res, next) => {
     if (Object.values(content.pages).some(page => !validTextFields(page))) return res.status(400).json({ message: 'Page fields must contain plain text or lists of plain-text cards.' });
     if (!validLabelMap(content.navigation)) return res.status(400).json({ message: 'Navigation labels must be plain text.' });
     if (!validLabelMap(content.footer)) return res.status(400).json({ message: 'Footer fields must be plain text.' });
+    const contact = content.pages.contact || {};
+    if (contact.contactEmail && (contact.contactEmail.length > 180 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(contact.contactEmail))) return res.status(400).json({ message: 'Enter a valid public contact email address.' });
+    for (const field of ['phone','whatsapp']) {
+      if (contact[field] && (contact[field].length > 40 || !/^[+()\\d\\s.-]+$/.test(contact[field]))) return res.status(400).json({ message: 'Telephone and WhatsApp details must contain only numbers and standard phone formatting.' });
+    }
+    for (const field of ['physicalAddress','postalAddress']) if (contact[field] && contact[field].length > 500) return res.status(400).json({ message: 'Contact addresses must be 500 characters or fewer.' });
+    if (contact.officeHours && contact.officeHours.length > 160) return res.status(400).json({ message: 'Office hours must be 160 characters or fewer.' });
     const saved = await SiteContent.findOneAndUpdate(
       { key: 'global' },
       { $set: { pages: content.pages, navigation: content.navigation || {}, footer: content.footer || {}, updatedBy: req.user._id } },
