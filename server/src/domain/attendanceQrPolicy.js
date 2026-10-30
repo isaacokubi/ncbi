@@ -1,4 +1,12 @@
 const allowedCategories = new Set(['sunday_service','midweek_service','prayer','bible_study','department','conference','outreach','other']);
+const attendanceManagers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','department_leader']);
+
+export function canCheckInWithQr(user, memberId) {
+  if (!user || !memberId) return false;
+  if (attendanceManagers.has(user.role)) return true;
+  return user.role === 'member' && Boolean(user.memberProfile) && String(user.memberProfile) === String(memberId);
+}
+
 export function validateQrSessionInput(input, now = new Date()) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return { valid: false, message: 'Session details are required' };
   const activityName = String(input.activityName || '').trim();

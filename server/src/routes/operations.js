@@ -8,7 +8,7 @@ import { Member, Attendance } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateEventRegistrationInput, validateEventRegistrationStatus } from '../domain/eventRegistrationPolicy.js';
-import { validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
+import { canCheckInWithQr, validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -85,8 +85,8 @@ router.post('/attendance/qr-checkin', async (req, res, next) => {
       return res.status(401).json({ message: 'QR session is invalid or expired; ask an usher for a new code' });
     }
     if (session.purpose !== 'ncbi-attendance-checkin' || !mongoose.isValidObjectId(session.organisation) || !attendanceCategories.has(session.category) || !session.jti) return res.status(401).json({ message: 'QR session is not a valid attendance session' });
+    if (!canCheckInWithQr(req.user, memberId)) return res.status(403).json({ message: 'Only authorised attendance officers or the member linked to this profile can check in' });
     if (!(await assertOrganisationAccess(req.user, session.organisation))) return res.status(403).json({ message: 'QR session belongs to another organisation' });
-    if (req.user.role === 'member' && String(req.user.memberProfile || '') !== String(memberId)) return res.status(403).json({ message: 'Members can only check in their own profile' });
     const member = await Member.findOne({ _id: memberId, homeOrganisation: session.organisation, status: { $in: ['member','worker','minister','new_believer'] } }).select('_id').lean();
     if (!member) return res.status(404).json({ message: 'Active member profile not found in this branch' });
     const heldAt = new Date(session.heldAt);
