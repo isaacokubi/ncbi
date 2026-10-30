@@ -823,3 +823,16 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .supplier-settlement-confirm .editor-actions{margin:0;white-space:nowrap}
 .dark .supplier-settlement-confirm h3{color:var(--champagne)}
 @media(max-width:760px){.supplier-settlement-confirm{grid-template-columns:1fr}.supplier-settlement-confirm .editor-actions{flex-wrap:wrap}}
+
+
+/* Compact sign-in and registration dialogs over the public NCBI website. */
+.auth-modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(24,10,31,.58);backdrop-filter:blur(5px);overflow-y:auto}
+.auth-modal-dialog{position:relative;width:min(100%,540px);max-height:calc(100vh - 48px);overflow:auto;border-radius:18px;box-shadow:0 28px 90px rgba(15,5,22,.38)}
+.auth-modal-close{position:absolute;z-index:3;right:12px;top:10px;width:36px;height:36px;border:0;border-radius:50%;background:#f3edf5;color:#382044;font-size:27px;line-height:1;cursor:pointer}
+.auth-modal-dialog .auth-screen{display:block;min-height:0;padding:0;background:transparent}
+.auth-modal-dialog .auth-card{width:100%;max-width:none;max-height:none;min-height:0;margin:0;padding:30px 34px;border:0;border-radius:18px;box-shadow:none}
+.auth-modal-dialog .registration-card{overflow:visible}
+.auth-modal-dialog .auth-intro{margin-top:14px}
+.auth-modal-dialog .auth-intro h1{font-size:clamp(25px,4vw,34px)}
+.auth-modal-dialog .auth-brand{padding-right:42px}
+@media(max-width:600px){.auth-modal-backdrop{align-items:flex-start;padding:12px}.auth-modal-dialog{max-height:calc(100vh - 24px);border-radius:14px}.auth-modal-dialog .auth-card{padding:24px 20px}.auth-modal-dialog .registration-card{max-height:none}.auth-modal-close{right:8px;top:8px}}
