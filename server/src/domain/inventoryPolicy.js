@@ -12,7 +12,7 @@ export function inventoryItemInputError(input = {}) {
 export function inventoryMovementInputError(input = {}) {
   if(!movementTypes.has(input.movementType))return 'Select a valid stock movement type';
   const quantity=Number(input.quantity);
-  if(!Number.isFinite(quantity)||quantity<=0||quantity>1000000000)return 'Quantity must be greater than zero and no more than 1,000,000,000';
+  if(!Number.isFinite(quantity)||quantity<0||quantity>1000000000||(quantity===0&&input.movementType!=='stocktake'))return 'Quantity must be greater than zero (or zero for a stocktake) and no more than 1,000,000,000';
   const key=String(input.idempotencyKey??'').trim();
   if(key.length<8||key.length>120)return 'A valid movement request key is required';
   if(input.movementType==='adjustment'&&!['increase','decrease'].includes(input.adjustmentDirection||'increase'))return 'Select whether the adjustment increases or decreases stock';
