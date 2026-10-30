@@ -197,3 +197,37 @@ export const DEFAULT_SITE_CONTENT = {
   },
   footer: { brand: 'NEW CHURCH BELIEVERS INTERNATIONAL', strapline: 'ONE CHURCH. ONE VISION. UNITED IN CHRIST AND COMMITTED TO SERVICE.', motto: 'FAITH IN ACTION. SERVICE WITH PURPOSE.' }
 };
+
+
+// Upgrade the original starter copy without overwriting text that an NCBI editor
+// has deliberately customised in the website content manager.
+const LEGACY_PUBLIC_COPY = {
+  navigation: { branches: 'Find a branch', programmes: 'Programmes', news: 'News and notices', register: 'Connect with NCBI', signIn: 'Member and staff sign in' },
+  pages: {
+    home: { description: 'A Christian community serving God and neighbours through worship, fellowship, discipleship and practical care. Discover an NCBI congregation and find a place to connect.', motto: 'A CALL TO SERVE', heroCaptionTitle: 'Faith expressed in service.', heroCaptionText: 'Worship, grow and serve with your local congregation.', strapline: ['GROWING IN FAITH', 'SERVING WITH COMPASSION', 'CONNECTED IN COMMUNITY'] },
+    about: { eyebrow: 'WHO WE ARE', titleLine1: 'A church family,', titleLine2: 'united in faith and service.', body: 'New Church Believers International is a Christian church community with congregations serving in their local contexts. NCBI brings people together for worship, fellowship, biblical learning and practical service. Our shared identity is expressed in the call to serve God and care for our neighbours.' },
+    mission: { eyebrow: 'OUR SHARED PURPOSE', title: 'Faith that forms a life of service.', subtitle: 'Worship, discipleship and care for our communities shape the way we serve together.', cards: [{ eyebrow: '01 / WORSHIP', title: 'Worship together', body: 'Gather as a church family for prayer, praise, teaching and fellowship.' }, { eyebrow: '02 / DISCIPLESHIP', title: 'Grow in faith', body: 'Encourage learning, spiritual formation and faithful service throughout life.' }, { eyebrow: '03 / COMMUNITY', title: 'Care for our neighbours', body: 'Put compassion into practice through local ministry, outreach and support.' }] },
+    ministries: { eyebrow: 'LIFE TOGETHER', titleLine1: 'Many ways to worship,', titleLine2: 'learn and serve.', body: 'NCBI congregations bring people together through worship, discipleship, pastoral care and community outreach. Contact a local branch to learn which ministries and programmes are available in your area.', cta: 'Find a local congregation', cards: [{ title: 'Worship and fellowship', body: 'Gather with a congregation for worship, encouragement and shared life.' }, { title: 'Discipleship and teaching', body: 'Build a foundation for Christian life through learning and mentoring.' }, { title: 'Pastoral care', body: 'Offer prayer, practical support and compassionate care within the church community.' }, { title: 'Outreach and service', body: 'Serve local communities and share the Christian message with care and respect.' }] },
+    branches: { eyebrow: 'FIND YOUR CHURCH FAMILY', title: 'NCBI congregations', subtitle: 'Explore active branches and connect with a local congregation.', empty: 'The branch directory is being updated. Please contact the NCBI office for help finding a congregation.' },
+    programmes: { eyebrow: 'GATHER · LEARN · SERVE', title: 'Church programmes and events', subtitle: 'See programmes published by NCBI branches and ministry teams.', empty: 'No public programmes are listed at present. Check again later or contact a local branch for its programme schedule.' },
+    news: { eyebrow: 'CHURCH NEWS AND NOTICES', title: 'Updates from NCBI', subtitle: 'Read notices that NCBI branches and authorised leaders have chosen to publish.', empty: 'There are no public notices at present.' },
+    contact: { eyebrow: 'CONNECT WITH NCBI', titleLine1: 'Find a place', titleLine2: 'to worship and serve.', body: 'Contact a local congregation to ask about worship, programmes, membership or ways to get involved. For account access, use the member and staff sign-in.', branchesCta: 'Find a branch', signInCta: 'Member and staff sign in' }
+  },
+  footer: { strapline: 'ONE CHURCH. ONE VISION. A CALL TO SERVE.', motto: 'A CALL TO SERVE' }
+};
+export function mergeSiteContent(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const pages = Object.fromEntries(Object.entries(DEFAULT_SITE_CONTENT.pages).map(([key, defaults]) => {
+    const saved = source.pages?.[key] && typeof source.pages[key] === 'object' ? { ...source.pages[key] } : {};
+    const legacy = LEGACY_PUBLIC_COPY.pages[key] || {};
+    for (const [field, oldValue] of Object.entries(legacy)) {
+      if (JSON.stringify(saved[field]) === JSON.stringify(oldValue)) delete saved[field];
+    }
+    return [key, { ...defaults, ...saved }];
+  }));
+  const navigation = { ...DEFAULT_SITE_CONTENT.navigation, ...(source.navigation || {}) };
+  for (const [key, oldValue] of Object.entries(LEGACY_PUBLIC_COPY.navigation)) if (navigation[key] === oldValue) navigation[key] = DEFAULT_SITE_CONTENT.navigation[key];
+  const footer = { ...DEFAULT_SITE_CONTENT.footer, ...(source.footer || {}) };
+  for (const [key, oldValue] of Object.entries(LEGACY_PUBLIC_COPY.footer)) if (footer[key] === oldValue) footer[key] = DEFAULT_SITE_CONTENT.footer[key];
+  return { navigation, pages, footer };
+}
