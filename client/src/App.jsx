@@ -143,7 +143,7 @@ function Registration({onLogin,onPublic,brandLogo}) {
     {!loading&&dashboardChoice&&!eligibleOrganisations.length&&<small className="field-help">No active church organisation is currently available for this dashboard. Please contact the NCBI office.</small>}
    <label>Create password</label><input required type="password" minLength="6" maxLength="128" autoComplete="new-password" value={form.password} onChange={e=>set('password',e.target.value)} placeholder="At least 6 characters"/>
    {error&&<div className="form-error" role="alert">{error}</div>}
-    <button className="auth-submit" disabled={busy||loading||!dashboardChoice||!eligibleOrganisations.length}>
+    <button className="auth-submit" disabled={busy||loading||!dashboardChoice||!eligibleOrganisations.length}>{busy?'Submitting…':'Submit registration'}</button>
   </form>}
    <small className="auth-foot">Member portal applications are verified by the selected branch pastor. All official dashboard requests are reviewed by authorised NCBI leadership. Selecting a dashboard does not grant access or privileges.</small>
   <button type="button" className="text-button auth-public-link" onClick={onPublic}>Back to NCBI public website</button>
@@ -172,11 +172,11 @@ function DocumentFilesPanel({ token, documents, onError, onSuccess }) {
 
 function Login({onLogin,busy,error,onPublic,onRegister,brandLogo}) {
  const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
-  return <div className="auth-screen"><section className="auth-card">
+ return <div className="auth-screen"><section className="auth-card"><div className="auth-brand"><div className="brand-mark"><img src={brandLogo||"/ncbi-logo.jpg"} onError={e=>{if(!e.currentTarget.dataset.fallback){e.currentTarget.dataset.fallback="true";e.currentTarget.src="/ncbi-logo.jpg";}else{e.currentTarget.style.visibility="hidden";}}} alt="NCBI emblem"/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div><div className="auth-intro"><div className="eyebrow">ONE CHURCH. ONE VISION.</div><h1>Your NCBI workspace.</h1><p>Sign in to continue to the church administration or member services available to your account.</p></div><form onSubmit={e=>{e.preventDefault();onLogin(email,password);}}><label>Email address</label><input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@church.org"/><label>Password</label><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/>{error&&<div className="form-error" role="alert">{error}</div>}<button className="auth-submit" disabled={busy}>{busy?'Signing in…':'Sign in securely'}</button></form><small className="auth-foot">Access is monitored and limited by your assigned church role.</small><button type="button" className="text-button auth-public-link" onClick={onRegister}>Create an account</button><button type="button" className="text-button auth-public-link" onClick={onPublic}>Back to NCBI public website</button></section></div>;
 }
 function Field({label,children}) { return <label className="field"><span>{label}</span>{children}</label>; }
 
-function PublicHome({onLogin,onRegister,brandLogo,authMode,onCloseAuth,onLoginSubmit,loginBusy,loginError})
+function PublicHome({onLogin,onRegister,brandLogo,authMode,onCloseAuth,onLoginSubmit,loginBusy,loginError}) {
  const [content,setContent]=useState({branches:[],events:[],announcements:[]}); const [siteContent,setSiteContent]=useState(DEFAULT_SITE_CONTENT);
  const [loading,setLoading]=useState(true); const [error,setError]=useState('');
  const [menuOpen,setMenuOpen]=useState(false);
