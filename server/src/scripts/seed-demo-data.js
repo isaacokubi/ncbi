@@ -154,7 +154,7 @@ try {
     await user({ fullName: `${nationals[i].name} Administrator`, email: `national.${nationalSpecs[i][1].toLowerCase()}@demo.ncbi.org`, role: 'national_admin', organisation: nationals[i] });
   }
   for (let i = 0; i < regions.length; i += 1) {
-    await user({ fullName: `${regions[i].name} Overseer`, email: `overseer.${regionSpecs[i][1].toLowerCase()}@demo.ncbi.org`, role: 'regional_overseer', organisation: regions[i] }));
+    await user({ fullName: `${regions[i].name} Overseer`, email: `overseer.${regionSpecs[i][1].toLowerCase()}@demo.ncbi.org`, role: 'regional_overseer', organisation: regions[i] });
   }
   const districtUsers = [];
   for (let i = 0; i < districts.length; i += 1) {
@@ -268,7 +268,7 @@ try {
     regions: await Organisation.countDocuments({ code: { $in: regionSpecs.map((item) => item[1]) }, level: 'regional', status: 'active' }),
     districts: await Organisation.countDocuments({ code: { $in: districtSpecs.map((item) => item[1]) }, level: 'district', status: 'active' }),
     churches: seededBranches.length,
-    demoUsers: await User.countDocuments({ email: /@demo\\.ncbi\\.org$/ }),
+    demoUsers: await User.countDocuments({ email: /@demo\.ncbi\.org$/ }),
     demoMembers: await Member.countDocuments({ membershipNumber: /^NCBI-(?:V)?[0-9]{1,2}-/ }),
     demoAttendance: await Attendance.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, activityName: 'Sunday Celebration Service' }),
     demoFinance: await FinanceTransaction.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-NCBI-CH-/ }),
