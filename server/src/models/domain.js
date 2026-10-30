@@ -57,7 +57,7 @@ const journalEntrySchema = new Schema({
   postedAt: Date,
   sourceType: String,
   sourceId: Schema.Types.ObjectId
-}, { timestamps: true });
+}, { timestamps: true, optimisticConcurrency: true });
 journalEntrySchema.index({ organisation: 1, entryNumber: 1 }, { unique: true });
 journalEntrySchema.index({ sourceType: 1, sourceId: 1 }, { unique: true, partialFilterExpression: { sourceType: { $type: 'string' }, sourceId: { $type: 'objectId' } } });
 
@@ -74,7 +74,7 @@ const budgetSchema = new Schema({
   decidedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   approvedAt: Date,
   decisionNote: { type: String, maxlength: 300 }
-}, { timestamps: true });
+}, { timestamps: true, optimisticConcurrency: true });
 budgetSchema.index({ organisation: 1, account: 1, fiscalYear: 1, period: 1 }, { unique: true });
 
 const bankReconciliationSchema = new Schema({
@@ -207,7 +207,7 @@ const purchaseRequestSchema=new Schema({
  approvedAt:Date,
  decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
  approvals:[{actor:{type:Schema.Types.ObjectId,ref:'User',required:true},role:{type:String,required:true},decision:{type:String,enum:['approve','reject'],required:true},note:{type:String,maxlength:500},decidedAt:{type:Date,required:true}}]
-},{timestamps:true});
+},{timestamps:true, optimisticConcurrency: true });
 purchaseRequestSchema.index({organisation:1,requestNumber:1},{unique:true});
 
 const supplierInvoiceSchema=new Schema({
@@ -229,7 +229,7 @@ const supplierInvoiceSchema=new Schema({
  approvedAt:Date,
  decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
  approvals:[{actor:{type:Schema.Types.ObjectId,ref:'User',required:true},role:{type:String,required:true},decision:{type:String,enum:['approve','reject'],required:true},note:{type:String,maxlength:500},decidedAt:{type:Date,required:true}}]
-},{timestamps:true});
+},{timestamps:true, optimisticConcurrency: true });
 supplierInvoiceSchema.index({organisation:1,supplier:1,invoiceNumber:1},{unique:true});
 
 const supplierPaymentSchema=new Schema({
@@ -248,7 +248,7 @@ const supplierPaymentSchema=new Schema({
  confirmedAt:Date,
  journalEntry:{type:Schema.Types.ObjectId,ref:'JournalEntry',default:null},
  approvals:[{actor:{type:Schema.Types.ObjectId,ref:'User',required:true},role:{type:String,required:true},decision:{type:String,enum:['approve','reject'],required:true},note:{type:String,maxlength:500},decidedAt:{type:Date,required:true}}]
-},{timestamps:true});
+},{timestamps:true, optimisticConcurrency: true });
 supplierPaymentSchema.index({organisation:1,createdAt:-1});
 supplierPaymentSchema.index({organisation:1,reference:1},{unique:true,partialFilterExpression:{reference:{$type:'string',$gt:''}}});
 
