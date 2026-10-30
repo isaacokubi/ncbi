@@ -27,8 +27,7 @@ router.post('/login', async (req, res, next) => {
 });
 
 
-// Public registration: applicants can request only a basic member-portal account.
-// Privileged roles are provisioned separately by authorised administrators.
+// Public registration accepts member, visitor and church-official applications. Official roles are assigned only after an authorised approval.
 router.get('/registration/branches', async (_req, res, next) => {
   try {
     const [branches, organisations] = await Promise.all([
@@ -150,10 +149,10 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
       action: decision === 'approve' ? 'account.registration_approved' : 'account.registration_rejected',
       entity: 'user', recordId: target._id,
       summary: 'Registration ' + (decision === 'approve' ? 'approved' : 'rejected') + ' for ' + target.fullName,
-      metadata: { registrationCategory: target.registrationCategory, note },
+      metadata: { registrationCategory: target.registrationCategory, requestedRole: target.requestedRole || null, assignedRole: target.role, note },
       ipAddress: req.ip, userAgent: req.get('user-agent')
     });
-    res.json({ message: decision === 'approve' ? 'Account approved. The applicant can now sign in.' : 'Registration rejected.', registration: { id: target.id, accountApproval: target.accountApproval, active: target.active } });
+    res.json({ message: decision === 'approve' ? (target.registrationCategory === 'official' ? 'Official application approved. The requested church dashboard has been assigned.' : 'Account approved. The applicant can now sign in.') : 'Registration rejected.', registration: { id: target.id, accountApproval: target.accountApproval, active: target.active } });
   } catch (error) { next(error); }
 });
 
