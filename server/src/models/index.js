@@ -39,7 +39,7 @@ const memberSchema = new Schema({
   joinedAt: Date, ministries: [String], assignedPastor: { type: Schema.Types.ObjectId, ref: 'User' },
   transferHistory: [{ from: Schema.Types.ObjectId, to: Schema.Types.ObjectId, approvedBy: Schema.Types.ObjectId, transferredAt: Date, note: String }]
 }, timestamps);
-memberSchema.index({ homeOrganisation: 1, membershipNumber: 1 }, { unique: true, sparse: true });
+memberSchema.index({ homeOrganisation: 1, membershipNumber: 1 }, { unique: true, partialFilterExpression: { membershipNumber: { $type: 'string' } } });
 
 const attendanceSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
