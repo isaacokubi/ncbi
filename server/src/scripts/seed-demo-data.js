@@ -45,6 +45,7 @@ try {
       if (doc.role !== role || String(doc.organisation) !== String(org._id)) {
         throw new Error(`Seed account ${normalizedEmail} already exists with a different role or organisation.`);
       }
+      accountLog.push({ email: doc.email, role: doc.role, status: 'existing' });
       return doc;
     }
     doc = await User.create({
@@ -52,6 +53,7 @@ try {
       active: true, accountApproval: 'approved', registrationPhone: phone
     });
     counts.users += 1;
+    accountLog.push({ email: doc.email, role: doc.role, status: 'created' });
     return doc;
   }
 
