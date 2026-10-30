@@ -93,7 +93,7 @@ router.post('/purchase-requests/:id/decision',async(req,res,next)=>{try{
  await item.save();
  await audit(req,item.organisation,'purchase_request_'+decision,'purchase_request',item,'Purchase request '+(decision==='reject'?'rejected':progress.complete?'approved':'approval recorded'),{note,remainingApprovals:progress.remaining});
  res.json({purchaseRequest:item,approvalProgress:{complete:progress.complete,remaining:progress.remaining}});
-}catch(e){next(e);}});
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'This record changed while you were processing it. Reload the latest record and retry.'});next(e);}});
 
 router.get('/invoices',async(req,res,next)=>{try{
  if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Supplier invoice access denied'});
@@ -166,7 +166,7 @@ router.post('/invoices/:id/decision',async(req,res,next)=>{try{
  await invoice.save();
  await audit(req,invoice.organisation,'supplier_invoice_'+decision,'supplier_invoice',invoice,'Supplier invoice '+invoice.status,{note,journalEntry:invoice.journalEntry||null});
  res.json({invoice});
-}catch(e){next(e);}});
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'This record changed while you were processing it. Reload the latest record and retry.'});next(e);}});
 
 router.get('/payments',async(req,res,next)=>{try{
  if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Supplier payment access denied'});
@@ -212,7 +212,7 @@ router.post('/payments/:id/decision',async(req,res,next)=>{try{
  }
  await audit(req,payment.organisation,'supplier_payment_'+decision,'supplier_payment',payment,'Supplier payment '+payment.status,{note});
  res.json({payment});
-}catch(e){next(e);}});
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'This record changed while you were processing it. Reload the latest record and retry.'});next(e);}});
 router.post('/payments/:id/confirm',async(req,res,next)=>{try{
  if(!financeRoles.has(req.user.role))return res.status(403).json({message:'Supplier payment confirmation permission required'});
  const ids=await scopedIds(req),payment=await SupplierPayment.findOne({_id:req.params.id,organisation:{$in:ids}});
@@ -238,5 +238,5 @@ router.post('/payments/:id/confirm',async(req,res,next)=>{try{
  await invoice.save();
  await audit(req,payment.organisation,'supplier_payment_confirm','supplier_payment',payment,'Supplier payment confirmed and posted',{invoice:invoice.invoiceNumber,journalEntry:journal._id});
  res.json({payment,invoice,journalEntry:journal});
-}catch(e){next(e);}});
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'This record changed while you were processing it. Reload the latest record and retry.'});next(e);}});
 export default router;
