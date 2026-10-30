@@ -23,7 +23,7 @@ This matrix is the acceptance boundary for the submitted project proposal. "Part
 | 15. Projects and development | Partial | Formal proposal/approval stages, milestones, contractor procurement, change orders, evidence review and project-to-ledger budget controls. |
 | 16. Children, youth and family | Partial | Parent/guardian portal, verified guardian relationships, authorised collection workflow, child attendance handover, staff vetting and complete safeguarding case management. Consent capture alone is not the full safeguarding module. |
 | 17. Documents and records | Partial | Malware scanning, retention/legal holds, off-site replication, restore verification, richer document classification and archival policies. Private versioned storage exists but requires production persistent storage configuration. |
-| 18. Public website and member portal | Partial | Native Android/iOS applications, secure online giving experience, broader member self-service, public sermon/media delivery and end-to-end accessibility/device acceptance. Public CMS and core member portal are present. |
+| 18. Public website and member portal | Partial | Native Android/iOS applications, secure online giving experience, broader member self-service, public sermon/media delivery and end-to-end accessibility/device acceptance. Public CMS and core member portal are present. Super Admin and National Admin can now manage public email, telephone, WhatsApp, physical/postal address and office hours in the Contact page editor; published details appear on the public Contact page and footer. |
 | 19. Security, governance and audit | Partial | MFA, per-device refresh-token rotation, password reset/recovery, formal immutable audit storage, security alerting, automated backup/restore drills, incident response and independent penetration testing. |
 | Mobile and offline architecture | Not delivered | No native Android/iOS application or durable offline-first sync engine is present. Do not record financial payments offline as confirmed; future sync must be idempotent and reconcile conflicts. |
 | Data migration and rollout | Not delivered | Import validation/mapping tools, controlled pilot migration, rollback rehearsal, branch onboarding and formal user acceptance sign-off. |
@@ -46,6 +46,24 @@ This document distinguishes working code from planned work. A module is not prod
 - API base: `/api/suppliers`; resources: `/suppliers`, `/purchase-requests`, `/invoices`, and `/payments`. Each list and mutation is authenticated and organisation-scoped.
 - Automated pure-policy tests cover supplier naming, invoice validation, exact decimal handling, rejection/approval separation, payment overrun prevention and partial settlement.
 - **Not yet complete:** no dedicated supplier/procurement/invoice/payment workspace has been added to the React client; pending purchase orders/payments do not reserve budget or invoice balance; concurrent settlement requests are not protected by a database transaction/atomic reservation; no supplier statement, tax withholding, purchase-order line-item/receiving, bank-feed matching or live payment-provider disbursement is implemented. Supplier payments are recorded and posted after an authorised human confirms settlement; this does not transfer money to a supplier.
+
+
+## Public website contact information management
+
+- Extended the existing Public Website CMS Contact page with public contact email, main telephone, WhatsApp number, physical/headquarters address, postal address and office hours.
+- Super Admin and National Admin can edit these fields in the dashboard under **Institutional Configuration → Public Website → Contact page → Official contact information**, then publish them with the existing Save & Publish action.
+- The public Contact page displays configured details as clickable email, telephone and WhatsApp links, plus address and office-hours information. Public footer also displays the configured email and telephone.
+- The public website reads these values from the existing public content endpoint; no separate manual website edit or deployment configuration is required for each contact detail.
+- Server-side validation rejects malformed email addresses, unsafe phone characters and overlong address/hours fields. The content remains plain text and existing CMS-managed page copy is preserved when fields are added.
+- Contact details are optional and blank by default. NCBI administrators must enter and publish verified official details; no phone number, email or address has been invented.
+- Automated policy tests cover valid details, malformed email/phone values and length limits; client terminology tests cover contact defaults and preservation through CMS merges.
+
+## Supplier and procurement dashboard
+
+- Added a role-restricted **Suppliers & procurement** finance workspace for authorised finance and leadership roles, including treasurers.
+- The workspace provides supplier registration, purchase-request submission and review, supplier invoice submission and independent approval, supplier payment requests, payment approval and a separate settlement confirmation screen requiring selection of an active bank/cash asset account.
+- The workspace uses the existing organisation-scoped /api/suppliers endpoints and chart-of-accounts API. It does not initiate bank transfers or M-Pesa disbursements; users confirm settlement only after the real-world payment has occurred.
+- The dashboard is responsive and includes registers, status indicators and rejection-reason inputs. Full browser acceptance and real MongoDB integration tests remain outstanding.
 
 ## Implemented in this delivery
 - Financial request rejection now requires an explanation in the API, stores it on the transaction and includes it in the audit event. The interface prompts for the explanation before sending the decision and uses distinct authorise, confirm-and-post, and decline action labels.
