@@ -16,6 +16,36 @@ export function dashboardPendingApprovalsForRole(role, breakdown) {
 }
 
 export function dashboardMetricsForRole(role, metrics) {
+  if (role === 'super_admin') return {
+    organisationUnits: metrics.organisationUnits,
+    activeOrganisations: metrics.activeOrganisations,
+    activeUsers: metrics.activeUsers,
+    pendingAccounts: metrics.pendingAccounts,
+    branches: metrics.branches
+  };
+  if (role === 'international_executive') return {
+    nationalOffices: metrics.nationalOffices,
+    regionalUnits: metrics.regionalUnits,
+    districtUnits: metrics.districtUnits,
+    branches: metrics.branches,
+    members: metrics.members,
+    visitors: metrics.visitors,
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
+    confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
+    confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
+    pendingApprovals: metrics.pendingApprovals
+  };
+  if (role === 'national_admin') return {
+    regionalUnits: metrics.regionalUnits,
+    districtUnits: metrics.districtUnits,
+    branches: metrics.branches,
+    members: metrics.members,
+    visitors: metrics.visitors,
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
+    confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
+    confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
+    pendingApprovals: metrics.pendingApprovals
+  };
   if (role === 'department_leader') return { attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth };
   if (role === 'treasurer') return { confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth, confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth };
   if (role === 'branch_admin') return { branches: metrics.branches, members: metrics.members, visitors: metrics.visitors, attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth, pendingApprovals: metrics.pendingApprovals };
