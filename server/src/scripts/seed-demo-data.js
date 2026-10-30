@@ -80,7 +80,7 @@ try {
       { $setOnInsert: {
         organisation: org._id, entity, reference, title, data, status, visibility,
         owner: actor._id, assignedTo: [actor._id], createdBy: actor._id, updatedBy: actor._id,
-        startAt: dateOffset(-1), endAt: dateOffset(30)
+        startAt: dateOffset(-1), endAt: new Date(now.getTime() + 2 * 86400000)
       } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
