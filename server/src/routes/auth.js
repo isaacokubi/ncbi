@@ -89,7 +89,8 @@ router.get('/registrations/pending', requireAuth, async (req, res, next) => {
       filter.registrationCategory = 'member';
     } else {
       filter.registrationCategory = { $in: ['non_member','official'] };
-      const accessibleIds = await accessibleOrganisationIds(req.user);\n      filter.organisation = { $in: accessibleIds };
+      const accessibleIds = await accessibleOrganisationIds(req.user);
+      filter.organisation = { $in: accessibleIds };
     }
     const registrations = await User.find(filter)
       .select('fullName email organisation registrationCategory requestedRole registrationPhone claimedMembershipNumber createdAt')
@@ -107,7 +108,10 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
     const memberPastor = req.user.role === 'branch_pastor';
     const target = await User.findOne({ _id: req.params.id, accountApproval: 'pending' });
     if (!target) return res.status(404).json({ message: 'Pending registration not found.' });
-    const accessibleIds = await accessibleOrganisationIds(req.user);\n    const scopeError = registrationScopeError(req.user, target, accessibleIds);\n    if (scopeError) return res.status(403).json({ message: scopeError });\n    const decisionError = registrationDecisionError(req.user, target);
+    const accessibleIds = await accessibleOrganisationIds(req.user);
+    const scopeError = registrationScopeError(req.user, target, accessibleIds);
+    if (scopeError) return res.status(403).json({ message: scopeError });
+    const decisionError = registrationDecisionError(req.user, target);
     if (decisionError) return res.status(403).json({ message: decisionError });
     if (decision === 'approve' && target.registrationCategory === 'member') {
       const verifiedMember = await Member.findOne({
