@@ -813,3 +813,13 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .dark .supplier-register td input,.dark .supplier-register .table-action{background:#211a26;border-color:#493a50;color:#eee}
 .dark .public-contact-details>a,.dark .public-contact-details>div{background:#211a26;border-color:#493a50;color:#eee}
 .dark .website-cms-subheading{color:var(--champagne)}
+
+
+.public-footer-contact{display:block;margin-top:7px;color:#dfcc80;font-size:11px;text-decoration:none}
+.public-footer-contact:hover{text-decoration:underline}
+.supplier-settlement-confirm{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,360px) auto;align-items:end;gap:16px;padding:18px;border:1px solid #dfcc80}
+.supplier-settlement-confirm h3{margin:0;color:var(--purple);font-size:14px}
+.supplier-settlement-confirm p{margin:5px 0 0;color:#817786;font-size:11px;line-height:1.5}
+.supplier-settlement-confirm .editor-actions{margin:0;white-space:nowrap}
+.dark .supplier-settlement-confirm h3{color:var(--champagne)}
+@media(max-width:760px){.supplier-settlement-confirm{grid-template-columns:1fr}.supplier-settlement-confirm .editor-actions{flex-wrap:wrap}}
