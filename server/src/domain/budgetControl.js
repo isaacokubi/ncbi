@@ -1,6 +1,6 @@
 const toMinorUnits=value=>{
  const text=String(value??'0').trim();
- if(!/^-?\\d+(?:\\.\\d{1,2})?$/.test(text))return null;
+ if(!/^-?\d+(?:\.\d{1,2})?$/.test(text))return null;
  const negative=text.startsWith('-');
  const unsigned=negative?text.slice(1):text;
  const [whole,decimal='']=unsigned.split('.');
