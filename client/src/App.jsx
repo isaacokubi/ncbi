@@ -425,6 +425,13 @@ function App(){
  const dashboardMetrics=dashboard?.metrics||{}; const organisationRows=useMemo(()=>organisationHierarchyRows(organisations),[organisations]);
  const selectedReportCurrency=Object.hasOwn(reportData?.totals||{},reportCurrency)?reportCurrency:(Object.keys(reportData?.totals||{})[0]||reportCurrency);
  const dashboardStatDefinitions=[
+  ['organisationUnits','Organisation units',Network,'Church units included in the platform reporting scope'],
+  ['activeOrganisations','Active organisations',Church,'Approved and active church offices and congregations'],
+  ['activeUsers','Active user accounts',Users,'Approved accounts currently enabled to sign in'],
+  ['pendingAccounts','Accounts awaiting approval',ClipboardList,'New accounts awaiting administrator review'],
+  ['nationalOffices','National offices',Church,'National church offices in the international reporting scope'],
+  ['regionalUnits','Regions',MapPin,'Active regional units in your reporting scope'],
+  ['districtUnits','Districts',Network,'Active district units in your reporting scope'],
   ['branches','Active branches',Church,'Active branch locations'],
   ['members','Registered members',Users,'People registered as members, workers or ministers'],
   ['visitors','Visitors',HeartHandshake,'Visitors recorded in your authorised scope'],
