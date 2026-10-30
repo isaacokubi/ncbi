@@ -5,6 +5,7 @@ import { User, Organisation, Member } from '../models/index.js';
 import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
 import { passwordChangeError } from '../domain/authPolicy.js';
+import { registrationDecisionError } from '../domain/registrationPolicy.js';
 
 const router = Router();
 
@@ -95,16 +96,10 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
     if (!['approve','reject'].includes(decision)) return res.status(400).json({ message: 'Decision must be approve or reject.' });
     if (decision === 'reject' && !note) return res.status(400).json({ message: 'Provide a reason when rejecting an application.' });
     const memberPastor = req.user.role === 'branch_pastor';
-    const adminRoles = ['super_admin','international_executive','national_admin'];
-    if (!memberPastor && !adminRoles.includes(req.user.role)) return res.status(403).json({ message: 'Registration approval permission required.' });
     const target = await User.findOne({ _id: req.params.id, accountApproval: 'pending' });
     if (!target) return res.status(404).json({ message: 'Pending registration not found.' });
-    if (memberPastor) {
-      const ownBranch = req.user.organisation?._id || req.user.organisation;
-      if (target.registrationCategory !== 'member' || String(target.organisation) !== String(ownBranch)) return res.status(403).json({ message: 'Pastors may approve member applications only for their assigned branch.' });
-    } else if (target.registrationCategory !== 'non_member' || (req.user.role === 'branch_admin' && String(target.organisation) !== String(req.user.organisation?._id || req.user.organisation))) {
-      return res.status(403).json({ message: 'Administrators may approve non-member applications only within their authorised branch scope. Member applications belong to the selected branch pastor.' });
-    }
+    const decisionError = registrationDecisionError(req.user, target);
+    if (decisionError) return res.status(403).json({ message: decisionError });
     if (decision === 'approve' && target.registrationCategory === 'member') {
       const verifiedMember = await Member.findOne({
         homeOrganisation: target.organisation,
