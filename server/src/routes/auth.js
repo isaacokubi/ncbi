@@ -153,7 +153,7 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
           code: 'MEMBERSHIP_VERIFICATION_REQUIRED',
           message: 'No existing member matched this applicant by name and phone. Enter the membership number assigned by your branch, or create/verify the member record before approving.'
         });
-        const names = target.fullName.split(/\\s+/);
+        const names = target.fullName.split(/\s+/);
         if (await Member.exists({ homeOrganisation: target.organisation, membershipNumber: suppliedNumber })) return res.status(409).json({ message: 'That membership number is already assigned in this branch. Check the member record and choose the correct number.' });
         let createdMember;
         try {
