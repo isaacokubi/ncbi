@@ -3,9 +3,11 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { connectDatabase } from '../config/db.js';
 import { Organisation, User } from '../models/index.js';
+import { passwordLengthError } from '../domain/authPolicy.js';
 const required = ['BOOTSTRAP_NAME','BOOTSTRAP_EMAIL','BOOTSTRAP_PASSWORD','BOOTSTRAP_ORG_NAME','BOOTSTRAP_ORG_CODE'];
 for (const key of required) if (!process.env[key]) throw new Error(`${key} is required`);
-if (process.env.BOOTSTRAP_PASSWORD.length < 14) throw new Error('Use a one-time password of at least 14 characters');
+const bootstrapPasswordError = passwordLengthError(process.env.BOOTSTRAP_PASSWORD, 'Bootstrap password');
+if (bootstrapPasswordError) throw new Error(bootstrapPasswordError);
 await connectDatabase();
 try {
  const email = process.env.BOOTSTRAP_EMAIL.trim().toLowerCase();

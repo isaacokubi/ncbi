@@ -6,6 +6,7 @@ import { accessibleOrganisationIds, assertOrganisationAccess } from '../middlewa
 import { validateAttendanceInput } from '../domain/attendancePolicy.js';
 import { SequenceCounter, AuditLog } from '../models/domain.js';
 import { attendanceWorkspaceFilter } from '../domain/dashboardPolicy.js';
+import { passwordLengthError } from '../domain/authPolicy.js';
 
 const router = Router(); router.use(requireAuth);
 const roleRank={super_admin:100,international_executive:90,national_admin:80,regional_overseer:70,district_pastor:60,branch_pastor:50,branch_admin:45,treasurer:35,department_leader:25,member:10};
@@ -23,7 +24,8 @@ router.post('/users',async(req,res,next)=>{
   if(!userManagers.includes(req.user.role))return res.status(403).json({message:'User administration permission required'});
   const {fullName,email,password,role,organisation,memberProfile}=req.body;
   if(!fullName||!email||!password||!role||!organisation)return res.status(400).json({message:'Name, email, temporary password, role and organisation are required'});
-  if(String(password).length<14)return res.status(400).json({message:'Temporary password must be at least 14 characters'});
+  const passwordError=passwordLengthError(password,'Temporary password');
+  if(passwordError)return res.status(400).json({message:passwordError});
   if(!Object.hasOwn(roleRank,role)||roleRank[role]>=roleRank[req.user.role])return res.status(403).json({message:'You cannot assign a role equal to or above your own authority'});
   if(!(await assertOrganisationAccess(req.user,organisation)))return res.status(403).json({message:'Organisation outside your authorised scope'});
   const org=await Organisation.findById(organisation);

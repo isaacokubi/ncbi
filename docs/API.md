@@ -5,7 +5,7 @@ All workspace endpoints except health and login require `Authorization: Bearer <
 ## Authentication
 - `POST /api/auth/login` — email/password; returns short-lived JWT and safe user profile.
 - `GET /api/auth/me` — current active account.
-- `POST /api/auth/change-password` — verifies the current password, enforces a 14-character minimum, changes the password and revokes all existing JWT sessions.
+- `POST /api/auth/change-password` — verifies the current password, enforces a 6-character minimum, changes the password and revokes all existing JWT sessions.
 - `POST /api/auth/logout-all` — increments the server-side token version to invalidate all previously issued access tokens; the action is written to the audit log.
 - `GET/POST /api/workspace/users` — scoped user directory and role-controlled account provisioning.
 - `PATCH /api/workspace/users/:id/status` — activate or deactivate a lower-privilege account.

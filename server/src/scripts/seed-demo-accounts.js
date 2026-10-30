@@ -3,12 +3,12 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { connectDatabase } from '../config/db.js';
 import { Organisation, User, Member } from '../models/index.js';
+import { passwordLengthError } from '../domain/authPolicy.js';
 
 // Idempotent demo-account seed. The existing super_admin is required and never created or changed.
 const commonPassword = process.env.SEED_COMMON_PASSWORD;
-if (!commonPassword || commonPassword.length < 14) {
-  throw new Error('Set SEED_COMMON_PASSWORD to a password of at least 14 characters');
-}
+const seedPasswordError = passwordLengthError(commonPassword, 'SEED_COMMON_PASSWORD');
+if (seedPasswordError) throw new Error(seedPasswordError);
 
 await connectDatabase();
 try {

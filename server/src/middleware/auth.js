@@ -8,7 +8,7 @@ export async function requireAuth(req, res, next) {
     if (!token) return res.status(401).json({ message: 'Authentication required' });
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.sub).populate('organisation', 'name code level parent');
-    if (!user || !user.active) return res.status(401).json({ message: 'Session is no longer valid' });
+    if (!user || !user.active || !tokenVersionMatches(payload.tokenVersion, user.tokenVersion)) return res.status(401).json({ message: 'Session is no longer valid. Please sign in again.' });
     req.user = user;
     next();
   } catch {
