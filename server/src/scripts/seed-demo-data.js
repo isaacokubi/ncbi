@@ -187,6 +187,8 @@ try {
     const income = await account(org, '4000', 'Tithes and Offerings', 'income', 'credit');
     const expense = await account(org, '5000', 'Ministry and Operations', 'expense', 'debit');
     const payable = await account(org, '2000', 'Trade Payables', 'liability', 'credit');
+    const demoBudgetAccount = await account(org, 'DEMO-BUDGET', 'Demo Annual Ministry Budget', 'expense', 'debit');
+    const demoBankAccount = await account(org, 'DEMO-BANK', 'Demo Reconciliation Bank Account', 'asset', 'debit');
 
     const members = [];
     const firstNames = ['Alice','Brian','Carol','David','Esther','Faith','George','Hannah','Isaac','Janet','Kevin','Lydia','Moses','Naomi','Oscar','Priscilla','Samuel','Tabitha','Victor','Winnie','Yusuf','Zawadi','Peter','Ruth','Daniel'];
@@ -265,21 +267,21 @@ try {
     }
 
     const budget = await Budget.findOneAndUpdate(
-      { organisation: org._id, account: expense._id, fiscalYear: now.getFullYear(), period: 'annual' },
-      { $setOnInsert: { organisation: org._id, account: expense._id, fiscalYear: now.getFullYear(), period: 'annual', amount: mongoose.Types.Decimal128.fromString(String(500000 + b * 125000)), notes: 'DEMO annual ministry and operations allocation.', status: 'approved', createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, decidedBy: actors.district._id, approvedAt: now } },
+      { organisation: org._id, account: demoBudgetAccount._id, fiscalYear: now.getFullYear(), period: 'annual' },
+      { $setOnInsert: { organisation: org._id, account: demoBudgetAccount._id, fiscalYear: now.getFullYear(), period: 'annual', amount: mongoose.Types.Decimal128.fromString(String(500000 + b * 125000)), notes: 'DEMO annual ministry and operations allocation.', status: 'approved', createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, decidedBy: actors.district._id, approvedAt: now } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     void budget;
 
     await BankReconciliation.findOneAndUpdate(
-      { organisation: org._id, bankAccount: cash._id, statementDate: new Date(now.getFullYear(), now.getMonth(), 1) },
-      { $setOnInsert: { organisation: org._id, bankAccount: cash._id, statementDate: new Date(now.getFullYear(), now.getMonth(), 1), statementBalance: mongoose.Types.Decimal128.fromString('125000.00'), bookBalance: mongoose.Types.Decimal128.fromString('125000.00'), difference: mongoose.Types.Decimal128.fromString('0.00'), status: 'reconciled', reconciledBy: actors.district._id, reconciledAt: now, notes: 'DEMO reconciliation; synthetic opening balance.' } },
+      { organisation: org._id, bankAccount: demoBankAccount._id, statementDate: new Date(now.getFullYear(), now.getMonth(), 1) },
+      { $setOnInsert: { organisation: org._id, bankAccount: demoBankAccount._id, statementDate: new Date(now.getFullYear(), now.getMonth(), 1), statementBalance: mongoose.Types.Decimal128.fromString('125000.00'), bookBalance: mongoose.Types.Decimal128.fromString('125000.00'), difference: mongoose.Types.Decimal128.fromString('0.00'), status: 'reconciled', reconciledBy: actors.district._id, reconciledAt: now, notes: 'DEMO reconciliation; synthetic opening balance.' } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     const supplierSpecs = [
-      ['Grace Supplies & Stationery', 'SUP-GRACE'],
-      ['Community Builders Cooperative', 'SUP-COMMUNITY']
+      ['DEMO Grace Supplies & Stationery', 'SUP-GRACE'],
+      ['DEMO Community Builders Cooperative', 'SUP-COMMUNITY']
     ];
     for (let si = 0; si < supplierSpecs.length; si += 1) {
       const [supplierName, supplierCode] = supplierSpecs[si];
