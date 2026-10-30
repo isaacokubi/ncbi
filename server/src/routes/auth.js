@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import { createHash, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User, Organisation, Member } from '../models/index.js';
 import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
-import { passwordChangeError } from '../domain/authPolicy.js';
+import { passwordChangeError, passwordLengthError, phoneNumberError } from '../domain/authPolicy.js';
+import { accountActionUrl, sendAccountEmail } from '../services/email.js';
 import { registrationDecisionError, registrationScopeError } from '../domain/registrationPolicy.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
@@ -51,7 +53,8 @@ router.post('/register', async (req, res, next) => {
     const membershipNumber = String(req.body.membershipNumber || '').trim();
     const requestedRole = String(req.body.requestedRole || '').trim();
     const allowedRequestedRoles = ['international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer','department_leader'];
-    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member','official'].includes(category) || (category === 'official' && !allowedRequestedRoles.includes(requestedRole))) {
+    const phoneError = phoneNumberError(phone);
+    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || phoneError || !organisationId || !['member','non_member','official'].includes(category) || (category === 'official' && !allowedRequestedRoles.includes(requestedRole))) {
       return res.status(400).json({ message: 'Enter a valid name, email, phone, password (at least 6 characters), account category and church branch.' });
     }
     const requestedLevels = { international_executive:['international'], national_admin:['national'], regional_overseer:['regional'], district_pastor:['district'], branch_pastor:['branch'], branch_admin:['branch'], treasurer:['branch','district','regional','national'], department_leader:['branch','district','regional','national'] };
@@ -158,6 +161,108 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
       ipAddress: req.ip, userAgent: req.get('user-agent')
     });
     res.json({ message: decision === 'approve' ? (target.registrationCategory === 'official' ? 'Official application approved. The requested church dashboard has been assigned.' : 'Account approved. The applicant can now sign in.') : 'Registration rejected.', registration: { id: target.id, accountApproval: target.accountApproval, active: target.active } });
+  } catch (error) { next(error); }
+});
+
+const hashAccountToken = value => createHash('sha256').update(String(value)).digest('hex');
+const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+
+router.post('/password-reset/request', async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!validEmail(email)) return res.status(400).json({ message: 'Enter a valid email address.' });
+    const user = await User.findOne({ email, active: true, accountApproval: 'approved' });
+    if (user) {
+      const token = randomBytes(32).toString('hex');
+      user.passwordResetTokenHash = hashAccountToken(token);
+      user.passwordResetExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+      await user.save();
+      try {
+        const url = accountActionUrl('resetPassword', token);
+        await sendAccountEmail({
+          to: user.email,
+          subject: 'Reset your NCBI account password',
+          text: 'A password reset was requested for your NCBI account. Open this link within 30 minutes to choose a new password: ' + url + '\n\nIf you did not request this, ignore this email.',
+          html: '<p>A password reset was requested for your NCBI account.</p><p><a href="' + url + '">Reset your password</a></p><p>This link expires in 30 minutes and can only be used once. If you did not request this, ignore this email.</p>'
+        });
+      } catch (error) {
+        user.passwordResetTokenHash = undefined;
+        user.passwordResetExpiresAt = undefined;
+        await user.save();
+        throw error;
+      }
+    }
+    res.json({ message: 'If an active NCBI account exists for that email, a password-reset link will be sent shortly.' });
+  } catch (error) { next(error); }
+});
+
+router.post('/password-reset/confirm', async (req, res, next) => {
+  try {
+    const token = String(req.body.token || '');
+    const newPassword = String(req.body.newPassword || '');
+    const validationError = passwordLengthError(newPassword, 'New password');
+    if (!token || token.length > 200 || validationError || newPassword.length > 128) return res.status(400).json({ message: validationError || 'This password reset link is invalid.' });
+    const user = await User.findOne({ passwordResetTokenHash: hashAccountToken(token), passwordResetExpiresAt: { $gt: new Date() } }).select('+passwordHash +passwordResetTokenHash +passwordResetExpiresAt');
+    if (!user) return res.status(400).json({ message: 'This password reset link is invalid or has expired. Request a new one.' });
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpiresAt = undefined;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    await AuditLog.create({ organisation: user.organisation, actor: user._id, action: 'account.password_reset', entity: 'user', recordId: user._id, summary: 'Password reset by verified email; existing sessions revoked', ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ message: 'Your password has been reset. You can now sign in with your new password.' });
+  } catch (error) { next(error); }
+});
+
+router.post('/email-change/request', requireAuth, async (req, res, next) => {
+  try {
+    const newEmail = String(req.body.newEmail || '').trim().toLowerCase();
+    const currentPassword = String(req.body.currentPassword || '');
+    if (!validEmail(newEmail)) return res.status(400).json({ message: 'Enter a valid new email address.' });
+    if (newEmail === req.user.email) return res.status(400).json({ message: 'That is already your registered email address.' });
+    if (await User.exists({ email: newEmail, _id: { $ne: req.user._id } })) return res.status(409).json({ message: 'That email address is already associated with another account.' });
+    const account = await User.findById(req.user._id).select('+passwordHash');
+    if (!account || !(await bcrypt.compare(currentPassword, account.passwordHash))) return res.status(401).json({ message: 'Your current password is incorrect.' });
+    const token = randomBytes(32).toString('hex');
+    account.pendingEmail = newEmail;
+    account.emailChangeTokenHash = hashAccountToken(token);
+    account.emailChangeExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await account.save();
+    try {
+      const url = accountActionUrl('verifyEmail', token);
+      await sendAccountEmail({
+        to: newEmail,
+        subject: 'Confirm your new NCBI account email',
+        text: 'Confirm your new NCBI account email by opening this link within 30 minutes: ' + url + '\n\nIf you did not request this change, ignore this email.',
+        html: '<p>Confirm that you want to use this email address for your NCBI account.</p><p><a href="' + url + '">Confirm new email address</a></p><p>This link expires in 30 minutes and can only be used once.</p>'
+      });
+    } catch (error) {
+      account.pendingEmail = undefined;
+      account.emailChangeTokenHash = undefined;
+      account.emailChangeExpiresAt = undefined;
+      await account.save();
+      throw error;
+    }
+    res.json({ message: 'A confirmation link has been sent to your new email address. Your current email remains active until you confirm the change.' });
+  } catch (error) { next(error); }
+});
+
+router.post('/email-change/confirm', async (req, res, next) => {
+  try {
+    const token = String(req.body.token || '');
+    if (!token || token.length > 200) return res.status(400).json({ message: 'This email confirmation link is invalid.' });
+    const account = await User.findOne({ emailChangeTokenHash: hashAccountToken(token), emailChangeExpiresAt: { $gt: new Date() } }).select('+pendingEmail +emailChangeTokenHash +emailChangeExpiresAt');
+    if (!account || !account.pendingEmail) return res.status(400).json({ message: 'This email confirmation link is invalid or has expired. Request a new one.' });
+    if (await User.exists({ email: account.pendingEmail, _id: { $ne: account._id } })) return res.status(409).json({ message: 'That email address is now in use. Request a different address.' });
+    const previousEmail = account.email;
+    account.email = account.pendingEmail;
+    account.pendingEmail = undefined;
+    account.emailChangeTokenHash = undefined;
+    account.emailChangeExpiresAt = undefined;
+    account.tokenVersion = (account.tokenVersion || 0) + 1;
+    await account.save();
+    await AuditLog.create({ organisation: account.organisation, actor: account._id, action: 'account.email_changed', entity: 'user', recordId: account._id, summary: 'Account email changed after confirmation; previous sessions revoked', metadata: { previousEmail, newEmail: account.email }, ipAddress: req.ip, userAgent: req.get('user-agent') });
+    res.json({ message: 'Your email address has been updated. Please sign in again using the new email address.' });
   } catch (error) { next(error); }
 });
 

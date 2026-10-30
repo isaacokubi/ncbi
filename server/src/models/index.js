@@ -32,7 +32,12 @@ const userSchema = new Schema({
   approvedAt: Date,
   rejectedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   rejectedAt: Date,
-  tokenVersion: { type: Number, default: 0, select: true }
+  tokenVersion: { type: Number, default: 0, select: true },
+  passwordResetTokenHash: { type: String, select: false },
+  passwordResetExpiresAt: { type: Date, select: false },
+  pendingEmail: { type: String, lowercase: true, trim: true, select: false },
+  emailChangeTokenHash: { type: String, select: false },
+  emailChangeExpiresAt: { type: Date, select: false }
 }, timestamps);
 
 userSchema.index({ memberProfile: 1 }, { unique: true, partialFilterExpression: { memberProfile: { $type: 'objectId' } } });

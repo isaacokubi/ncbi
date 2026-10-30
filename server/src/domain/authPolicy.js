@@ -16,3 +16,12 @@ export function passwordChangeError(currentPassword, newPassword) {
   if (currentPassword === newPassword) return 'Your new password must be different from your current password';
   return null;
 }
+
+export function phoneNumberError(value) {
+  const phone = String(value || '').trim();
+  if (!phone) return 'Enter a phone number.';
+  if (phone.length > 40 || !/^\+?[0-9\s().-]+$/.test(phone)) return 'Enter a valid phone number using digits and common phone separators.';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15) return 'Enter a phone number containing 7 to 15 digits.';
+  return null;
+}
