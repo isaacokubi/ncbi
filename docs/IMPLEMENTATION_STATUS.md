@@ -213,3 +213,9 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Public media records still require publication approval. New uploads fail with a service-unavailable response when Cloudinary is not configured; they are not silently written to ephemeral local storage.
 - Existing local media remains readable while the legacy persistent disk is configured. A separate migration of old media to Cloudinary is still required before removing that disk.
 - Cloudinary plan/account upload limits and Render/proxy request-body limits must permit 100 MiB uploads; verify this on the deployed service before accepting large videos.
+
+
+## Concurrent financial record protection
+
+- Budget decisions, journal posting, purchase-request decisions, supplier-invoice decisions and supplier-payment decisions/settlement now use Mongoose optimistic concurrency. A stale write is rejected with HTTP 409 rather than silently overwriting another actor's update.
+- The client must reload the latest record after a conflict before retrying. This protects concurrent edits to the same record; it is not a transactional reservation across separate budget-consuming records. Concurrent cross-record budget overspend prevention and pending purchase commitment reservation remain outstanding and require database-level atomic budget reservations/transactions plus integration tests.
