@@ -4,7 +4,7 @@ import { SiteContent } from '../models/siteContent.js';
 import { publicContactError } from '../domain/siteContactPolicy.js';
 
 const router = Router();
-const editors = ['super_admin', 'national_admin'];
+const editors = ['super_admin', 'international_executive', 'national_admin'];
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const validTextFields = value => isRecord(value) && Object.values(value).every(field =>
   typeof field === 'string' ||
