@@ -39,6 +39,13 @@ async function validateVolunteerRoster(entity, data, organisation, excludeId=nul
   const eligible = await Member.find({ _id: { $in: memberIds }, homeOrganisation: organisation, status: { $in: ['new_believer','member','worker','minister'] } }).select('_id firstName lastName').lean();
   if (eligible.length !== memberIds.length) return 'Every assigned person must be an eligible member of this church organisation';
   data.assignedMembers = eligible.map(member => member.firstName + ' ' + member.lastName).join(', ') + (data.assignmentNotes ? ' · ' + data.assignmentNotes : '');
+  if (data.attendanceByMember !== undefined) {
+    if (!data.attendanceByMember || typeof data.attendanceByMember !== 'object' || Array.isArray(data.attendanceByMember)) return 'Member attendance must be an object keyed by assigned member';
+    const allowedAttendance = new Set(['present','late','absent','excused','not_recorded']);
+    for (const [memberId, attendance] of Object.entries(data.attendanceByMember)) {
+      if (!memberIds.includes(memberId) || !allowedAttendance.has(attendance)) return 'Attendance can only be recorded for assigned members using a valid attendance status';
+    }
+  }
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(data.serviceTime||'')) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(data.serviceEndTime||'')) || data.serviceEndTime <= data.serviceTime) return 'Enter a valid service start and end time; the end must be later than the start';
   const conflictFilter = { organisation, entity: 'volunteer_schedule', status: { $nin: ['archived','cancelled'] }, 'data.serviceDate': data.serviceDate, $or: [{ 'data.assignedMemberIds': { $in: memberIds } }, { 'data.ministryTeam': data.ministryTeam }] };
   if (excludeId) conflictFilter._id = { $ne: excludeId };
@@ -68,7 +75,7 @@ function validateStructuredOperationData(entity, data) {
     communications: { required: ['campaignType','audience','channels','messageSummary','plannedDate'], dates: ['plannedDate','publishedAt'], enums: { campaignType: ['announcement','pastoral_notice','event_promotion','fundraising','outreach','newsletter','other'], approvalStatus: ['draft','pending','approved','rejected','published'] } },
     media: { required: ['projectType','producer'], dates: ['scheduledAt'], enums: { projectType: ['photography','video','audio','livestream','graphic_design','publication','other'], productionStage: ['planned','recording','editing','review','approved','published','archived'] } },
     transport: { required: ['vehicleRegistration','driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost','maintenanceCost'], dates: ['departureAt','returnAt','nextServiceAt'], enums: { vehicleStatus: ['available','in_use','under_maintenance','out_of_service'] } },
-    vehicle_maintenance: { required: ['vehicleRegistration','serviceType','serviceDate','maintenanceProvider','workDescription'], numbers: ['odometer','cost'], dates: ['serviceDate','nextServiceAt'], enums: { serviceStatus: ['scheduled','in_progress','completed','deferred'] } },
+    vehicle_maintenance: { required: ['vehicleRegistration','serviceType','serviceDate','maintenanceProvider','workDescription'], numbers: ['odometer','cost'], dates: ['serviceDate','nextServiceAt'], enums: { serviceType: ['routine_service','inspection','repair','tyres','insurance','licensing','other'], serviceStatus: ['scheduled','in_progress','completed','deferred'] } },
     compliance: { required: ['recordType','responsibleOfficer','complianceArea','requirement'], dates: ['reviewDate','completedAt'], enums: { recordType: ['policy','governance_resolution','compliance_action','meeting','risk','other'], actionStatus: ['not_started','in_progress','awaiting_evidence','completed','overdue'] } },
     member_class: { required: ['programmeName','classLevel','facilitator','curriculum','startDate'], numbers: ['capacity','enrolledCount'], dates: ['startDate','endDate'], enums: { classLevel: ['new_believer','foundation','membership','baptism_preparation','discipleship','leadership','other'] } },
     volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','serviceTime','serviceEndTime'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
@@ -93,6 +100,9 @@ function validateStructuredOperationData(entity, data) {
       if (data.capacity !== undefined && data.capacity < 1) return 'Class capacity must be at least one learner';
       if (data.enrolledCount !== undefined && data.capacity !== undefined && data.enrolledCount > data.capacity) return 'Enrolled learners cannot exceed class capacity';
     }
+    if (entity === 'transport' && data.returnAt && new Date(data.returnAt) <= new Date(data.departureAt)) return 'Expected return must be later than departure';
+    if (entity === 'vehicle_maintenance' && data.nextServiceAt && new Date(data.nextServiceAt) < new Date(data.serviceDate)) return 'Next service date cannot be earlier than the current service date';
+    if (entity === 'transport' && data.passengerCount !== undefined && !Number.isInteger(Number(data.passengerCount))) return 'Passenger count must be a whole number';
     for (const [field, allowed] of Object.entries(rule.enums || {})) {
       if (data[field] !== undefined && data[field] !== '' && !allowed.includes(data[field])) return 'Select a valid ' + field;
     }
