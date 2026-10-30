@@ -229,3 +229,8 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Follow-up endpoints enforce organisation scope and restrict assignment to active authorised staff in the same branch. The overview is private/no-store.
 - Automated policy tests cover supported methods/outcomes/statuses, future scheduling, completed follow-ups and malformed input. GitHub Actions passed for the backend route update and earlier frontend component/style commits; the latest combined frontend integration check is still running at the time of this note.
 - Remaining work: richer assignment controls, reminders/notifications, visitor conversion analytics, escalation rules, and end-to-end tests against a configured MongoDB deployment. This workflow does not send SMS, WhatsApp or email.
+
+
+## Operational module form upgrade (30 October 2026)
+
+The inventory, procurement, communications, media, transport, compliance, membership-class and ministry-roster workspaces now expose dedicated, validated browser form fields for their domain-specific record data. The forms submit through the existing organisation-scoped operations API and preserve the existing record audit and access controls. Operational register search now checks record titles, references and commonly used module-specific fields. These changes improve record capture and discovery; they do not by themselves implement stock-ledger accounting, supplier quotation comparison, automated approval chains, vehicle telematics, learner assessment engines, or file uploads. Those require additional domain models, transaction-safe services and end-to-end verification before being described as complete.

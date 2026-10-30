@@ -514,7 +514,22 @@ router.get('/:entity', async (req, res, next) => {
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 25));
     const filter = scopedRecordFilter(entity, ids, req.user);
     if (req.query.status && ['draft','pending','active','scheduled','in_progress','completed','cancelled','closed','archived'].includes(req.query.status)) filter.status = req.query.status;
-    if (req.query.search) filter.title = { $regex: String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+if (req.query.search) {
+      const term = String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\    if (req.query.search) filter.title = { $regex: String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };');
+      const pattern = { $regex: term, $options: 'i' };
+      filter.$or = [
+        { title: pattern }, { reference: pattern },
+        { 'data.itemCode': pattern }, { 'data.itemName': pattern },
+        { 'data.requestNumber': pattern }, { 'data.requestedBy': pattern },
+        { 'data.supplier': pattern }, { 'data.audience': pattern },
+        { 'data.producer': pattern }, { 'data.vehicleRegistration': pattern },
+        { 'data.driver': pattern }, { 'data.policyReference': pattern },
+        { 'data.responsibleOfficer': pattern }, { 'data.programmeName': pattern },
+        { 'data.facilitator': pattern }, { 'data.ministryTeam': pattern },
+        { 'data.teamLeader': pattern }, { 'data.location': pattern },
+        { 'data.destination': pattern }
+      ];
+    }
     const [records, total] = await Promise.all([
       OperationsRecord.find(filter).sort({ startAt: 1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate('organisation','name code level').lean(),
       OperationsRecord.countDocuments(filter)
