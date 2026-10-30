@@ -10,6 +10,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import financeRoutes from './routes/finance.js';
 import accountingRoutes from './routes/accounting.js';
 import paymentRoutes from './routes/payments.js';
+import reportsRoutes from './routes/reports.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -26,6 +27,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/accounting', accountingRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/reports', reportsRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' }));
 app.use((error, _req, res, _next) => {
   console.error(error);
