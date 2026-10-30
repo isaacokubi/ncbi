@@ -1,7 +1,9 @@
 const baseUrl=()=>process.env.MPESA_ENV==='production'?'https://api.safaricom.co.ke':'https://sandbox.safaricom.co.ke';
+let cachedToken=null;let cachedTokenExpiresAt=0;
 function required(){
  const keys=['MPESA_CONSUMER_KEY','MPESA_CONSUMER_SECRET','MPESA_SHORTCODE','MPESA_PASSKEY','MPESA_CALLBACK_URL','MPESA_CALLBACK_SECRET'];
  const missing=keys.filter(key=>!process.env[key]);
+ if(process.env.MPESA_ENV&&!['sandbox','production'].includes(process.env.MPESA_ENV))throw new Error('MPESA_ENV must be sandbox or production');
  if(missing.length)throw new Error('M-Pesa is not configured. Missing: '+missing.join(', '));
  if(!/^https:\/\//i.test(process.env.MPESA_CALLBACK_URL))throw new Error('MPESA_CALLBACK_URL must be a public HTTPS URL');
  if(process.env.MPESA_CALLBACK_SECRET.length<32)throw new Error('MPESA_CALLBACK_SECRET must be at least 32 characters');
@@ -17,10 +19,10 @@ export function normalizeKenyanPhone(value){
 export async function darajaToken(){
  required();
  const credentials=Buffer.from(process.env.MPESA_CONSUMER_KEY+':'+process.env.MPESA_CONSUMER_SECRET).toString('base64');
- const response=await fetch(baseUrl()+'/oauth/v1/generate?grant_type=client_credentials',{headers:{Authorization:'Basic '+credentials}});
+ const response=await fetch(baseUrl()+'/oauth/v1/generate?grant_type=client_credentials',{headers:{Authorization:'Basic '+credentials},signal:AbortSignal.timeout(15000)});
  const data=await response.json().catch(()=>({}));
  if(!response.ok||!data.access_token)throw new Error(data.errorMessage||'Unable to authenticate with Daraja');
- return data.access_token;
+ cachedToken=data.access_token;cachedTokenExpiresAt=Date.now()+(Number(data.expires_in)||3600)*1000;return cachedToken;
 }
 export async function requestStkPush({phone,amount,accountReference,description}){
  required();
@@ -31,6 +33,7 @@ export async function requestStkPush({phone,amount,accountReference,description}
  const response=await fetch(baseUrl()+'/mpesa/stkpush/v1/processrequest',{
   method:'POST',
   headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+  signal:AbortSignal.timeout(20000),
   body:JSON.stringify({
    BusinessShortCode:shortcode,Password:password,Timestamp:timestamp,
    TransactionType:process.env.MPESA_TRANSACTION_TYPE||'CustomerPayBillOnline',
