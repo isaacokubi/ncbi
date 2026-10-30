@@ -51,3 +51,7 @@ Do not load real member, child, counselling or financial records until NCBI has 
 - `branchPerformance`: up to 30 accessible branches with current member and attendance-record counts.
 
 The optional organisation filter is rejected unless it belongs to the authenticated user's server-derived organisation scope. This endpoint is an operational management report, not an audited financial statement. Financial values are included only for transactions whose state is `confirmed`.
+
+
+## Database index migration
+The member-number uniqueness rule now uses a partial index so a branch can register multiple visitors before membership numbers are assigned. A second partial unique index guarantees that one member profile is linked to at most one portal account. Before deploying this schema change to an existing database, back up MongoDB and run `npm run migrate-member-indexes -w server` with the production `MONGODB_URI`. The migration is idempotent; resolve any duplicate linked profiles before running it.
