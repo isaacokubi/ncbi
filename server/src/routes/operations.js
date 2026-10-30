@@ -9,6 +9,7 @@ import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateEventRegistrationInput, validateEventRegistrationStatus } from '../domain/eventRegistrationPolicy.js';
 import { canCheckInWithQr, validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
+import { canReadOperationsEntity } from '../domain/workspaceEntityPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -279,6 +280,7 @@ router.get('/:entity', async (req, res, next) => {
   try {
     const { entity } = req.params;
     if (!entities.has(entity)) return res.status(404).json({ message: 'Unknown workspace module' });
+    if (!canReadOperationsEntity(req.user, entity)) return res.status(403).json({ message: 'This workspace module is not available to your assigned role' });
     if (sensitiveEntities.has(entity) && !canManageSensitive.has(req.user.role)) return res.status(403).json({ message: 'Restricted pastoral information' });
     const ids = await accessibleOrganisationIds(req.user);
     const page = Math.max(1, Math.min(1000, Number(req.query.page) || 1));
