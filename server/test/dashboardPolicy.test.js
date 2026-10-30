@@ -38,3 +38,7 @@ test('department leaders do not receive approval counts they cannot administer',
 test('missing or invalid approval counts safely contribute zero',()=>{
  assert.equal(dashboardPendingApprovalsForRole('national_admin',{registrations:null,organisations:-2,finance:'bad',budgets:1}),1);
 });
+
+test('branch administrators only count approval queues they can act on',()=>{
+ assert.equal(dashboardPendingApprovalsForRole('branch_admin',{registrations:2,organisations:8,finance:9,budgets:7,operations:1}),3);
+});
