@@ -66,3 +66,13 @@ All accounting endpoints require authentication, finance roles and server-derive
 - `POST /api/payments/mpesa/callback/:secret` — public Safaricom callback protected by a high-entropy callback path secret. Matching successful callbacks create a confirmed finance transaction and balanced posted journal once.
 
 Set `MPESA_ENV`, consumer key/secret, shortcode, passkey, callback URL and a random callback secret of at least 32 characters. The callback URL must be public HTTPS and end in `/api/payments/mpesa/callback/<MPESA_CALLBACK_SECRET>`. M-Pesa requests are not live until Safaricom credentials and the deployed callback URL have been configured and verified.
+
+
+## Child safeguarding consent
+- `GET /api/operations/safeguarding/consents?child=<memberId>&status=active|revoked` — restricted to senior pastoral roles or users explicitly granted `safeguarding:manage`. Returns effective status, including expired consent.
+- `POST /api/operations/safeguarding/consents` — captures guardian identity/contact, confirmed guardian authority, one or more consent purposes, optional expiry, and authorised collection persons when that purpose is selected. The child must be a registered minor in the caller's organisation scope.
+- `PATCH /api/operations/safeguarding/consents/:id/revoke` — requires a reason and preserves the original record with revocation actor/time.
+
+## QR attendance
+- `POST /api/operations/attendance/qr-session` — attendance officers create a signed QR session for an activity, category, organisation and date. The returned token expires in 10 minutes.
+- `POST /api/operations/attendance/qr-checkin` — authenticated users submit the session token and member ID. Members may only check in their own linked profile; staff must have access to the token's organisation. Repeated scans return the existing attendance record.
