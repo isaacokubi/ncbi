@@ -7,6 +7,7 @@ import { validateAttendanceInput } from '../domain/attendancePolicy.js';
 import { SequenceCounter, AuditLog } from '../models/domain.js';
 import { attendanceWorkspaceFilter } from '../domain/dashboardPolicy.js';
 import { passwordLengthError } from '../domain/authPolicy.js';
+import { memberTransferError } from '../domain/memberTransferPolicy.js';
 
 const router = Router(); router.use(requireAuth);
 const roleRank={super_admin:100,international_executive:90,national_admin:80,regional_overseer:70,district_pastor:60,branch_pastor:50,branch_admin:45,treasurer:35,department_leader:25,member:10};
@@ -150,8 +151,23 @@ router.get('/attendance',async(req,res,next)=>{
   }catch(e){next(e);}
 });
 router.post('/members/:id/transfer',allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'),async(req,res,next)=>{
-  try{const {toOrganisation,note}=req.body;if(!(await assertOrganisationAccess(req.user,toOrganisation)))return res.status(403).json({message:'Destination outside your authorised scope'});const member=await Member.findById(req.params.id);if(!member||!(await assertOrganisationAccess(req.user,member.homeOrganisation)))return res.status(404).json({message:'Member not found'});if(String(member.homeOrganisation)===String(toOrganisation))return res.status(409).json({message:'Member already belongs to this organisation'});member.transferHistory.push({from:member.homeOrganisation,to:toOrganisation,approvedBy:req.user._id,transferredAt:new Date(),note});member.homeOrganisation=toOrganisation;await member.save();await User.updateOne({memberProfile:member._id,role:'member'},{organisation:toOrganisation});res.json({member});}
-  catch(e){next(e);}
+  try {
+    const { toOrganisation, note } = req.body;
+    if (!toOrganisation || !(await assertOrganisationAccess(req.user, toOrganisation))) return res.status(403).json({ message: 'Destination outside your authorised scope' });
+    const member = await Member.findById(req.params.id);
+    if (!member || !(await assertOrganisationAccess(req.user, member.homeOrganisation))) return res.status(404).json({ message: 'Member not found' });
+    const destination = await Organisation.findById(toOrganisation).select('_id level status name code').lean();
+    const actorOrganisation = req.user.organisation?._id ?? req.user.organisation;
+    const transferError = memberTransferError({ member, destination, actorOrganisation });
+    if (transferError) return res.status(409).json({ message: transferError });
+    const sourceOrganisation = member.homeOrganisation;
+    member.transferHistory.push({ from: sourceOrganisation, to: destination._id, approvedBy: req.user._id, transferredAt: new Date(), note: String(note || '').trim().slice(0, 500) });
+    member.homeOrganisation = destination._id;
+    await member.save();
+    await User.updateOne({ memberProfile: member._id, role: 'member' }, { $set: { organisation: destination._id } });
+    await AuditLog.create({ organisation: sourceOrganisation, actor: req.user._id, action: 'member.transferred', entity: 'member', recordId: member._id, summary: 'Member transferred to ' + destination.name, metadata: { from: String(sourceOrganisation), to: String(destination._id) } });
+    res.json({ member });
+  } catch (e) { next(e); }
 });
 router.post('/attendance',async(req,res,next)=>{
   try{
