@@ -90,6 +90,7 @@ router.get('/:id/files', async (req,res,next) => {
 });
 router.post('/:id/files', upload, async (req,res,next) => {
   let target;
+  let createdFile;
   try {
     if (!managers.has(req.user.role)) return res.status(403).json({message:'Document upload denied'});
     const doc = await findDocument(req,req.params.id);
@@ -106,11 +107,14 @@ router.post('/:id/files', upload, async (req,res,next) => {
     const latest = await DocumentFile.findOne({organisation:doc.organisation,document:doc._id}).sort({version:-1}).select('version').lean();
     const version = (latest?.version || 0)+1;
     const sum = createHash('sha256').update(req.body).digest('hex');
-    const originalName = filename(req.get('x-file-name'),type.ext);
-    const file = await DocumentFile.create({organisation:doc.organisation,document:doc._id,storageKey:key,originalName,mimeType:mime,size:req.body.length,checksum:sum,version,uploadedBy:req.user._id});
+    let suppliedName = req.get('x-file-name') || 'document';
+    try { suppliedName = decodeURIComponent(suppliedName); } catch { return res.status(400).json({message:'Invalid file name'}); }
+    const originalName = filename(suppliedName,type.ext);
+    const file = createdFile = await DocumentFile.create({organisation:doc.organisation,document:doc._id,storageKey:key,originalName,mimeType:mime,size:req.body.length,checksum:sum,version,uploadedBy:req.user._id});
     await AuditLog.create({organisation:doc.organisation,actor:req.user._id,action:'document-upload',entity:'document_file',recordId:file._id,summary:'Uploaded a new document version',metadata:{documentId:String(doc._id),version,size:file.size,checksum:sum}});
     res.status(201).json({file:{id:file._id,originalName,mimeType:mime,size:file.size,checksum:sum,version,createdAt:file.createdAt}});
   } catch(e) {
+    if (createdFile?._id) await DocumentFile.deleteOne({_id:createdFile._id}).catch(()=>{});
     if (target) await unlink(target).catch(()=>{});
     if (e.code===11000) return res.status(409).json({message:'A concurrent upload created this version; retry'});
     next(e);
@@ -128,11 +132,8 @@ router.get('/files/:fileId/download', async (req,res,next) => {
     const root = storageRoot();
     const target = path.resolve(root,file.storageKey);
     if (path.dirname(target)!==root) return res.status(404).json({message:'File not found'});
-    const data = await readFile(target);
-    if (data.length !== file.size || createHash('sha256').update(data).digest('hex') !== file.checksum) return res.status(404).json({message:'Stored file failed integrity verification'});
-    const ext = types[file.mimeType].ext;
-    res.set({'Content-Type':'application/octet-stream','Content-Length':String(file.size),'Content-Disposition':'attachment; filename="'+filename(file.originalName,ext)+'"','X-Content-Type-Options':'nosniff','Cache-Control':'no-store, private'});
-    res.send(data);
+    await AuditLog.create({organisation:file.organisation,actor:req.user._id,action:'document-download',entity:'document_file',recordId:file._id,summary:'Downloaded a private document version',metadata:{documentId:String(doc._id),version:file.version}});
+    return sendVerifiedFile(res,file);
   } catch(e) { next(e); }
 });
 export default router;

@@ -121,6 +121,27 @@ function Registration({onLogin,onPublic}) {
  </section></main>;
 }
 
+
+function DocumentFilesPanel({ token, documents, onError, onSuccess }) {
+ const [selectedId,setSelectedId]=useState('');
+ const [files,setFiles]=useState([]);
+ const [loadingFiles,setLoadingFiles]=useState(false);
+ const [uploading,setUploading]=useState(false);
+ const [selectedFile,setSelectedFile]=useState(null);
+ useEffect(()=>{if(!documents.length){setSelectedId('');setFiles([]);return;}if(!documents.some(item=>String(item._id)===selectedId))setSelectedId(String(documents[0]._id));},[documents,selectedId]);
+ const loadFiles=useCallback(async id=>{if(!id){setFiles([]);return;}setLoadingFiles(true);try{const result=await api('/documents/'+id+'/files',token);setFiles(result.files||[]);}catch(error){onError(error.message);}finally{setLoadingFiles(false);}},[token,onError]);
+ useEffect(()=>{loadFiles(selectedId);},[selectedId,loadFiles]);
+ const upload=async event=>{event.preventDefault();if(!selectedId||!selectedFile)return;const formElement=event.currentTarget;setUploading(true);try{await api('/documents/'+selectedId+'/files',token,{method:'POST',body:selectedFile,headers:{'Content-Type':'application/octet-stream','X-File-Name':encodeURIComponent(selectedFile.name),'X-File-Type':selectedFile.type}});setSelectedFile(null);formElement.reset();await loadFiles(selectedId);onSuccess('Document uploaded and version history updated.');}catch(error){onError(error.message);}finally{setUploading(false);}};
+ const download=async file=>{try{const response=await fetch(API+'/documents/files/'+file._id+'/download',{headers:{Authorization:'Bearer '+token}});if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.message||'Download failed');}const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=file.originalName;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){onError(error.message);}};
+ return <article className="panel document-files-panel"><div className="panel-heading"><div><span className="eyebrow">PRIVATE FILE STORAGE</span><h3>Document files & version history</h3><p>Files are private and available only to authorised managers in your organisation scope.</p></div></div>
+ {!documents.length?<p className="empty-state">Create a document register entry first, then attach its files here.</p>:<>
+ <div className="form-grid"><Field label="Select document"><select value={selectedId} onChange={event=>setSelectedId(event.target.value)}>{documents.map(item=><option value={item._id} key={item._id}>{item.title}</option>)}</select></Field></div>
+ <form className="document-upload-form" onSubmit={upload}><Field label="Choose a file (PDF, JPEG, PNG, WebP, DOCX or XLSX; maximum 10 MiB)"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx" onChange={event=>setSelectedFile(event.target.files?.[0]||null)}/></Field><button className="gold-button" disabled={!selectedFile||uploading}>{uploading?'Uploading…':'Upload new version'}</button></form>
+ <div className="table-wrap"><table><thead><tr><th>File</th><th>Version</th><th>Size</th><th>Uploaded</th><th>Action</th></tr></thead><tbody>{files.map(file=><tr key={file._id}><td><b>{file.originalName}</b><small className="cell-sub">{file.mimeType}</small></td><td>v{file.version}</td><td>{(file.size/1024).toFixed(1)} KB</td><td>{fmt(file.createdAt)}</td><td><button type="button" className="row-action" onClick={()=>download(file)}>Download</button></td></tr>)}{!loadingFiles&&!files.length&&<tr><td colSpan="5" className="empty-cell">No files uploaded for this document yet.</td></tr>}</tbody></table></div>{loadingFiles&&<p className="empty-state">Loading document history…</p>}
+ </>}
+ </article>;
+}
+
 function Login({onLogin,busy,error,onPublic,onRegister}) {
  const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
  return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><div className="brand-mark"><Church size={25}/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div><div className="auth-intro"><div className="eyebrow">ONE CHURCH. ONE VISION.</div><h1>Church leadership, connected.</h1><p>Sign in to your authorised NCBI management workspace.</p></div><form onSubmit={e=>{e.preventDefault();onLogin(email,password);}}><label>Email address</label><input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@church.org"/><label>Password</label><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/>{error&&<div className="form-error" role="alert">{error}</div>}<button className="auth-submit" disabled={busy}>{busy?'Signing in…':'Sign in securely'}</button></form><small className="auth-foot">Access is monitored and limited by your assigned church role.</small><button type="button" className="text-button auth-public-link" onClick={onRegister}>Create an account</button><button type="button" className="text-button auth-public-link" onClick={onPublic}>Back to NCBI public website</button></section></main>;
