@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { connectDatabase } from '../config/db.js';
 import { Organisation, User, Member, Attendance, FinanceTransaction } from '../models/index.js';
-import { OperationsRecord, LedgerAccount, InventoryItem } from '../models/domain.js';
+import { OperationsRecord, LedgerAccount, InventoryItem, JournalEntry, Budget, BankReconciliation, Supplier, PurchaseRequest, SupplierInvoice, SupplierPayment } from '../models/domain.js';
 
 const password = process.env.SEED_COMMON_PASSWORD;
 if (!password || password.length < 6) {
@@ -186,6 +186,7 @@ try {
     const cash = await account(org, '1000', 'Cash and Mobile Money', 'asset', 'debit');
     const income = await account(org, '4000', 'Tithes and Offerings', 'income', 'credit');
     const expense = await account(org, '5000', 'Ministry and Operations', 'expense', 'debit');
+    const payable = await account(org, '2000', 'Trade Payables', 'liability', 'credit');
 
     const members = [];
     const firstNames = ['Alice','Brian','Carol','David','Esther','Faith','George','Hannah','Isaac','Janet','Kevin','Lydia','Moses','Naomi','Oscar','Priscilla','Samuel','Tabitha','Victor','Winnie','Yusuf','Zawadi','Peter','Ruth','Daniel'];
@@ -244,6 +245,58 @@ try {
       };
       const result = await FinanceTransaction.updateOne({ organisation: org._id, reference }, { $setOnInsert: values }, { upsert: true });
       if (result.upsertedCount) counts.finance += 1;
+      const transaction = await FinanceTransaction.findOne({ organisation: org._id, reference });
+      const entryNumber = `DEMO-JE-${branchSpecs[b][1]}-${String(i + 1).padStart(3,'0')}`;
+      const journal = await JournalEntry.findOneAndUpdate(
+        { organisation: org._id, entryNumber },
+        { $setOnInsert: {
+          organisation: org._id, entryNumber, entryDate: values.occurredAt,
+          description: `Demo posting for ${reference}`, status: 'posted',
+          lines: [
+            { account: values.debitAccount, debit: values.amount, credit: '0.00', memo: values.category },
+            { account: values.creditAccount, debit: '0.00', credit: values.amount, memo: values.category }
+          ],
+          createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, postedAt: values.occurredAt,
+          sourceType: 'finance_transaction', sourceId: transaction._id
+        } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      if (!transaction.journalEntry) await FinanceTransaction.updateOne({ _id: transaction._id }, { $set: { journalEntry: journal._id } });
+    }
+
+    const budget = await Budget.findOneAndUpdate(
+      { organisation: org._id, account: expense._id, fiscalYear: now.getFullYear(), period: 'annual' },
+      { $setOnInsert: { organisation: org._id, account: expense._id, fiscalYear: now.getFullYear(), period: 'annual', amount: mongoose.Types.Decimal128.fromString(String(500000 + b * 125000)), notes: 'DEMO annual ministry and operations allocation.', status: 'approved', createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, decidedBy: actors.district._id, approvedAt: now } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    void budget;
+
+    await BankReconciliation.findOneAndUpdate(
+      { organisation: org._id, bankAccount: cash._id, statementDate: new Date(now.getFullYear(), now.getMonth(), 1) },
+      { $setOnInsert: { organisation: org._id, bankAccount: cash._id, statementDate: new Date(now.getFullYear(), now.getMonth(), 1), statementBalance: mongoose.Types.Decimal128.fromString('125000.00'), bookBalance: mongoose.Types.Decimal128.fromString('125000.00'), difference: mongoose.Types.Decimal128.fromString('0.00'), status: 'reconciled', reconciledBy: actors.district._id, reconciledAt: now, notes: 'DEMO reconciliation; synthetic opening balance.' } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const supplierSpecs = [
+      ['Grace Supplies & Stationery', 'SUP-GRACE'],
+      ['Community Builders Cooperative', 'SUP-COMMUNITY']
+    ];
+    for (let si = 0; si < supplierSpecs.length; si += 1) {
+      const [supplierName, supplierCode] = supplierSpecs[si];
+      let supplier = await Supplier.findOne({ organisation: org._id, name: supplierName });
+      if (!supplier) supplier = await Supplier.create({ organisation: org._id, name: supplierName, contactName: 'Demo Supplier Contact', email: `${supplierCode.toLowerCase()}.${b + 1}@demo.ncbi.org`, phone: `+254711000${b}${si}`, address: org.address, status: 'active', createdBy: actors.admin._id, updatedBy: actors.admin._id });
+      const requestNumber = `DEMO-PR-${branchSpecs[b][1]}-${si + 1}`;
+      let request = await PurchaseRequest.findOne({ organisation: org._id, requestNumber });
+      if (!request) request = await PurchaseRequest.create({ organisation: org._id, requestNumber, supplier: supplier._id, description: 'Demo purchase of ministry supplies and facility materials.', currency: org.currency || 'KES', amount: mongoose.Types.Decimal128.fromString(String(8500 + b * 500 + si * 1200)), status: 'approved', createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, approvedAt: now, decidedBy: actors.district._id });
+      const invoiceNumber = `DEMO-INV-${branchSpecs[b][1]}-${si + 1}`;
+      let invoice = await SupplierInvoice.findOne({ organisation: org._id, supplier: supplier._id, invoiceNumber });
+      if (!invoice) invoice = await SupplierInvoice.create({ organisation: org._id, supplier: supplier._id, purchaseRequest: request._id, invoiceNumber, invoiceDate: dateOffset(14), dueDate: dateOffset(-16), currency: org.currency || 'KES', amount: mongoose.Types.Decimal128.fromString(String(8500 + b * 500 + si * 1200)), expenseAccount: expense._id, payableAccount: payable._id, status: 'paid', createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, approvedAt: now, decidedBy: actors.district._id });
+      const paymentReference = `DEMO-SP-${branchSpecs[b][1]}-${si + 1}`;
+      await SupplierPayment.findOneAndUpdate(
+        { organisation: org._id, reference: paymentReference },
+        { $setOnInsert: { organisation: org._id, invoice: invoice._id, amount: invoice.amount, currency: invoice.currency, paymentMethod: 'bank_transfer', reference: paymentReference, status: 'paid', createdBy: actors.treasurer._id, approvedBy: actors.pastor._id, approvedAt: now, confirmedBy: actors.district._id, confirmedAt: now } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     }
 
     await operation(org, actors.pastor, 'department', `DEMO-${b}-WORSHIP`, 'Worship and Music Ministry', { leader: actors.leader.fullName, meetingDay: 'Thursday', activeVolunteers: 12 });
@@ -252,6 +305,24 @@ try {
     await operation(org, actors.pastor, 'announcement', `DEMO-${b}-NOTICE`, 'Community Prayer and Outreach Week', { message: 'Join the church family for prayer, visitation and community service.', public: true }, 'active', 'public');
     await operation(org, actors.pastor, 'project', `DEMO-${b}-PROJECT`, 'Sanctuary Improvement Project', { budget: 250000 + b * 50000, progressPercent: 20 + b * 12 }, 'in_progress');
     await operation(org, actors.pastor, 'visitor_follow_up', `DEMO-${b}-FOLLOWUP`, 'New Visitor Follow-up List', { assignedTeam: 'Welcome Team', followUpsDue: 5 + b });
+    const additionalEntities = [
+      'pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment',
+      'asset','document','volunteer','training','property','children_ministry','youth_ministry','family_ministry',
+      'small_group','baptism','wedding','funeral','benevolence','facility_booking','procurement','communications',
+      'media','church_media','transport','compliance','member_class','volunteer_schedule','sermon','church_plant',
+      'sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit',
+      'discipline_case','counselling_case'
+    ];
+    const privateEntities = new Set(['pastoral_case','prayer_request','benevolence','discipline_case','counselling_case','welfare_visit']);
+    for (const entity of additionalEntities) {
+      await operation(
+        org, actors.pastor, entity, `DEMO-${branchSpecs[b][1]}-${entity.toUpperCase()}`,
+        `Demo ${entity.replaceAll('_',' ')} record`,
+        { demo: true, summary: 'Synthetic demonstration record. No real person or confidential case details are included.', responsibleTeam: 'Church Administration' },
+        entity === 'training' || entity === 'sermon' || entity === 'event_registration' ? 'scheduled' : 'active',
+        privateEntities.has(entity) ? 'private' : 'organisation'
+      );
+    }
     const inventoryExists = await InventoryItem.exists({ organisation: org._id, itemCode: 'DEMO-CHAIRS' });
     await InventoryItem.findOneAndUpdate(
       { organisation: org._id, itemCode: 'DEMO-CHAIRS' },
@@ -272,9 +343,9 @@ try {
     demoMembers: await Member.countDocuments({ membershipNumber: /^NCBI-(?:V)?[0-9]{1,2}-/ }),
     demoAttendance: await Attendance.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, activityName: 'Sunday Celebration Service' }),
     demoFinance: await FinanceTransaction.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-NCBI-CH-/ }),
-    demoOperations: await OperationsRecord.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-/ })
+    demoOperations: await OperationsRecord.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-/ }),\n    demoJournals: await JournalEntry.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, entryNumber: /^DEMO-JE-/ }),\n    demoBudgets: await Budget.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, notes: /^DEMO/ }),\n    demoReconciliations: await BankReconciliation.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, notes: /^DEMO/ }),\n    demoSuppliers: await Supplier.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, email: /@demo\\.ncbi\\.org$/ }),\n    demoPurchaseRequests: await PurchaseRequest.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, requestNumber: /^DEMO-PR-/ }),\n    demoInvoices: await SupplierInvoice.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, invoiceNumber: /^DEMO-INV-/ }),\n    demoSupplierPayments: await SupplierPayment.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-SP-/ })
   };
-  const expected = { internationalOffices: 3, nationalOffices: 5, regions: 8, districts: 10, churches: 5, demoUsers: 46, demoMembers: 190, demoAttendance: 660, demoFinance: 60, demoOperations: 30 };
+  const expected = { internationalOffices: 3, nationalOffices: 5, regions: 8, districts: 10, churches: 5, demoUsers: 46, demoMembers: 190, demoAttendance: 660, demoFinance: 60, demoOperations: 220, demoJournals: 60, demoBudgets: 5, demoReconciliations: 5, demoSuppliers: 10, demoPurchaseRequests: 10, demoInvoices: 10, demoSupplierPayments: 10 };
   for (const [key, value] of Object.entries(expected)) {
     if (integrity[key] !== value) throw new Error(`Seed integrity check failed for ${key}: expected ${value}, found ${integrity[key]}.`);
   }
