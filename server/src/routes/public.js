@@ -20,7 +20,7 @@ router.get('/content', async (_req, res, next) => {
       OperationsRecord.find({ entity: 'announcement', visibility: 'public', status: 'active' }).sort({ createdAt: -1 }).limit(10).select('title createdAt data organisation').populate('organisation','name code').lean(),
       SiteContent.findOne({ key: 'global' }).select('pages navigation footer updatedAt').lean()
     ]);
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    res.set('Cache-Control', 'public, max-age=0, must-revalidate');
     res.json({ branches, events, announcements, siteContent: site ? { pages: site.pages || {}, navigation: site.navigation || {}, footer: site.footer || {} } : null, generatedAt: now.toISOString() });
   } catch (error) { next(error); }
 });
