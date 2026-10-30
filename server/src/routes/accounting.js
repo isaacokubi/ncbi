@@ -230,7 +230,7 @@ router.post('/approval-policies',async(req,res,next)=>{try{
  if(!mongoose.isValidObjectId(org)||!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});
  if(transactionType!=='budget')return res.status(400).json({message:'Only budget approval policies are currently supported'});
  const roles=Array.isArray(approverRoles)?[...new Set(approverRoles.map(String))]:[];
- if(!roles.length||roles.some(role=>!approvers.has(role))||!Number.isInteger(requiredApprovals)||requiredApprovals<1||requiredApprovals>3||requiredApprovals>roles.length)return res.status(400).json({message:'Select valid approver roles and a required approval count supported by the selected roles'});
+ if(!roles.length||roles.some(role=>!approvers.has(role))||!Number.isInteger(requiredApprovals)||requiredApprovals<1||requiredApprovals>3)return res.status(400).json({message:'Select valid approver roles and a required approval count supported by the selected roles'});
  const rangeError=approvalPolicyRangeError(minimumAmount,maximumAmount);
  if(rangeError)return res.status(400).json({message:rangeError});
  const existing=await FinanceApprovalPolicy.find({organisation:org,transactionType,active:true}).lean();

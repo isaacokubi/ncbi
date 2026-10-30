@@ -1,6 +1,6 @@
 const minorUnits=value=>{
  const text=String(value??'0').trim();
- if(!/^\\d+(?:\\.\\d{1,2})?$/.test(text))return null;
+ if(!/^\d+(?:\.\d{1,2})?$/.test(text))return null;
  const [whole,decimal='']=text.split('.');
  return BigInt(whole)*100n+BigInt((decimal+'00').slice(0,2));
 };
