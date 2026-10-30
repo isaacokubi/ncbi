@@ -152,7 +152,7 @@ router.post('/journals/:id/post',async(req,res,next)=>{try{
  journal.status='posted';journal.approvedBy=req.user._id;journal.postedAt=new Date();await journal.save();
  await AuditLog.create({organisation:journal.organisation,actor:req.user._id,action:'post',entity:'journal_entry',recordId:journal._id,summary:'Posted journal '+journal.entryNumber});
  res.json({journal});
-}catch(e){next(e);}});
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'This record changed while you were processing it. Reload the latest record and retry.'});next(e);}});
 router.post('/journals/:id/reject',async(req,res,next)=>{try{
  if(!approvers.has(req.user.role))return res.status(403).json({message:'Independent finance approval permission required'});
  const ids=await accessibleOrganisationIds(req.user);const journal=await JournalEntry.findOne({_id:req.params.id,organisation:{$in:ids}});
@@ -212,7 +212,7 @@ router.post('/budgets/:id/decision',async(req,res,next)=>{try{
  await budget.save();
  await AuditLog.create({organisation:budget.organisation,actor:req.user._id,action:'budget_'+decision,entity:'budget',recordId:budget._id,summary:`Budget ${budget.status}: ${budget.fiscalYear} ${budget.period}`,metadata:{account:budget.account,amount:String(budget.amount),note,approvals:budget.approvals.length,requiredApprovals}});
  res.json({budget,pendingApprovals:budget.status==='submitted'?Math.max(0,requiredApprovals-budget.approvals.filter(item=>item.decision==='approve').length):0});
-}catch(e){next(e);}});
+}catch(e){if(e?.name==='VersionError')return res.status(409).json({message:'This record changed while you were processing it. Reload the latest record and retry.'});next(e);}});
 
 const approvalPolicyAdmins=new Set(['super_admin','international_executive','national_admin','regional_overseer']);
 router.get('/approval-policies',async(req,res,next)=>{try{
