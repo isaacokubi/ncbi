@@ -1603,3 +1603,44 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .website-cms-list-row .danger-text-button{margin-bottom:8px}
 .website-cms-group>.secondary-button{margin:14px 0 4px}
 @media(max-width:640px){.website-cms-list-row{grid-template-columns:1fr}.website-cms-list-row .danger-text-button{justify-self:start;margin:0}.website-cms-card-actions{gap:5px}}
+
+/* Purpose-built communications and programme registration workspaces */
+.communications-workspace,.programme-registration-workspace{display:grid;gap:20px;min-width:0}
+.communications-intro,.programme-intro{display:flex;align-items:center;gap:18px;padding:24px 26px;border:1px solid var(--line,#e7e4dc);border-radius:18px;background:linear-gradient(115deg,rgba(191,153,73,.10),rgba(255,255,255,.96) 58%)}
+.communications-icon{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:15px;background:rgba(185,145,55,.14);color:var(--gold-dark,#876522)}
+.communications-intro>div:nth-child(2),.programme-intro>div:nth-child(2){flex:1;min-width:0}
+.communications-intro h2,.programme-intro h2{font-family:Georgia,serif;font-size:clamp(21px,2.2vw,29px);line-height:1.2;margin:6px 0 7px;color:var(--ink,#25251f)}
+.communications-intro p,.programme-intro p{max-width:760px;margin:0;color:var(--muted,#73736c);line-height:1.65;font-size:13px}
+.communications-intro>.gold-button,.programme-intro>.secondary-button{flex:0 0 auto;white-space:nowrap}
+.communications-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.communications-stats>.panel{padding:17px 19px;border:1px solid var(--line,#e7e4dc);border-radius:15px;display:grid;gap:6px;min-width:0}
+.communications-stats span{font-size:12px;color:var(--muted,#73736c);font-weight:650}
+.communications-stats strong{font-size:27px;line-height:1.1;color:var(--ink,#25251f);font-variant-numeric:tabular-nums}
+.communications-stats small{font-size:11px;color:var(--muted,#85857d)}
+.communications-editor,.announcement-preview,.communications-list{padding:20px;border:1px solid var(--line,#e7e4dc);border-radius:17px;min-width:0}
+.communications-editor .panel-heading,.communications-list .panel-heading,.announcement-preview .panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.communications-editor .panel-heading h3,.communications-list .panel-heading h3,.announcement-preview .panel-heading h3{margin:4px 0 5px;font-size:19px}
+.communications-editor .panel-heading p,.communications-list .panel-heading p{margin:0;color:var(--muted,#73736c);font-size:12px;line-height:1.55}
+.communications-editor .form-grid{margin-top:18px}
+.communications-editor .field{display:grid;gap:7px;min-width:0}
+.communications-editor .field>span{font-size:12px;font-weight:650;color:var(--ink,#333)}
+.communications-editor input,.communications-editor select,.communications-editor textarea{width:100%;min-width:0;border:1px solid var(--line,#ddd9cf);border-radius:10px;padding:11px 12px;background:var(--surface,#fff);color:var(--ink,#25251f);font:inherit;font-size:13px;outline:none}
+.communications-editor input:focus,.communications-editor select:focus,.communications-editor textarea:focus{border-color:var(--gold,#b89142);box-shadow:0 0 0 3px rgba(184,145,66,.12)}
+.communications-message{grid-column:1/-1}
+.communications-message textarea{resize:vertical;min-height:140px;line-height:1.6}
+.announcement-preview p{white-space:pre-wrap;line-height:1.75;color:var(--ink,#333);font-size:14px}
+.communications-list .toolbar{margin:16px 0}
+.communications-list .table-wrap{overflow-x:auto}
+.communications-list table{min-width:820px}
+.communications-list td{vertical-align:middle}
+.communications-list .row-actions{flex-wrap:wrap;gap:6px}
+.communications-list .row-action{white-space:nowrap}
+.programme-registration-workspace .table-wrap{overflow-x:auto}
+.programme-registration-workspace table{min-width:850px}
+.programme-registration-workspace td{vertical-align:middle}
+.programme-registration-workspace .toolbar{margin:16px 0}
+.programme-registration-workspace .toolbar-right{display:flex;gap:9px;flex-wrap:wrap}
+.programme-registration-workspace .toolbar-right select{min-width:150px}
+.programme-registration-workspace .inline-select{max-width:150px}
+@media(max-width:900px){.communications-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.communications-intro,.programme-intro{align-items:flex-start;flex-wrap:wrap}.communications-intro>div:nth-child(2),.programme-intro>div:nth-child(2){flex-basis:calc(100% - 70px)}.communications-intro>.gold-button,.programme-intro>.secondary-button{margin-left:66px}}
+@media(max-width:600px){.communications-stats{gap:9px}.communications-stats>.panel{padding:13px}.communications-stats strong{font-size:23px}.communications-editor,.communications-list{padding:14px}.communications-intro,.programme-intro{padding:17px}.communications-intro>.gold-button,.programme-intro>.secondary-button{margin-left:0;width:100%;justify-content:center}.communications-list .panel-heading{flex-direction:column}.communications-list .panel-heading .refresh-button{align-self:flex-start}.programme-registration-workspace .toolbar,.communications-list .toolbar{align-items:stretch;flex-direction:column}.programme-registration-workspace .toolbar-right{width:100%}.programme-registration-workspace .toolbar-right select{flex:1;min-width:0}}
