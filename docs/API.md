@@ -102,7 +102,7 @@ The generic operations register is available to senior, district and branch mana
 - `POST /api/portal/prayer-requests` creates a private member-owned prayer request, assigned to the member's assigned pastor where one exists. Prayer text is excluded from audit summaries.
 - `POST /api/portal/enrolments` accepts `programmeId` and `programmeType` (`small_group` or `discipleship_course`); duplicate submissions are idempotent.
 - `PATCH /api/portal/notifications/:id/read` marks only a notification addressed to the authenticated account as read.
-- Member documents are listed only when a document record has an exact `data.memberId` match. They remain metadata-only until private object storage and authorised download URLs are deployed.
+- Member documents are listed only when a document record has an exact `data.memberId` match. Active private file versions are downloadable through authenticated member-specific routes after branch, assignment and checksum verification.
 
 
 ## Member portal delivery controls
