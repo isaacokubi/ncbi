@@ -193,6 +193,26 @@ function PublicHome({onLogin,onRegister,brandLogo,heroImage:initialHeroImage,aut
  const navigate=(id)=>{if(!validPages.includes(id))return;setActivePage(id);setMenuOpen(false);if(window.location.hash!==`#${id}`)window.history.pushState({page:id},'',`#${id}`);window.scrollTo({top:0,behavior:'auto'});};
  const pageLink=(id,label,className)=> <a key={id} className={className||undefined} href={`#${id}`} aria-current={activePage===id?'page':undefined} onClick={e=>{e.preventDefault();navigate(id);}}>{label}</a>;
  const closeMenu=()=>setMenuOpen(false);
+ useEffect(()=>{
+  const closePublicDropdowns=(event)=>{
+   const groups=document.querySelectorAll('.public-nav-group[open]');
+   if(event.type==='keydown'){
+    if(event.key!=='Escape')return;
+    groups.forEach(group=>group.removeAttribute('open'));
+    return;
+   }
+   const clickedGroup=event.target.closest?.('.public-nav-group');
+   groups.forEach(group=>{
+    if(group!==clickedGroup)group.removeAttribute('open');
+   });
+  };
+  document.addEventListener('pointerdown',closePublicDropdowns);
+  document.addEventListener('keydown',closePublicDropdowns);
+  return()=>{
+   document.removeEventListener('pointerdown',closePublicDropdowns);
+   document.removeEventListener('keydown',closePublicDropdowns);
+  };
+ },[]);
  const loadingState=(label)=>loading?<div className="public-state">{label}</div>:null;
  const errorState=()=>error?<div className="public-state public-state-error" role="alert">{error}<button className="public-retry-button" onClick={loadPublicContent}>Try again <RefreshCw size={14}/></button></div>:null;
  return <main className="public-site">
