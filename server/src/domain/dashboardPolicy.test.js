@@ -18,9 +18,10 @@ const breakdown = {
 };
 
 test('approval totals follow each role authority', () => {
-  assert.equal(dashboardPendingApprovalsForRole('treasurer', breakdown), 12);
+  assert.equal(dashboardPendingApprovalsForRole('treasurer', breakdown), 0);
   assert.equal(dashboardPendingApprovalsForRole('department_leader', breakdown), 0);
   assert.equal(dashboardPendingApprovalsForRole('branch_admin', breakdown), 13);
+  assert.equal(dashboardPendingApprovalsForRole('branch_pastor', breakdown), 25);
   assert.equal(dashboardPendingApprovalsForRole('national_admin', breakdown), 28);
 });
 
@@ -81,7 +82,6 @@ test('dashboard metrics expose only role-relevant fields', () => {
   assert.deepEqual(dashboardMetricsForRole('treasurer', metrics), {
     confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
     confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
-    pendingApprovals: 6
   });
   assert.deepEqual(dashboardMetricsForRole('branch_admin', metrics), {
     branches: 4,
