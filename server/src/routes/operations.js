@@ -11,13 +11,21 @@ import { validateEventRegistrationInput, validateEventRegistrationStatus } from 
 import { canCheckInWithQr, validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
 import { canReadOperationsEntity } from '../domain/workspaceEntityPolicy.js';
 import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
+import { validateAnnouncementRecord } from '../domain/announcementPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
 const entities = new Set(['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','transport','compliance','member_class','volunteer_schedule','event_registration','sermon','church_plant','sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit','discipline_case','counselling_case']);
-const sensitiveEntities = new Set(['pastoral_case','prayer_request','benevolence','discipline_case','counselling_case']);
+const sensitiveEntities = new Set(['pastoral_case','prayer_request','benevolence','welfare_visit','discipline_case','counselling_case']);
 const managers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin']);
 const canManageSensitive = new Set(['super_admin','international_executive','national_admin','branch_pastor']);
+
+async function validateLinkedMember(entity, payload, organisation) {
+  if (!['pastoral_case','prayer_request','benevolence','welfare_visit','discipline_case','counselling_case','volunteer','member_enrolment','baptism'].includes(entity) || !payload.memberId) return null;
+  if (!mongoose.isValidObjectId(payload.memberId)) return 'Select a valid member for this record';
+  const member = await Member.findOne({ _id: payload.memberId, homeOrganisation: organisation }).select('_id').lean();
+  return member ? null : 'The selected member does not belong to this church organisation';
+}
 
 async function audit(req, action, entity, record, summary) {
   await AuditLog.create({ organisation: record?.organisation ?? req.user.organisation?._id ?? req.user.organisation, actor: req.user._id, action, entity, recordId: record?._id, summary, ipAddress: req.ip, userAgent: req.get('user-agent') });
@@ -26,6 +34,131 @@ function safeData(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
   try { if (JSON.stringify(data).length > 30000) return null; } catch { return null; }
   return data;
+}
+
+function validateStructuredOperationData(entity, data) {
+  const operationalRules = {
+    inventory: { required: ['itemCode','itemName','category','unit','movementType','location'], numbers: ['quantity','reorderLevel'], dates: ['movementDate'], enums: { movementType: ['opening_stock','received','issued','transfer','adjustment','stocktake'] } },
+    procurement: { required: ['requestedBy','itemDescription'], numbers: ['quantity','estimatedCost'], dates: ['requiredBy'], enums: { approvalStage: ['draft','submitted','under_review','approved','rejected','ordered','received'] } },
+    communications: { required: ['campaignType','audience','channels','messageSummary','plannedDate'], dates: ['plannedDate','publishedAt'], enums: { campaignType: ['announcement','pastoral_notice','event_promotion','fundraising','outreach','newsletter','other'], approvalStatus: ['draft','pending','approved','rejected','published'] } },
+    media: { required: ['projectType','producer'], dates: ['scheduledAt'], enums: { projectType: ['photography','video','audio','livestream','graphic_design','publication','other'], productionStage: ['planned','recording','editing','review','approved','published','archived'] } },
+    transport: { required: ['driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost'], dates: ['departureAt','returnAt'] },
+    compliance: { required: ['recordType','responsibleOfficer','complianceArea','requirement'], dates: ['reviewDate','completedAt'], enums: { recordType: ['policy','governance_resolution','compliance_action','meeting','risk','other'], actionStatus: ['not_started','in_progress','awaiting_evidence','completed','overdue'] } },
+    member_class: { required: ['programmeName','classLevel','facilitator','curriculum','startDate'], numbers: ['capacity','enrolledCount'], dates: ['startDate','endDate'], enums: { classLevel: ['new_believer','foundation','membership','baptism_preparation','discipleship','leadership','other'] } },
+    volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','assignedMembers'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
+  };
+  const rule = operationalRules[entity];
+  if (rule) {
+    for (const field of rule.required) {
+      if (typeof data[field] !== 'string' || !data[field].trim()) return field + ' is required';
+    }
+    for (const field of rule.numbers || []) {
+      if (data[field] === undefined || data[field] === null || data[field] === '') continue;
+      const value = Number(data[field]);
+      if (!Number.isFinite(value) || value < 0 || value > 1000000000000) return field + ' must be a non-negative number';
+      data[field] = value;
+    }
+    for (const field of rule.dates || []) {
+      if (data[field] === undefined || data[field] === null || data[field] === '') continue;
+      if (Number.isNaN(new Date(data[field]).getTime())) return field + ' must be a valid date';
+    }
+    for (const [field, allowed] of Object.entries(rule.enums || {})) {
+      if (data[field] !== undefined && data[field] !== '' && !allowed.includes(data[field])) return 'Select a valid ' + field;
+    }
+    for (const [field, value] of Object.entries(data)) {
+      if (typeof value === 'string' && value.length > 5000) return field + ' must be no longer than 5,000 characters';
+    }
+  }
+
+  const requiredTextFields = {
+    property: ['location'],
+    prayer_request: ['requestSummary'],
+    children_ministry: ['programmeName'],
+    youth_ministry: ['programmeName'],
+    family_ministry: ['programmeName'],
+    small_group: ['leaderName'],
+    wedding: ['partnerOne','partnerTwo'],
+    funeral: ['deceasedName'],
+    facility_booking: ['facilityName']
+  };
+  for (const field of requiredTextFields[entity] || []) {
+    if (typeof data[field] !== 'string' || !data[field].trim()) return field + ' is required';
+  }
+  const textFields = {
+    property: ['location','parcelNumber','ownershipStatus','size','condition','custodian','maintenanceNotes'],
+    prayer_request: ['prayerCategory','requestSummary'],
+    children_ministry: ['programmeName','ageGroup','className','leaderName','meetingSchedule','room','objectives'],
+    youth_ministry: ['programmeName','ageGroup','coordinatorName','mentorshipFocus','meetingSchedule','venue','programmePlan'],
+    family_ministry: ['programmeName','programmeType','coordinatorName','targetGroup','meetingSchedule','venue','description'],
+    small_group: ['groupType','leaderName','assistantLeader','meetingSchedule','location','studyFocus'],
+    baptism: ['ceremonyType','officiant','preparationStatus','venue','certificateReference'],
+    wedding: ['partnerOne','partnerTwo','officiant','preparationStatus','venue','certificateReference'],
+    funeral: ['deceasedName','familyContactName','familyContactPhone','officiant','venue','serviceNotes'],
+    benevolence: ['assistanceType','priority','coordinationSummary'],
+    facility_booking: ['facilityName','bookingType','requestedBy','setupRequirements','bookingApproval'],
+    church_plant: ['location','targetCommunity','teamLeader','progressUpdate'],
+    sponsorship: ['sponsorName','purpose','currency','sponsorContact','fulfilmentNotes'],
+    donation_pledge: ['pledgerName','givingPurpose','currency','frequency','pledgeNotes'],
+    ministry_report: ['reportingPeriod','ministryName','activities','outcomes','challenges','nextSteps'],
+    welfare_visit: ['welfareType','careTeam','coordinationSummary'],
+    discipline_case: ['caseType','caseOfficer','adminSummary'],
+    counselling_case: ['supportCategory','coordinatorName'],
+    volunteer: ['volunteerRole','ministryName','availability','skills','coordinatorName'],
+    training: ['trainingName','trainingCategory','facilitator','trainingVenue','learningOutcomes'],
+    member_enrolment: ['programmeName','programmeType','reviewNotes']
+  };
+  for (const field of textFields[entity] || []) {
+    if (data[field] !== undefined && (typeof data[field] !== 'string' || data[field].length > 5000)) {
+      return field + ' must be text no longer than 5,000 characters';
+    }
+  }
+  const dateFields = {
+    church_plant: ['launchDate'],
+    sponsorship: ['commitmentDate','expectedDate'],
+    donation_pledge: ['pledgeDate','targetDate'],
+    welfare_visit: ['visitDate','nextFollowUpAt'],
+    discipline_case: ['reviewDate'],
+    counselling_case: ['appointmentDate','reviewDate'],
+    training: [],
+    member_enrolment: ['requestedStart']
+  };
+  for (const field of dateFields[entity] || []) {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const date = new Date(data[field]);
+      if (Number.isNaN(date.getTime())) return field + ' must be a valid date';
+    }
+  }
+  const numberFields = {
+    church_plant: ['households'],
+    ministry_report: ['peopleReached']
+  };
+  for (const field of numberFields[entity] || []) {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const value = Number(data[field]);
+      if (!Number.isSafeInteger(value) || value < 0 || value > 100000000) return field + ' must be a whole number between 0 and 100,000,000';
+      data[field] = value;
+    }
+  }
+  if (entity === 'training' && data.capacity !== undefined && data.capacity !== null && data.capacity !== '') {
+    const capacity = Number(data.capacity);
+    if (!Number.isSafeInteger(capacity) || capacity < 1 || capacity > 1000000) return 'Training capacity must be a whole number between 1 and 1,000,000';
+    data.capacity = capacity;
+  }
+  if (entity === 'member_enrolment' && data.programmeType !== undefined && !['discipleship','membership','baptism','leadership','other'].includes(data.programmeType)) return 'Select a valid programme type';
+  const amountField = entity === 'sponsorship' ? 'committedAmount' : entity === 'donation_pledge' ? 'pledgedAmount' : null;
+  if (amountField) {
+    if (data[amountField] !== undefined) {
+      const amount = Number(data[amountField]);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000000000) return amountField + ' must be a positive amount';
+      data[amountField] = amount;
+    }
+    if (data.currency !== undefined && !/^[A-Z]{3}$/.test(String(data.currency))) return 'Currency must be a three-letter ISO currency code';
+    if (data.isReceivedIncome === true || data.receivedAmount !== undefined) return 'Pledges and sponsorship commitments are not confirmed income; record received funds through the finance module';
+    data.isReceivedIncome = false;
+  }
+  if (entity === 'church_plant' && data.plantingPhase !== undefined && !['assessment','preparation','launch','establishing','established','paused'].includes(data.plantingPhase)) return 'Select a valid church planting phase';
+  if (entity === 'donation_pledge' && data.frequency !== undefined && !['once','weekly','monthly','quarterly','annually'].includes(data.frequency)) return 'Select a valid pledge frequency';
+  return null;
 }
 function privateRecordScope(user) {
   return { $or: [{ createdBy: user._id }, { owner: user._id }, { assignedTo: user._id }] };
@@ -357,6 +490,34 @@ router.get('/events/:id/registrations', allowRoles('super_admin','international_
   } catch (error) { next(error); }
 });
 
+router.get('/event-registrations', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'), async (req, res, next) => {
+  try {
+    const ids = await accessibleOrganisationIds(req.user);
+    const page = Math.max(1, Math.min(10000, Number(req.query.page) || 1));
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 25));
+    const filter = { entity: 'event_registration', organisation: { $in: ids }, status: { $ne: 'archived' } };
+    if (['pending','confirmed','waitlisted','cancelled'].includes(req.query.status)) filter.status = req.query.status;
+    if (req.query.eventId) {
+      if (!mongoose.isValidObjectId(req.query.eventId)) return res.status(400).json({ message: 'Invalid programme identifier' });
+      filter['data.eventId'] = new mongoose.Types.ObjectId(req.query.eventId);
+    }
+    const [records, total, events, counts] = await Promise.all([
+      OperationsRecord.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate('organisation','name code level').lean(),
+      OperationsRecord.countDocuments(filter),
+      OperationsRecord.find({ entity: 'event', organisation: { $in: ids }, status: { $ne: 'archived' } }).sort({ startAt: -1, createdAt: -1 }).limit(200).select('title startAt organisation').populate('organisation','name code').lean(),
+      Promise.all(['pending','confirmed','waitlisted','cancelled'].map(async status => [status, await OperationsRecord.countDocuments({ entity: 'event_registration', organisation: { $in: ids }, status })]))
+    ]);
+    const eventIds = [...new Set(records.map(record => String(record.data?.eventId || '')).filter(Boolean))].filter(mongoose.isValidObjectId);
+    const eventRecords = eventIds.length ? await OperationsRecord.find({ _id: { $in: eventIds }, entity: 'event', organisation: { $in: ids } }).select('title startAt organisation').populate('organisation','name code').lean() : [];
+    const eventMap = new Map(eventRecords.map(event => [String(event._id), event]));
+    const registrations = records.map(record => {
+      const event = eventMap.get(String(record.data?.eventId || ''));
+      return { ...record, eventTitle: event?.title || 'Programme unavailable', eventDate: event?.startAt || record.startAt, eventOrganisation: event?.organisation?.name || record.organisation?.name || '—', eventId: String(record.data?.eventId || '') };
+    });
+    res.json({ registrations, events, counts: Object.fromEntries(counts), pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (error) { next(error); }
+});
+
 router.patch('/event-registrations/:id/status', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'), async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Registration not found' });
@@ -386,7 +547,22 @@ router.get('/:entity', async (req, res, next) => {
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 25));
     const filter = scopedRecordFilter(entity, ids, req.user);
     if (req.query.status && ['draft','pending','active','scheduled','in_progress','completed','cancelled','closed','archived'].includes(req.query.status)) filter.status = req.query.status;
-    if (req.query.search) filter.title = { $regex: String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+if (req.query.search) {
+      const term = String(req.query.search).slice(0, 80).replace(/[^a-z0-9 _@.-]/gi, '');
+      const pattern = { $regex: term, $options: 'i' };
+      filter.$or = [
+        { title: pattern }, { reference: pattern },
+        { 'data.itemCode': pattern }, { 'data.itemName': pattern },
+        { 'data.requestNumber': pattern }, { 'data.requestedBy': pattern },
+        { 'data.supplier': pattern }, { 'data.audience': pattern },
+        { 'data.producer': pattern }, { 'data.vehicleRegistration': pattern },
+        { 'data.driver': pattern }, { 'data.policyReference': pattern },
+        { 'data.responsibleOfficer': pattern }, { 'data.programmeName': pattern },
+        { 'data.facilitator': pattern }, { 'data.ministryTeam': pattern },
+        { 'data.teamLeader': pattern }, { 'data.location': pattern },
+        { 'data.destination': pattern }
+      ];
+    }
     const [records, total] = await Promise.all([
       OperationsRecord.find(filter).sort({ startAt: 1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate('organisation','name code level').lean(),
       OperationsRecord.countDocuments(filter)
@@ -408,6 +584,19 @@ router.post('/:entity', async (req, res, next) => {
     if (sensitiveEntities.has(entity) && visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
     const payload = safeData(data ?? {});
     if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+    if (entity === 'announcement') {
+      const policy = validateAnnouncementRecord({ title, data: payload, visibility: visibility || 'organisation' }, req.user);
+      if (!policy.valid) return res.status(policy.status).json({ message: policy.message });
+    }
+    const memberLinkError = await validateLinkedMember(entity, payload, targetOrg);
+    if (memberLinkError) return res.status(400).json({ message: memberLinkError });
+    const structuredDataError = validateStructuredOperationData(entity, payload);
+    if (structuredDataError) return res.status(400).json({ message: structuredDataError });
+    if (assignedTo !== undefined) {
+      if (!Array.isArray(assignedTo) || assignedTo.length > 10 || assignedTo.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ message: 'Assignees must be valid user identifiers' });
+      const eligibleAssignees = await User.countDocuments({ _id: { $in: assignedTo }, organisation: targetOrg, active: true });
+      if (eligibleAssignees !== assignedTo.length) return res.status(400).json({ message: 'Every assignee must be an active user in the selected church organisation' });
+    }
     if (entity === 'member_notification') {
       if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'A valid memberId is required to address this notification' });
       const targetMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: targetOrg }).select('_id').lean();
@@ -439,10 +628,20 @@ router.patch('/:entity/:id', async (req, res, next) => {
     const filter = scopedRecordFilter(entity, ids, req.user); filter._id = id;
     const record = await OperationsRecord.findOne(filter);
     if (!record) return res.status(404).json({ message: 'Record not found' });
+    if (req.body.assignedTo !== undefined) {
+      const assignees = req.body.assignedTo;
+      if (!Array.isArray(assignees) || assignees.length > 10 || assignees.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ message: 'Assignees must be valid user identifiers' });
+      const eligibleAssignees = await User.countDocuments({ _id: { $in: assignees }, organisation: record.organisation, active: true });
+      if (eligibleAssignees !== assignees.length) return res.status(400).json({ message: 'Every assignee must be an active user in the same church organisation' });
+    }
     for (const key of ['title','reference','status','startAt','endAt','assignedTo','visibility']) if (req.body[key] !== undefined) record[key] = req.body[key];
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+      const memberLinkError = await validateLinkedMember(entity, payload, record.organisation);
+      if (memberLinkError) return res.status(400).json({ message: memberLinkError });
+      const structuredDataError = validateStructuredOperationData(entity, payload);
+      if (structuredDataError) return res.status(400).json({ message: structuredDataError });
       if (entity === 'member_notification') {
         if (String(payload.memberId || '') !== String(record.data?.memberId || '')) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
         const message = String(payload.message || '').trim();
@@ -451,7 +650,7 @@ router.patch('/:entity/:id', async (req, res, next) => {
       }
       record.data = payload;
     }
-    if (sensitiveEntities.has(entity) && record.visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
+    if (sensitiveEntities.has(entity)) record.visibility = 'private';
     record.updatedBy = req.user._id; await record.save();
     await audit(req, 'update', entity, record, `Updated ${entity}: ${record.title}`);
     res.json({ record });
@@ -468,6 +667,7 @@ router.delete('/:entity/:id', async (req, res, next) => {
     const filter = scopedRecordFilter(entity, ids, req.user); filter._id = id;
     const record = await OperationsRecord.findOne(filter);
     if (!record) return res.status(404).json({ message: 'Record not found' });
+    if (entity === 'announcement' && record.visibility === 'public' && !['super_admin','international_executive','national_admin'].includes(req.user.role)) return res.status(403).json({ message: 'Only headquarters administrators may archive public NCBI announcements' });
     record.status = 'archived'; record.archivedAt = new Date(); record.updatedBy = req.user._id; await record.save();
     await audit(req, 'archive', entity, record, `Archived ${entity}: ${record.title}`);
     res.json({ message: 'Record archived' });

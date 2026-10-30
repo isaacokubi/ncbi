@@ -22,8 +22,11 @@ router.post('/mpesa/callback/:secret',async(req,res)=>{
   if(!payment)return res.status(200).json({ResultCode:0,ResultDesc:'Unknown checkout reference acknowledged'});
   if(payment.status==='paid')return res.status(200).json({ResultCode:0,ResultDesc:'Already processed'});
   if(Number(callback.ResultCode)!==0){
-   payment.status='failed';payment.responseDescription=String(callback.ResultDesc||'Payment was not completed').slice(0,180);payment.callbackReceivedAt=new Date();await payment.save();
-   return res.status(200).json({ResultCode:0,ResultDesc:'Failure callback recorded'});
+   const failure=await PaymentIntent.updateOne(
+    {_id:payment._id,status:{$in:['initiated','accepted']}},
+    {$set:{status:'failed',responseDescription:String(callback.ResultDesc||'Payment was not completed').slice(0,180),callbackReceivedAt:new Date()}}
+   );
+   return res.status(200).json({ResultCode:0,ResultDesc:failure.modifiedCount?'Failure callback recorded':'Payment is already being processed or completed'});
   }
   const items=callback.CallbackMetadata?.Item||[];
   const get=name=>items.find(item=>item.Name===name)?.Value;
@@ -31,8 +34,11 @@ router.post('/mpesa/callback/:secret',async(req,res)=>{
   const paidPhone=normalizeKenyanPhone(get('PhoneNumber'));
   const expectedAmount=moneyCents(payment.amount);
   if(paidAmount===null||paidAmount!==expectedAmount||paidPhone!==payment.phoneNumber){
-   payment.status='failed';payment.responseDescription='Callback amount or phone did not match the payment request';payment.callbackReceivedAt=new Date();await payment.save();
-   return res.status(200).json({ResultCode:0,ResultDesc:'Payment details did not match'});
+   const mismatch=await PaymentIntent.updateOne(
+    {_id:payment._id,status:{$in:['initiated','accepted']}},
+    {$set:{status:'failed',responseDescription:'Callback amount or phone did not match the payment request',callbackReceivedAt:new Date()}}
+   );
+   return res.status(200).json({ResultCode:0,ResultDesc:mismatch.modifiedCount?'Payment details did not match':'Payment is already being processed or completed'});
   }
   const claimed=await PaymentIntent.findOneAndUpdate({_id:payment._id,status:{$in:['initiated','accepted']}},{$set:{status:'processing',callbackReceivedAt:new Date()}},{new:true});
   if(!claimed)return res.status(200).json({ResultCode:0,ResultDesc:'Callback already being processed'});
