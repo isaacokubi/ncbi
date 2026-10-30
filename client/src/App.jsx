@@ -230,7 +230,7 @@ function BrandingSettings({token,brandLogo,onUpdated,onError,onSuccess}) {
 
 
 function WebsiteCMSField({label,value,onChange,multiline=false,help=''}) {
- return <label className="field website-cms-field"><span>{label}</span>{multiline?<textarea rows={3} value={value??''} onChange={e=>onChange(e.target.value)}/>:<input value={value??''} onChange={e=>onChange(e.target.value)}/ >}{help&&<small>{help}</small>}</label>;
+ return <label className="field website-cms-field"><span>{label}</span>{multiline?<textarea rows={3} value={value??''} onChange={e=>onChange(e.target.value)}/>:<input value={value??''} onChange={e=>onChange(e.target.value)}/>}{help&&<small>{help}</small>}</label>;
 }
 function WebsiteCMSCardEditor({page,card,index,onChange,onRemove}) {
  return <div className="website-cms-card"><div className="website-cms-card-heading"><b>{page==='mission'?'Purpose card':'Ministry card'} {index+1}</b><button type="button" className="danger-text-button" onClick={()=>onRemove(page,index)}>Remove</button></div>{page==='mission'&&<WebsiteCMSField label="Small label" value={card.eyebrow} onChange={v=>onChange(page,index,'eyebrow',v)}/>}<WebsiteCMSField label="Card heading" value={card.title} onChange={v=>onChange(page,index,'title',v)}/><WebsiteCMSField label="Card description" multiline value={card.body} onChange={v=>onChange(page,index,'body',v)}/></div>;
