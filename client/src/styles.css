@@ -1354,3 +1354,18 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
     transition: none !important;
   }
 }
+
+
+/* Ensure the animated underline is visible on desktop at every width.
+   Earlier compact-navigation media rules hide link pseudo-elements; explicitly
+   restore them for desktop so the active Home link is underlined as well. */
+@media (min-width: 761px) {
+  .public-nav > a::after,
+  .public-nav-group > summary::after {
+    display: block !important;
+  }
+  .public-nav > a[aria-current="page"]::after,
+  .public-nav-group:has(.public-nav-dropdown a[aria-current="page"]) > summary::after {
+    transform: scaleX(1);
+  }
+}
