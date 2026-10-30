@@ -35,6 +35,67 @@ function safeData(data) {
   try { if (JSON.stringify(data).length > 30000) return null; } catch { return null; }
   return data;
 }
+
+function validateStructuredOperationData(entity, data) {
+  const textFields = {
+    church_plant: ['location','targetCommunity','teamLeader','progressUpdate'],
+    sponsorship: ['sponsorName','purpose','currency','sponsorContact','fulfilmentNotes'],
+    donation_pledge: ['pledgerName','givingPurpose','currency','frequency','pledgeNotes'],
+    ministry_report: ['reportingPeriod','ministryName','activities','outcomes','challenges','nextSteps'],
+    welfare_visit: ['welfareType','careTeam','coordinationSummary'],
+    discipline_case: ['caseType','caseOfficer','adminSummary'],
+    counselling_case: ['supportCategory','coordinatorName'],
+    volunteer: ['volunteerRole','ministryName','availability','skills','coordinatorName'],
+    training: ['programmeName','category','facilitator','venue','learningOutcomes'],
+    member_enrolment: ['programmeName','enrolmentType','reviewNotes']
+  };
+  for (const field of textFields[entity] || []) {
+    if (data[field] !== undefined && (typeof data[field] !== 'string' || data[field].length > 5000)) {
+      return field + ' must be text no longer than 5,000 characters';
+    }
+  }
+  const dateFields = {
+    church_plant: ['launchDate'],
+    sponsorship: ['commitmentDate','expectedDate'],
+    donation_pledge: ['pledgeDate','targetDate'],
+    welfare_visit: ['visitDate','nextFollowUpAt'],
+    discipline_case: ['reviewDate'],
+    counselling_case: ['appointmentDate','reviewDate'],
+    training: ['startDate','endDate'],
+    member_enrolment: ['requestedStart']
+  };
+  for (const field of dateFields[entity] || []) {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const date = new Date(data[field]);
+      if (Number.isNaN(date.getTime())) return field + ' must be a valid date';
+    }
+  }
+  const numberFields = {
+    church_plant: ['households'],
+    ministry_report: ['peopleReached']
+  };
+  for (const field of numberFields[entity] || []) {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const value = Number(data[field]);
+      if (!Number.isSafeInteger(value) || value < 0 || value > 100000000) return field + ' must be a whole number between 0 and 100,000,000';
+      data[field] = value;
+    }
+  }
+  const amountField = entity === 'sponsorship' ? 'committedAmount' : entity === 'donation_pledge' ? 'pledgedAmount' : null;
+  if (amountField) {
+    if (data[amountField] !== undefined) {
+      const amount = Number(data[amountField]);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000000000) return amountField + ' must be a positive amount';
+      data[amountField] = amount;
+    }
+    if (data.currency !== undefined && !/^[A-Z]{3}$/.test(String(data.currency))) return 'Currency must be a three-letter ISO currency code';
+    if (data.isReceivedIncome === true || data.receivedAmount !== undefined) return 'Pledges and sponsorship commitments are not confirmed income; record received funds through the finance module';
+    data.isReceivedIncome = false;
+  }
+  if (entity === 'church_plant' && data.plantingPhase !== undefined && !['assessment','preparation','launch','establishing','established','paused'].includes(data.plantingPhase)) return 'Select a valid church planting phase';
+  if (entity === 'donation_pledge' && data.frequency !== undefined && !['once','weekly','monthly','quarterly','annually'].includes(data.frequency)) return 'Select a valid pledge frequency';
+  return null;
+}
 function privateRecordScope(user) {
   return { $or: [{ createdBy: user._id }, { owner: user._id }, { assignedTo: user._id }] };
 }
@@ -185,14 +246,6 @@ router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
     const status = req.body.status === undefined ? record.status : String(req.body.status);
     if (!['pending','in_progress','completed'].includes(status)) return res.status(400).json({ message: 'Status must be pending, in_progress or completed' });
     let assignedTo = record.assignedTo || [];
-    if (entity === 'announcement') {
-      const policy = validateAnnouncementRecord({
-        title: req.body.title ?? record.title,
-        data: req.body.data ?? record.data,
-        visibility: req.body.visibility ?? record.visibility
-      }, req.user, { existingPublic: record.visibility === 'public' });
-      if (!policy.valid) return res.status(policy.status).json({ message: policy.message });
-    }
     if (req.body.assignedTo !== undefined) {
       if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid pastoral assignee' });
       const pastor = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean();
@@ -458,6 +511,8 @@ router.post('/:entity', async (req, res, next) => {
     }
     const memberLinkError = await validateLinkedMember(entity, payload, targetOrg);
     if (memberLinkError) return res.status(400).json({ message: memberLinkError });
+    const structuredDataError = validateStructuredOperationData(entity, payload);
+    if (structuredDataError) return res.status(400).json({ message: structuredDataError });
     if (assignedTo !== undefined) {
       if (!Array.isArray(assignedTo) || assignedTo.length > 10 || assignedTo.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ message: 'Assignees must be valid user identifiers' });
       const eligibleAssignees = await User.countDocuments({ _id: { $in: assignedTo }, organisation: targetOrg, active: true });
@@ -506,6 +561,8 @@ router.patch('/:entity/:id', async (req, res, next) => {
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
       const memberLinkError = await validateLinkedMember(entity, payload, record.organisation);
       if (memberLinkError) return res.status(400).json({ message: memberLinkError });
+      const structuredDataError = validateStructuredOperationData(entity, payload);
+      if (structuredDataError) return res.status(400).json({ message: structuredDataError });
       if (entity === 'member_notification') {
         if (String(payload.memberId || '') !== String(record.data?.memberId || '')) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
         const message = String(payload.message || '').trim();
@@ -514,7 +571,7 @@ router.patch('/:entity/:id', async (req, res, next) => {
       }
       record.data = payload;
     }
-    if (sensitiveEntities.has(entity) && record.visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
+    if (sensitiveEntities.has(entity)) record.visibility = 'private';
     record.updatedBy = req.user._id; await record.save();
     await audit(req, 'update', entity, record, `Updated ${entity}: ${record.title}`);
     res.json({ record });
