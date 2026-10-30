@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ACTION_TERMS, DEFAULT_SITE_CONTENT, EMPTY_STATES, MODULE_PRESENTATION, NAVIGATION_TERMS, ROLE_LABELS, ROLE_PRESENTATION, SUCCESS_MESSAGES } from "./content/terminology.js";
+import { ACTION_TERMS, DEFAULT_SITE_CONTENT, mergeSiteContent, EMPTY_STATES, MODULE_PRESENTATION, NAVIGATION_TERMS, ROLE_LABELS, ROLE_PRESENTATION, SUCCESS_MESSAGES } from "./content/terminology.js";
 import QrAttendancePanel from './components/QrAttendancePanel.jsx';
 import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X, MapPin } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
@@ -170,7 +170,7 @@ function PublicHome({onLogin,onRegister,brandLogo}) {
  const validPages=['home',...publicLinks.map(([id])=>id)];
  const readPage=()=>{const candidate=window.location.hash.replace(/^#/,'')||'home';return validPages.includes(candidate)?candidate:'home';};
  const [activePage,setActivePage]=useState(readPage);
- const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const data=await api('/public/content','');setContent({branches:Array.isArray(data.branches)?data.branches.filter(item=>item&&typeof item==='object'):[],events:Array.isArray(data.events)?data.events.filter(item=>item&&typeof item==='object'):[],announcements:Array.isArray(data.announcements)?data.announcements.filter(item=>item&&typeof item==='object'):[]});if(data.siteContent)setSiteContent({...DEFAULT_SITE_CONTENT,...data.siteContent,pages:Object.fromEntries(Object.entries(DEFAULT_SITE_CONTENT.pages).map(([key,value])=>[key,{...value,...(data.siteContent.pages?.[key]||{})}])),navigation:{...DEFAULT_SITE_CONTENT.navigation,...(data.siteContent.navigation||{})},footer:{...DEFAULT_SITE_CONTENT.footer,...(data.siteContent.footer||{})}});}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);
+ const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const data=await api('/public/content','');setContent({branches:Array.isArray(data.branches)?data.branches.filter(item=>item&&typeof item==='object'):[],events:Array.isArray(data.events)?data.events.filter(item=>item&&typeof item==='object'):[],announcements:Array.isArray(data.announcements)?data.announcements.filter(item=>item&&typeof item==='object'):[]});if(data.siteContent)setSiteContent(mergeSiteContent(data.siteContent));}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);
  useEffect(()=>{loadPublicContent();},[loadPublicContent]);
  useEffect(()=>{const sync=()=>setActivePage(readPage());window.addEventListener('popstate',sync);window.addEventListener('hashchange',sync);return()=>{window.removeEventListener('popstate',sync);window.removeEventListener('hashchange',sync);};},[]);
  const navigate=(id)=>{if(!validPages.includes(id))return;setActivePage(id);setMenuOpen(false);if(window.location.hash!==`#${id}`)window.history.pushState({page:id},'',`#${id}`);window.scrollTo({top:0,behavior:'auto'});};
@@ -230,7 +230,7 @@ function WebsiteCMSCardEditor({page,card,index,onChange,onRemove}) {
 function WebsiteContentSettings({token,onError,onSuccess}) {
  const [draft,setDraft]=useState(DEFAULT_SITE_CONTENT);
  const [saving,setSaving]=useState(false); const [loading,setLoading]=useState(true); const [dirty,setDirty]=useState(false);
- const mergeContent=value=>({...DEFAULT_SITE_CONTENT,...(value||{}),pages:Object.fromEntries(Object.entries(DEFAULT_SITE_CONTENT.pages).map(([key,defaults])=>[key,{...defaults,...(value?.pages?.[key]||{})}])),navigation:{...DEFAULT_SITE_CONTENT.navigation,...(value?.navigation||{})},footer:{...DEFAULT_SITE_CONTENT.footer,...(value?.footer||{})}});
+ const mergeContent=mergeSiteContent;
  useEffect(()=>{let active=true;api('/site-content',token).then(result=>{if(active&&result.content){setDraft(mergeContent(result.content));}}).catch(e=>{if(active)onError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[token]);
  const change=(section,key,value)=>{setDraft(current=>({...current,[section]:{...current[section],[key]:value}}));setDirty(true);};
  const changePage=(page,key,value)=>{setDraft(current=>({...current,pages:{...current.pages,[page]:{...current.pages[page],[key]:value}}}));setDirty(true);};
