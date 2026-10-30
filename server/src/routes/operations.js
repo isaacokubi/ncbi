@@ -123,7 +123,8 @@ router.get('/safeguarding/consents', async (req, res, next) => {
     const consents = await SafeguardingConsent.find(filter).sort({ createdAt: -1 }).limit(100)
       .populate('child', 'firstName lastName membershipNumber dateOfBirth')
       .populate('capturedBy', 'fullName').populate('revokedBy', 'fullName').lean();
-    res.json({ consents });
+    const now = new Date();
+    res.json({ consents: consents.map(consent => ({ ...consent, effectiveStatus: consent.status === 'active' && consent.validUntil && consent.validUntil < now ? 'expired' : consent.status })) });
   } catch (error) { next(error); }
 });
 
