@@ -1,3 +1,18 @@
+export function registrationScopeError(actor, target, accessibleIds = []) {
+  const role = actor?.role;
+  const actorOrganisation = String(actor?.organisation?._id ?? actor?.organisation ?? '');
+  const targetOrganisation = String(target?.organisation?._id ?? target?.organisation ?? '');
+  if (role === 'branch_pastor') {
+    return target?.registrationCategory === 'member' && actorOrganisation && targetOrganisation === actorOrganisation
+      ? null
+      : 'Pastors may approve member applications only for their assigned branch.';
+  }
+  if (!accessibleIds.some(id => String(id) === targetOrganisation)) {
+    return 'This registration belongs to an organisation outside your authorised scope.';
+  }
+  return null;
+}
+
 export function registrationDecisionError(actor, target) {
   const role = actor?.role;
   const actorOrganisation = String(actor?.organisation?._id ?? actor?.organisation ?? '');
@@ -10,7 +25,7 @@ export function registrationDecisionError(actor, target) {
     return null;
   }
 
-  if (!['super_admin', 'international_executive', 'national_admin', 'branch_admin'].includes(role)) {
+  if (!['super_admin', 'international_executive', 'national_admin', 'regional_overseer', 'district_pastor', 'branch_admin'].includes(role)) {
     return 'Registration approval permission required.';
   }
 
