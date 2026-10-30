@@ -103,7 +103,7 @@ function PublicHome({onLogin}) {
  const [content,setContent]=useState({branches:[],events:[],announcements:[]});
  const [loading,setLoading]=useState(true); const [error,setError]=useState('');
  const [menuOpen,setMenuOpen]=useState(false);
- const publicLinks=[['about','About NCBI'],['mission','Our mission'],['ministries','Ministries'],['branches','Branches'],['programmes','Programmes'],['news','News']];
+ const publicLinks=[['about','About NCBI'],['mission','Our mission'],['ministries','Ministries'],['branches','Branches'],['programmes','Programmes'],['news','News'],['contact','Contact']];
  useEffect(()=>{let alive=true;api('/public/content','').then(data=>{if(alive)setContent(data);}).catch(e=>{if(alive)setError(e.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[]);
  const closeMenu=()=>setMenuOpen(false);
  return <main className="public-site">
