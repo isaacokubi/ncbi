@@ -5,7 +5,8 @@ import { User, Organisation, Member } from '../models/index.js';
 import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
 import { passwordChangeError } from '../domain/authPolicy.js';
-import { registrationDecisionError } from '../domain/registrationPolicy.js';
+import { registrationDecisionError, registrationScopeError } from '../domain/registrationPolicy.js';
+import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
 const router = Router();
 
@@ -79,7 +80,7 @@ router.post('/register', async (req, res, next) => {
 router.get('/registrations/pending', requireAuth, async (req, res, next) => {
   try {
     const memberPastor = req.user.role === 'branch_pastor';
-    const adminRoles = ['super_admin','international_executive','national_admin','branch_admin'];
+    const adminRoles = ['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_admin'];
     if (!memberPastor && !adminRoles.includes(req.user.role)) return res.status(403).json({ message: 'Registration approval permission required.' });
     const filter = { accountApproval: 'pending' };
     if (memberPastor) {
@@ -88,7 +89,7 @@ router.get('/registrations/pending', requireAuth, async (req, res, next) => {
       filter.registrationCategory = 'member';
     } else {
       filter.registrationCategory = { $in: ['non_member','official'] };
-      if (req.user.role === 'branch_admin') filter.organisation = req.user.organisation?._id || req.user.organisation;
+      const accessibleIds = await accessibleOrganisationIds(req.user);\n      filter.organisation = { $in: accessibleIds };
     }
     const registrations = await User.find(filter)
       .select('fullName email organisation registrationCategory requestedRole registrationPhone claimedMembershipNumber createdAt')
@@ -106,7 +107,7 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
     const memberPastor = req.user.role === 'branch_pastor';
     const target = await User.findOne({ _id: req.params.id, accountApproval: 'pending' });
     if (!target) return res.status(404).json({ message: 'Pending registration not found.' });
-    const decisionError = registrationDecisionError(req.user, target);
+    const accessibleIds = await accessibleOrganisationIds(req.user);\n    const scopeError = registrationScopeError(req.user, target, accessibleIds);\n    if (scopeError) return res.status(403).json({ message: scopeError });\n    const decisionError = registrationDecisionError(req.user, target);
     if (decisionError) return res.status(403).json({ message: decisionError });
     if (decision === 'approve' && target.registrationCategory === 'member') {
       const verifiedMember = await Member.findOne({
