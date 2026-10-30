@@ -4,6 +4,7 @@ This document distinguishes working code from planned work. A module is not prod
 
 ## Implemented in this delivery
 - Consolidated reporting API (`GET /api/reports/overview`) with validated hierarchy scope, 3–24 month membership and attendance trends, confirmed finance totals grouped by currency, ministry activity counts and branch comparison. Unconfirmed financial entries are excluded.
+- Aggregate CSV export (`GET /api/reports/overview.csv`) with matching server-derived organisation scope, confirmed-only finance aggregates, no personal member data, no-store headers and spreadsheet-formula neutralisation. Corrected the branch membership `$filter` variable reference.
 - React sign-in against the API, authenticated session restoration, sign-out and role-scoped live dashboard KPIs/events/organisation directory.
 - Client loading, empty, retry and API error states; no illustrative dashboard figures are represented as live data.
 - Database-backed registers and create/update/archive workflows for members, visitor follow-up, attendance, events and event registrations, departments, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training, ministry reports and other operations.

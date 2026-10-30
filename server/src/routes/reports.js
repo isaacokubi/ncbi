@@ -62,7 +62,7 @@ router.get('/overview', async (req, res, next) => {
         { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', as: 'attendance' } },
         { $project: {
           name: 1, code: 1, status: 1,
-          members: { $size: { $filter: { input: '$members', as: 'member', cond: { $in: ['$member.status', ['member','worker','minister']] } } } },
+          members: { $size: { $filter: { input: '$members', as: 'member', cond: { $in: ['$$member.status', ['member','worker','minister']] } } } },
           attendanceRecords: { $size: '$attendance' }
         } },
         { $sort: { members: -1, name: 1 } },
@@ -100,6 +100,51 @@ router.get('/overview', async (req, res, next) => {
       ministryActivity: ministry.map(row => ({ entity: row._id, count: row.count })),
       branchPerformance
     });
+  } catch (error) { next(error); }
+});
+
+function csvCell(value) {
+  let text = value === null || value === undefined ? '' : String(value);
+  if (/^[\s]*[=+\-@]/.test(text)) text = "'" + text;
+  return '"' + text.replaceAll('"', '""') + '"';
+}
+function csvDocument(rows) {
+  return ['section,period,metric,dimension,value,currency', ...rows.map(row => row.map(csvCell).join(','))].join('\r\n') + '\r\n';
+}
+router.get('/overview.csv', async (req, res, next) => {
+  try {
+    const months = Math.min(24, Math.max(3, Number.parseInt(req.query.months, 10) || 12));
+    const scopeIds = await accessibleOrganisationIds(req.user);
+    let ids = scopeIds;
+    if (req.query.organisation) {
+      if (!(await assertOrganisationAccess(req.user, req.query.organisation))) return res.status(403).json({ message: 'Organisation outside your authorised scope' });
+      ids = [req.query.organisation];
+    }
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months + 1, 1));
+    const [members, attendance, finance, ministry, branches] = await Promise.all([
+      Member.aggregate([{ $match: { homeOrganisation: { $in: ids }, createdAt: { $gte: start } } }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt', timezone: 'UTC' } }, count: { $sum: 1 } } }]),
+      Attendance.aggregate([{ $match: { organisation: { $in: ids }, heldAt: { $gte: start } } }, { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$heldAt', timezone: 'UTC' } }, count: { $sum: 1 } } }]),
+      FinanceTransaction.aggregate([{ $match: { organisation: { $in: ids }, status: 'confirmed', occurredAt: { $gte: start } } }, { $group: { _id: { month: { $dateToString: { format: '%Y-%m', date: '$occurredAt', timezone: 'UTC' } }, currency: '$currency', direction: '$direction' }, total: { $sum: '$amount' }, transactions: { $sum: 1 } } }]),
+      OperationsRecord.aggregate([{ $match: { organisation: { $in: ids }, status: { $ne: 'archived' }, createdAt: { $gte: start } } }, { $group: { _id: '$entity', count: { $sum: 1 } } }, { $sort: { count: -1, _id: 1 } }]),
+      Organisation.aggregate([
+        { $match: { _id: { $in: ids }, level: 'branch' } },
+        { $lookup: { from: 'members', localField: '_id', foreignField: 'homeOrganisation', as: 'members' } },
+        { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', as: 'attendance' } },
+        { $project: { name: 1, code: 1, members: { $size: { $filter: { input: '$members', as: 'member', cond: { $in: ['$member.status', ['member','worker','minister']] } } } }, attendanceRecords: { $size: '$attendance' } } },
+        { $sort: { members: -1, name: 1 } }, { $limit: 30 }
+      ])
+    ]);
+    const rows = [], memberMap = new Map(members.map(x => [x._id, x.count])), attendanceMap = new Map(attendance.map(x => [x._id, x.count]));
+    for (const { key } of monthLabels(start, months)) {
+      rows.push(['trend', key, 'new_members', '', memberMap.get(key) || 0, '']);
+      rows.push(['trend', key, 'attendance_records', '', attendanceMap.get(key) || 0, '']);
+    }
+    for (const x of finance) rows.push(['finance', x._id.month, x._id.direction, x.transactions + ' confirmed transactions', Number(x.total.toString()), x._id.currency || 'KES']);
+    for (const x of ministry) rows.push(['ministry', '', 'active_records', x._id, x.count, '']);
+    for (const x of branches) { rows.push(['branch', '', 'registered_members', x.code || x.name, x.members, '']); rows.push(['branch', '', 'attendance_records', x.code || x.name, x.attendanceRecords, '']); }
+    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="ncbi-management-report.csv"', 'Cache-Control': 'no-store' });
+    res.send(csvDocument(rows));
   } catch (error) { next(error); }
 });
 

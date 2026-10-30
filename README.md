@@ -25,6 +25,7 @@ There is intentionally no public sign-up route and no default administrator. Pro
 - `POST /api/workspace/attendance`, attendance summary
 - `GET /api/dashboard/summary` — role-scoped, database-backed KPIs
 - `GET /api/reports/overview?months=12&organisation=<id>` — hierarchy-scoped membership and attendance trends, confirmed finance totals by currency, ministry activity and branch comparisons. An optional organisation filter is validated against the caller's accessible subtree.
+- `GET /api/reports/overview.csv?months=12&organisation=<id>` — downloads aggregate management indicators as CSV; finance rows include confirmed transactions only, with no personal member or transaction-level details.
 - `GET/POST /api/operations/:entity`, `PATCH/DELETE /api/operations/:entity/:id`
 - `POST /api/operations/events/:id/register`, `PATCH /api/operations/events/:id/register/cancel`, `GET /api/operations/events/:id/registrations`, `PATCH /api/operations/event-registrations/:id/status`
 - `GET/POST /api/finance/transactions`, `POST /api/finance/transactions/:id/decision` (confirmation posts a balanced journal to the general ledger)
