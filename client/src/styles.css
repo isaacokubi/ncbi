@@ -968,3 +968,58 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 /* Budget approval matrix administration */
 .budget-approval-panel{padding:20px;margin:0 0 18px}.budget-approval-panel .panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.budget-approval-panel .form-grid{margin:16px 0;grid-template-columns:repeat(2,minmax(0,1fr))}.approval-role-field{grid-column:1/-1;border:1px solid var(--line,#e8e1eb);border-radius:10px;padding:12px 14px}.approval-role-field legend{font-size:11px;font-weight:700;color:var(--purple);padding:0 5px}.approval-role-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.approval-role-options label{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink,#34283a)}.approval-role-options input{accent-color:var(--gold)}.budget-approval-panel .table-wrap{margin-top:14px}
 @media(max-width:680px){.budget-approval-panel .form-grid{grid-template-columns:1fr}.approval-role-options{grid-template-columns:repeat(2,minmax(0,1fr))}.budget-approval-panel .panel-heading{flex-direction:column}}
+
+
+/* Keep the full portal action inside the public header at every viewport width. */
+.public-header{
+  box-sizing:border-box;
+  min-width:0;
+  gap:clamp(10px,1.4vw,22px);
+  padding-left:clamp(14px,2vw,30px);
+  padding-right:clamp(14px,2vw,30px);
+}
+.public-brand{min-width:0;flex-shrink:1}
+.public-brand b{font-size:clamp(16px,1.45vw,21px);letter-spacing:.07em}
+.public-brand small{letter-spacing:.08em}
+.public-nav{min-width:0;max-width:100%;flex:1 1 auto;gap:clamp(6px,.8vw,12px)}
+.public-nav>a{white-space:nowrap;font-size:clamp(9px,.78vw,11px)}
+.public-nav .public-register-button,
+.public-nav .public-login-button{
+  flex:0 0 auto;
+  white-space:nowrap;
+  padding-left:clamp(8px,.9vw,13px);
+  padding-right:clamp(8px,.9vw,13px);
+  font-size:10px;
+}
+@media(max-width:1250px){
+  .public-header{position:sticky;z-index:100;justify-content:space-between}
+  .public-menu-toggle{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border:1px solid #80698a;border-radius:9px;background:#43274e;color:#fff0c6;cursor:pointer}
+  .public-nav{
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;right:0;
+    display:none;
+    align-items:stretch;
+    flex-direction:column;
+    gap:2px;
+    max-width:none;
+    padding:13px 18px 18px;
+    border:1px solid #594164;
+    border-radius:12px;
+    background:linear-gradient(145deg,#281334,#3b2047);
+    box-shadow:0 18px 30px rgba(25,9,34,.28);
+  }
+  .public-nav.is-open{display:flex}
+  .public-nav>a{padding:11px 5px;white-space:normal;font-size:13px;color:#f6eff8;border-bottom:1px solid #ffffff1c}
+  .public-nav>a::after{display:none}
+  .public-nav .public-register-button,
+  .public-nav .public-login-button{width:100%;margin-top:9px;min-height:44px;font-size:12px}
+  .public-nav .public-register-button{color:#2c1736}
+  .public-nav .public-login-button{color:#fff2c8}
+}
+@media(max-width:760px){
+  .public-header{width:calc(100% - 24px);padding:10px 14px}
+  .public-brand{max-width:calc(100% - 58px)}
+  .public-brand b{font-size:clamp(14px,4vw,18px)}
+  .public-brand small{font-size:8px}
+}
