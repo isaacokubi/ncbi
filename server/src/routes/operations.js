@@ -373,6 +373,39 @@ router.get('/events/:id/registrations', allowRoles('super_admin','international_
   } catch (error) { next(error); }
 });
 
+router.get('/event-registrations', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'), async (req, res, next) => {
+  try {
+    const ids = await accessibleOrganisationIds(req.user);
+    const page = Math.max(1, Math.min(10000, Number(req.query.page) || 1));
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 25));
+    const filter = { entity: 'event_registration', organisation: { $in: ids }, status: { $ne: 'archived' } };
+    if (['pending','confirmed','waitlisted','cancelled'].includes(req.query.status)) filter.status = req.query.status;
+    if (req.query.eventId) {
+      if (!mongoose.isValidObjectId(req.query.eventId)) return res.status(400).json({ message: 'Invalid programme identifier' });
+      filter['data.eventId'] = new mongoose.Types.ObjectId(req.query.eventId);
+    }
+    if (req.query.search) {
+      const escaped = String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\router.patch('/event-registrations/:id/status', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'), async (req, res, next) => {');
+      const expression = new RegExp(escaped, 'i');
+      filter.$or = [{ title: expression }, { 'data.attendeeName': expression }, { 'data.email': expression }];
+    }
+    const [records, total, events, counts] = await Promise.all([
+      OperationsRecord.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate('organisation','name code level').lean(),
+      OperationsRecord.countDocuments(filter),
+      OperationsRecord.find({ entity: 'event', organisation: { $in: ids }, status: { $ne: 'archived' } }).sort({ startAt: -1, createdAt: -1 }).limit(200).select('title startAt organisation').populate('organisation','name code').lean(),
+      Promise.all(['pending','confirmed','waitlisted','cancelled'].map(async status => [status, await OperationsRecord.countDocuments({ entity: 'event_registration', organisation: { $in: ids }, status })]))
+    ]);
+    const eventIds = [...new Set(records.map(record => String(record.data?.eventId || '')).filter(Boolean))].filter(mongoose.isValidObjectId);
+    const eventRecords = eventIds.length ? await OperationsRecord.find({ _id: { $in: eventIds }, entity: 'event', organisation: { $in: ids } }).select('title startAt organisation').populate('organisation','name code').lean() : [];
+    const eventMap = new Map(eventRecords.map(event => [String(event._id), event]));
+    const registrations = records.map(record => {
+      const event = eventMap.get(String(record.data?.eventId || ''));
+      return { ...record, eventTitle: event?.title || 'Programme unavailable', eventDate: event?.startAt || record.startAt, eventOrganisation: event?.organisation?.name || record.organisation?.name || '—', eventId: String(record.data?.eventId || '') };
+    });
+    res.json({ registrations, events, counts: Object.fromEntries(counts), pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (error) { next(error); }
+});
+
 router.patch('/event-registrations/:id/status', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'), async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Registration not found' });
