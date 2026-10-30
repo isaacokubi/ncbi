@@ -1,5 +1,37 @@
 # NCBI-CMS implementation status
 
+## Proposal-wide feature coverage audit
+
+This matrix is the acceptance boundary for the submitted project proposal. "Partial" means useful APIs or shared operational records exist, but the full specialist workflow, controls or acceptance testing in the proposal is not yet delivered. A menu item or generic record type alone does not count as a completed module.
+
+| Proposal area | Current coverage | Remaining work before it can be called complete |
+|---|---|---|
+| 1. Headquarters executive dashboard | Partial | Validate every KPI against approved definitions and live branch data; add outstanding-return alerts, branch trend thresholds and full browser acceptance tests. |
+| 2. Membership management | Partial | Complete bulk import with duplicate-resolution preview, QR membership cards, family/household management, certificates, anniversary automation and complete transfer approval/notification workflow. |
+| 3. Visitors and new believers | Partial | Add structured source/conversion funnel, follow-up schedules, escalation and retention analytics beyond generic visitor records. |
+| 4. Attendance | Partial | Broad QR device/browser acceptance, offline queue and conflict-safe sync, self-check-in anti-abuse controls and complete attendance dashboards. |
+| 5. Departments and ministries | Partial | Dedicated ministry work plans, budgets, meetings/minutes, responsibilities and cross-branch performance workflows rather than generic records alone. |
+| 6. Finance and accounting | Partial | Approval matrices by amount/role, bank-feed/import integration, electronic PDF receipts, tax treatment, supplier payment lifecycle, cashbook/trial balance/financial statements and independent reconciliation controls. Live M-Pesa remains dependent on approved production credentials and callback configuration. |
+| 7. Events and programmes | Partial | Venue/resource conflict checks, event committee and speaker workflows, certificate generation, complete event budget controls and end-to-end registration tests. |
+| 8. Pastoral care and welfare | Partial | Encrypted case notes, granular case assignment, counselling confidentiality, welfare disbursement controls and approved safeguarding procedures. |
+| 9. Evangelism and missions | Partial | Structured field reports, mission-team deployment, missionary support, church-planting milestones, geospatial coverage and verified outcome reporting. |
+| 10. Discipleship and Bible training | Partial | Full course authoring/content delivery, quizzes, assessments, certificates, course prerequisites and trainer reporting. |
+| 11. Worship and service management | Partial | Dedicated song/hymn catalogue, rehearsal and musician rota, conflict checks, full order-of-service publishing and sermon media archive workflows. |
+| 12. Leadership and HR | Partial | Credentials/ordination evidence, leave management, performance reviews, volunteer lifecycle, succession planning and restricted disciplinary workflows. |
+| 13. Communication | Partial | Approved SMS, email and WhatsApp providers, consent/preferences, delivery receipts, retries, templates and audience segmentation. In-app notifications are not proof of external delivery. |
+| 14. Assets and property | Partial | Depreciation, scheduled maintenance, insurance/valuation history, custody acceptance and disposal approval workflow. |
+| 15. Projects and development | Partial | Formal proposal/approval stages, milestones, contractor procurement, change orders, evidence review and project-to-ledger budget controls. |
+| 16. Children, youth and family | Partial | Parent/guardian portal, verified guardian relationships, authorised collection workflow, child attendance handover, staff vetting and complete safeguarding case management. Consent capture alone is not the full safeguarding module. |
+| 17. Documents and records | Partial | Malware scanning, retention/legal holds, off-site replication, restore verification, richer document classification and archival policies. Private versioned storage exists but requires production persistent storage configuration. |
+| 18. Public website and member portal | Partial | Native Android/iOS applications, secure online giving experience, broader member self-service, public sermon/media delivery and end-to-end accessibility/device acceptance. Public CMS and core member portal are present. |
+| 19. Security, governance and audit | Partial | MFA, per-device refresh-token rotation, password reset/recovery, formal immutable audit storage, security alerting, automated backup/restore drills, incident response and independent penetration testing. |
+| Mobile and offline architecture | Not delivered | No native Android/iOS application or durable offline-first sync engine is present. Do not record financial payments offline as confirmed; future sync must be idempotent and reconcile conflicts. |
+| Data migration and rollout | Not delivered | Import validation/mapping tools, controlled pilot migration, rollback rehearsal, branch onboarding and formal user acceptance sign-off. |
+| Training and support | Not delivered | Role-specific manuals/video training, helpdesk workflow, support SLAs and operational handover. |
+
+The current codebase is therefore a substantial working web/API foundation, not a completed implementation of every item in the proposal. Production integrations that require NCBI/provider credentials, verified organisational policy or real-world acceptance cannot be truthfully marked complete from code alone.
+
+
 This document distinguishes working code from planned work. A module is not production-ready merely because a navigation item or model exists.
 
 ## Implemented in this delivery
