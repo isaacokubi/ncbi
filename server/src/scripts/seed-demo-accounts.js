@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { connectDatabase } from '../config/db.js';
 import { Organisation, User, Member } from '../models/index.js';
 
-// Idempotent demo-account seed. Password is supplied at runtime and never committed.
+// Idempotent demo-account seed. The existing super_admin is required and never created or changed.
 const commonPassword = process.env.SEED_COMMON_PASSWORD;
 if (!commonPassword || commonPassword.length < 14) {
   throw new Error('Set SEED_COMMON_PASSWORD to a password of at least 14 characters');
@@ -13,11 +13,16 @@ if (!commonPassword || commonPassword.length < 14) {
 await connectDatabase();
 try {
   const root = await Organisation.findOne({ code: 'NCBI' });
-  if (!root) throw new Error('NCBI international organisation not found. Run bootstrap-admin first.');
+  if (!root) throw new Error('NCBI international organisation not found. Confirm the existing admin bootstrap organisation.');
   if (root.level !== 'international') throw new Error('NCBI organisation must be the international root.');
-  if (root.status !== 'active') {
-    root.status = 'active';
-    await root.save();
+
+  const existingAdmin = await User.findOne({
+    role: 'super_admin',
+    organisation: root._id,
+    active: true
+  }).select('_id email').lean();
+  if (!existingAdmin) {
+    throw new Error('No active super_admin account was found for the NCBI international organisation. Seed stopped without creating accounts.');
   }
 
   const ensureOrganisation = async ({ name, code, level, parent }) => {
@@ -65,41 +70,38 @@ try {
 
   const results = [];
   for (const account of accounts) {
-    let user = await User.findOne({ email: account.email });
-    if (user) {
-      // Do not overwrite an existing account, its password, role, or organisation.
-      results.push({ email: user.email, role: user.role, status: 'already-exists' });
+    const existing = await User.findOne({ email: account.email }).select('email role').lean();
+    if (existing) {
+      results.push({ email: existing.email, role: existing.role, status: 'already-exists-unchanged' });
       continue;
     }
-    user = await User.create({ ...account, passwordHash, active: true });
-    results.push({ email: user.email, role: user.role, status: 'created' });
+    const created = await User.create({ ...account, passwordHash, active: true });
+    results.push({ email: created.email, role: created.role, status: 'created' });
   }
 
   const memberEmail = 'member@ncbi.org';
-  let memberUser = await User.findOne({ email: memberEmail });
-  if (!memberUser) {
-    let profile = await Member.findOne({
-      homeOrganisation: branch._id,
-      email: memberEmail
-    });
+  const existingMemberUser = await User.findOne({ email: memberEmail }).select('email role').lean();
+  if (existingMemberUser) {
+    results.push({ email: existingMemberUser.email, role: existingMemberUser.role, status: 'already-exists-unchanged' });
+  } else {
+    let profile = await Member.findOne({ homeOrganisation: branch._id, email: memberEmail });
     if (!profile) {
       profile = await Member.create({
         firstName: 'Demo', lastName: 'Member', email: memberEmail,
         status: 'member', joinedAt: new Date(), homeOrganisation: branch._id
       });
     }
-    memberUser = await User.create({
+    const created = await User.create({
       fullName: 'NCBI Demo Member', email: memberEmail, passwordHash,
       role: 'member', organisation: branch._id, memberProfile: profile._id, active: true
     });
-    results.push({ email: memberUser.email, role: memberUser.role, status: 'created' });
-  } else {
-    results.push({ email: memberUser.email, role: memberUser.role, status: 'already-exists' });
+    results.push({ email: created.email, role: created.role, status: 'created' });
   }
 
+  console.log(`Existing administrator verified: ${existingAdmin.email} (left unchanged)`);
   console.log('NCBI demo account seed completed:');
   for (const item of results) console.log(`- ${item.email} | ${item.role} | ${item.status}`);
-  console.log('A shared password was applied only to newly created accounts. Existing accounts were not changed.');
+  console.log('The common password was applied only to newly created demo accounts.');
 } finally {
   await mongoose.disconnect();
 }
