@@ -408,6 +408,16 @@ router.post('/:entity', async (req, res, next) => {
     if (sensitiveEntities.has(entity) && visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
     const payload = safeData(data ?? {});
     if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+    if (entity === 'pastoral_case' && payload.memberId) {
+      if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'Select a valid member for this pastoral record' });
+      const careMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: targetOrg }).select('_id').lean();
+      if (!careMember) return res.status(400).json({ message: 'The selected member does not belong to this church organisation' });
+    }
+    if (assignedTo !== undefined) {
+      if (!Array.isArray(assignedTo) || assignedTo.length > 10 || assignedTo.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ message: 'Assignees must be valid user identifiers' });
+      const eligibleAssignees = await User.countDocuments({ _id: { $in: assignedTo }, organisation: targetOrg, active: true });
+      if (eligibleAssignees !== assignedTo.length) return res.status(400).json({ message: 'Every assignee must be an active user in the selected church organisation' });
+    }
     if (entity === 'member_notification') {
       if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'A valid memberId is required to address this notification' });
       const targetMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: targetOrg }).select('_id').lean();
@@ -443,6 +453,11 @@ router.patch('/:entity/:id', async (req, res, next) => {
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+      if (entity === 'pastoral_case' && payload.memberId) {
+        if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'Select a valid member for this pastoral record' });
+        const careMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: record.organisation }).select('_id').lean();
+        if (!careMember) return res.status(400).json({ message: 'The selected member does not belong to this church organisation' });
+      }
       if (entity === 'member_notification') {
         if (String(payload.memberId || '') !== String(record.data?.memberId || '')) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
         const message = String(payload.message || '').trim();
