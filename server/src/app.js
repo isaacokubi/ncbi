@@ -8,6 +8,7 @@ import workspaceRoutes from './routes/workspaces.js';
 import operationsRoutes from './routes/operations.js';
 import dashboardRoutes from './routes/dashboard.js';
 import financeRoutes from './routes/finance.js';
+import accountingRoutes from './routes/accounting.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -22,6 +23,7 @@ app.use('/api/workspace', workspaceRoutes);
 app.use('/api/operations', operationsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/accounting', accountingRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' }));
 app.use((error, _req, res, _next) => {
   console.error(error);
