@@ -7,6 +7,13 @@ export function attendanceWorkspaceFilter(user, organisationIds) {
 }
 export function canSeeUpcomingEvents(user) { return user.role !== 'department_leader'; }
 
+export function dashboardPendingApprovalsForRole(role, breakdown) {
+  const categories = role === 'treasurer' ? ['finance','budgets']
+    : role === 'department_leader' ? []
+    : ['registrations','organisations','finance','budgets','operations'];
+  return categories.reduce((total, key) => total + Math.max(0, Number(breakdown?.[key]) || 0), 0);
+}
+
 export function dashboardMetricsForRole(role, metrics) {
   if (role === 'department_leader') return { attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth };
   if (role === 'treasurer') return { confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth, confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth };
