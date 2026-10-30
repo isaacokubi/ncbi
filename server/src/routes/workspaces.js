@@ -103,11 +103,6 @@ router.get('/attendance',async(req,res,next)=>{
     res.json({attendance:records,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});
   }catch(e){next(e);}
 });
-router.post('/members/:id/transfer''),$options:'i'};
-    const [records,total]=await Promise.all([Attendance.find(filter).sort({heldAt:-1}).skip((page-1)*limit).limit(limit).populate('member','firstName lastName membershipNumber').populate('organisation','name code').populate('recordedBy','fullName').lean(),Attendance.countDocuments(filter)]);
-    res.json({attendance:records,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});
-  }catch(e){next(e);}
-});
 router.post('/members/:id/transfer',allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'),async(req,res,next)=>{
   try{const {toOrganisation,note}=req.body;if(!(await assertOrganisationAccess(req.user,toOrganisation)))return res.status(403).json({message:'Destination outside your authorised scope'});const member=await Member.findById(req.params.id);if(!member||!(await assertOrganisationAccess(req.user,member.homeOrganisation)))return res.status(404).json({message:'Member not found'});if(String(member.homeOrganisation)===String(toOrganisation))return res.status(409).json({message:'Member already belongs to this organisation'});member.transferHistory.push({from:member.homeOrganisation,to:toOrganisation,approvedBy:req.user._id,transferredAt:new Date(),note});member.homeOrganisation=toOrganisation;member.status='member';await member.save();res.json({member});}
   catch(e){next(e);}
