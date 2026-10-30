@@ -22,10 +22,12 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
       FinanceTransaction.aggregate([{ $match: { organisation: { $in: ids }, status: 'confirmed', direction: 'expense', occurredAt: { $gte: start } } }, { $group: { _id: '$currency', total: { $sum: { $toDouble: '$amount' } } } }]),
       (canSeeUpcomingEvents(req.user) ? OperationsRecord.find({ organisation: { $in: ids }, entity: 'event', status: { $in: ['scheduled','active'] }, startAt: { $gte: now } }).sort({ startAt: 1 }).limit(6).select('title startAt organisation').populate('organisation','name').lean() : Promise.resolve([])),
       OperationsRecord.countDocuments({ organisation: { $in: ids }, status: 'pending' }),
-      User.countDocuments({ organisation: { $in: ids }, accountApproval: 'pending', ...(req.user.role === 'branch_admin' ? { registrationCategory: { $in: ['non_member','official'] } } : {}) }),
-      Organisation.countDocuments({ _id: { $in: ids }, status: 'pending' }),
-      FinanceTransaction.countDocuments({ organisation: { $in: ids }, status: { $in: ['submitted','approved'] } }),
-      Budget.countDocuments({ organisation: { $in: ids }, status: 'submitted' })
+      (['super_admin','international_executive','national_admin'].includes(req.user.role) || ['branch_admin','branch_pastor'].includes(req.user.role))
+        ? User.countDocuments({ organisation: { $in: ids }, accountApproval: 'pending', ...(req.user.role === 'branch_admin' ? { registrationCategory: { $in: ['non_member','official'] } } : req.user.role === 'branch_pastor' ? { registrationCategory: 'member' } : {}) })
+        : Promise.resolve(0),
+      (['super_admin','international_executive','national_admin'].includes(req.user.role) ? Organisation.countDocuments({ _id: { $in: ids }, status: 'pending' }) : Promise.resolve(0)),
+      (['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'].includes(req.user.role) ? FinanceTransaction.countDocuments({ organisation: { $in: ids }, status: { $in: ['submitted','approved'] } }) : Promise.resolve(0)),
+      (['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'].includes(req.user.role) ? Budget.countDocuments({ organisation: { $in: ids }, status: 'submitted' }) : Promise.resolve(0))
     ]);
 
     const approvalBreakdown = {
@@ -40,10 +42,10 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
       branches, members, visitors, attendanceRecordsThisMonth: attendance,
       confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals
     });
-    const visibleApprovalBreakdown = req.user.role === 'treasurer'
-      ? { finance: pendingFinance, budgets: pendingBudgets }
-      : req.user.role === 'department_leader' ? {}
+    const visibleApprovalBreakdown = req.user.role === 'treasurer' || req.user.role === 'department_leader' ? {}
       : req.user.role === 'branch_admin' ? { registrations: pendingRegistrations, operations: pendingOperational }
+      : req.user.role === 'branch_pastor' ? { registrations: pendingRegistrations, finance: pendingFinance, budgets: pendingBudgets, operations: pendingOperational }
+      : ['regional_overseer','district_pastor'].includes(req.user.role) ? { finance: pendingFinance, budgets: pendingBudgets, operations: pendingOperational }
       : approvalBreakdown;
     res.json({ scope: ids.length, asOf: now.toISOString(), metrics, approvalBreakdown: visibleApprovalBreakdown, upcomingEvents });
   } catch (error) { next(error); }
