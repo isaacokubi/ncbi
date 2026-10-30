@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, RefreshCw, Search, Download, Users, CheckCircle2, Clock3, UserX } from 'lucide-react';
+import { CalendarDays, RefreshCw, Search, Download } from 'lucide-react';
 
 const API = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 async function request(path, token, options = {}) {
@@ -25,10 +25,16 @@ export default function ProgrammeRegistrationWorkspace({ token, onError, onSucce
       const result = await request('/operations/event?limit=100', token);
       const availableEvents = result.records || [];
       setEvents(availableEvents);
-      const batches = await Promise.allSettled(availableEvents.map(async event => {
-        const response = await request('/operations/events/' + event._id + '/registrations', token);
-        return (response.registrations || []).map(registration => ({ ...registration, eventTitle: event.title, eventDate: event.startAt, eventOrganisation: event.organisation?.name || '—', eventId: event._id }));
-      }));
+      const batches = [];
+      // Limit concurrent branch/programme lookups so large calendars do not
+      // overwhelm the API or MongoDB when this workspace first opens.
+      for (let offset = 0; offset < availableEvents.length; offset += 10) {
+        const group = await Promise.allSettled(availableEvents.slice(offset, offset + 10).map(async event => {
+          const response = await request('/operations/events/' + event._id + '/registrations', token);
+          return (response.registrations || []).map(registration => ({ ...registration, eventTitle: event.title, eventDate: event.startAt, eventOrganisation: event.organisation?.name || '—', eventId: event._id }));
+        }));
+        batches.push(...group);
+      }
       const combined = batches.filter(x => x.status === 'fulfilled').flatMap(x => x.value);
       setRegistrations(combined.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)));
       const failures = batches.filter(x => x.status === 'rejected');
@@ -50,7 +56,11 @@ export default function ProgrammeRegistrationWorkspace({ token, onError, onSucce
     finally { setBusyId(''); }
   };
   const exportCsv = () => {
-    const quote = value => '"' + String(value ?? '').replaceAll('"','""') + '"';
+    const quote = value => {
+      let text = String(value ?? '');
+      if (/^[\\s]*[=+\\-@]/.test(text)) text = "'" + text;
+      return '"' + text.replaceAll('"','""') + '"';
+    };
     const rows = [['Programme','Church / branch','Participant','Email','Registration date','Status','Notes'], ...filtered.map(x => [x.eventTitle,x.eventOrganisation,x.data?.attendeeName,x.data?.email,x.createdAt,x.status,x.data?.notes])];
     const csv = rows.map(row => row.map(quote).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
