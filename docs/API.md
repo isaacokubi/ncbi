@@ -48,3 +48,10 @@ Only separate authorised approvers can approve a submitted transaction. Confirma
 - `GET/POST /api/accounting/reconciliations` — record statement balances; `POST /api/accounting/reconciliations/:id/reconcile` compares statement balance with posted ledger activity.
 
 All accounting endpoints require authentication, finance roles and server-derived organisation scope. Journal entries require equal positive debits and credits and active accounts belonging to the same organisation.
+
+## M-Pesa collections
+- `POST /api/payments/mpesa/stk-push` — authenticated STK push request; requires finance role, scoped asset and income accounts, and configured Daraja credentials.
+- `GET /api/payments/mpesa/payments` and `GET /api/payments/mpesa/payments/:id` — scoped payment status.
+- `POST /api/payments/mpesa/callback/:secret` — public Safaricom callback protected by a high-entropy callback path secret. Matching successful callbacks create a confirmed finance transaction and balanced posted journal once.
+
+Set `MPESA_ENV`, consumer key/secret, shortcode, passkey, callback URL and a random callback secret of at least 32 characters. The callback URL must be public HTTPS and end in `/api/payments/mpesa/callback/<MPESA_CALLBACK_SECRET>`. M-Pesa requests are not live until Safaricom credentials and the deployed callback URL have been configured and verified.
