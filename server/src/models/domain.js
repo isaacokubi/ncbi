@@ -17,6 +17,7 @@ const recordSchema = new Schema({
 }, { timestamps: true, minimize: false });
 recordSchema.index({ organisation: 1, entity: 1, status: 1, startAt: 1 });
 recordSchema.index({ organisation: 1, entity: 1, reference: 1 }, { unique: true, partialFilterExpression: { reference: { $type: 'string', $gt: '' } } });
+recordSchema.index({ organisation: 1, 'data.enrolmentKey': 1 }, { unique: true, partialFilterExpression: { entity: 'member_enrolment', status: { $in: ['pending','active'] }, 'data.enrolmentKey': { $type: 'string' } } });
 const auditSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', index: true },
   actor: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

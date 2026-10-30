@@ -702,7 +702,7 @@ router.post('/:entity', async (req, res, next) => {
     }
     if (entity === 'member_enrolment') {
       if (!payload.memberId || !String(payload.programmeName || '').trim() || !['discipleship','membership','baptism','leadership','other'].includes(payload.programmeType)) return res.status(400).json({ message: 'Select a member, programme name and valid programme type' });
-      const duplicate = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_enrolment', status: { $ne: 'archived' }, 'data.memberId': String(payload.memberId), 'data.programmeName': String(payload.programmeName).trim() }).select('_id').lean();
+      const duplicate = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_enrolment', status: { $nin: ['archived','rejected','cancelled'] }, 'data.memberId': String(payload.memberId), 'data.programmeName': String(payload.programmeName).trim() }).select('_id').lean();
       if (duplicate) return res.status(409).json({ message: 'This member already has an active enrolment for this programme' });
       const classRecord = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_class', status: { $ne: 'archived' }, $or: [{ 'data.programmeName': String(payload.programmeName).trim() }, { title: String(payload.programmeName).trim() }] }).select('data.capacity data.enrolledCount').lean();
       if (!classRecord) return res.status(400).json({ message: 'Select an existing membership or discipleship class programme' });
@@ -732,6 +732,7 @@ router.post('/:entity', async (req, res, next) => {
       if (!message || message.length > 2000) return res.status(400).json({ message: 'Notification message must contain 1–2,000 characters' });
       payload.memberId = String(targetMember._id); payload.recipientUserId = String(recipient._id); payload.message = message; payload.channel = 'in_app';
     }
+    if (entity === 'member_enrolment') payload.enrolmentKey = String(payload.memberId) + ':' + String(payload.programmeName).trim().toLowerCase().replace(/\s+/g, ' ');
     const record = await OperationsRecord.create({
       organisation: targetOrg, entity, title, reference, status, startAt, endAt, assignedTo,
       owner: req.user._id,
@@ -740,7 +741,7 @@ router.post('/:entity', async (req, res, next) => {
     });
     await audit(req, 'create', entity, record, `Created ${entity}: ${record.title}`);
     res.status(201).json({ record });
-  } catch (error) { next(error); }
+  } catch (error) { if (error?.code === 11000 && req.params.entity === 'member_enrolment') return res.status(409).json({ message: 'This member already has an active enrolment for this programme' }); next(error); }
 });
 
 router.patch('/:entity/:id', async (req, res, next) => {
