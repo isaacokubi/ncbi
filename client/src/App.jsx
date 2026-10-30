@@ -1,150 +1,145 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw } from 'lucide-react';
+import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API;
-const navigation = [
-  { title: 'OVERVIEW', items: [{ label: 'Executive dashboard', icon: LayoutDashboard }, { label: 'Organisation structure', icon: Network }] },
-  { title: 'CHURCH MANAGEMENT', items: [{ label: 'Branches', icon: Church }, { label: 'Membership', icon: Users }, { label: 'Visitors & follow-up', icon: HeartHandshake }, { label: 'Attendance', icon: ClipboardList }, { label: 'Departments & ministries', icon: BookOpen }] },
-  { title: 'MINISTRY & OPERATIONS', items: [{ label: 'Events & programmes', icon: CalendarDays }, { label: 'Pastoral care', icon: HeartHandshake }, { label: 'Evangelism & missions', icon: Activity }] },
-  { title: 'STEWARDSHIP', items: [{ label: 'Finance & accounting', icon: Wallet }, { label: 'Reports & analytics', icon: FileBarChart }] }
+const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+const navGroups = [
+ { title:'OVERVIEW', items:[['dashboard','Executive dashboard',LayoutDashboard],['organisations','Organisation structure',Network]] },
+ { title:'CHURCH MANAGEMENT', items:[['members','Membership',Users],['visitors','Visitors & follow-up',HeartHandshake],['attendance','Attendance',ClipboardList],['departments','Departments & ministries',BookOpen]] },
+ { title:'MINISTRY & OPERATIONS', items:[['events','Events & programmes',CalendarDays],['pastoral','Pastoral care',HeartHandshake],['missions','Evangelism & missions',Activity],['discipleship','Discipleship',BookOpen],['services','Service planning',Church],['leadership','Leadership & HR',Users]] },
+ { title:'STEWARDSHIP', items:[['finance','Finance & accounting',Wallet],['assets','Assets & property',Church],['projects','Projects',Network],['documents','Documents',FileBarChart],['reports','Reports & analytics',FileBarChart]] }
 ];
-
-async function request(path, token, options = {}) {
-  const response = await fetch(`${API}${path}`, {
-    ...options,
-    headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers }
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) { const error = new Error(body.message || `Request failed (${response.status})`); error.status = response.status; throw error; }
-  return body;
-}
-const number = value => new Intl.NumberFormat('en-KE').format(Number(value || 0));
-const dateLabel = value => value ? new Intl.DateTimeFormat('en-KE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)) : 'Date not set';
-const moneyLabel = groups => {
-  if (!Array.isArray(groups) || !groups.length) return 'KES 0';
-  return groups.map(item => `${item._id || 'KES'} ${number(item.total)}`).join(' · ');
+const configs = {
+ visitors:{title:'Visitors & follow-up',entity:'visitor_follow_up',description:'Record visitors, assign follow-up and track connection with a local church.'},
+ departments:{title:'Departments & ministries',entity:'department',description:'Manage church departments, ministry teams, leaders and membership.'},
+ events:{title:'Events & programmes',entity:'event',description:'Plan conferences, services, training, outreach and church programmes.'},
+ pastoral:{title:'Pastoral care',entity:'pastoral_case',description:'Restricted pastoral case register. Access is limited by server-side role and ownership rules.'},
+ missions:{title:'Evangelism & missions',entity:'mission',description:'Manage outreach, mission fields, evangelism teams and field reports.'},
+ discipleship:{title:'Discipleship',entity:'discipleship_course',description:'Manage discipleship courses, cohorts, lesson plans and learner progress.'},
+ services:{title:'Service planning',entity:'service_plan',description:'Coordinate worship services, service teams, programme items and resources.'},
+ leadership:{title:'Leadership & HR',entity:'leadership_appointment',description:'Record appointments, responsibilities, training and leadership terms.'},
+ assets:{title:'Assets & property',entity:'asset',description:'Maintain church asset registers, custody, condition and maintenance records.'},
+ projects:{title:'Projects',entity:'project',description:'Track church projects, milestones, budgets, owners and delivery status.'},
+ documents:{title:'Documents',entity:'document',description:'Register important documents and their metadata. Secure file storage is not configured yet.'},
+ announcements:{title:'Announcements',entity:'announcement',description:'Manage internal church notices and communications.'},
+ volunteers:{title:'Volunteers',entity:'volunteer',description:'Coordinate volunteer teams, roles and service schedules.'},
+ training:{title:'Training',entity:'training',description:'Manage leadership and ministry training programmes.'},
+ property:{title:'Property',entity:'property',description:'Maintain church property records, leases, locations and stewardship.'}
 };
-
-function Login({ onLogin, busy, error }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  return <main className="auth-screen"><section className="auth-card">
-    <div className="auth-brand"><div className="brand-mark"><Church size={25}/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div>
-    <div className="auth-intro"><div className="eyebrow">ONE CHURCH. ONE VISION.</div><h1>Church leadership, connected.</h1><p>Sign in to your authorised NCBI management workspace.</p></div>
-    <form onSubmit={event => { event.preventDefault(); onLogin(email, password); }}>
-      <label htmlFor="email">Email address</label><input id="email" type="email" autoComplete="username" required value={email} onChange={event => setEmail(event.target.value)} placeholder="you@church.org"/>
-      <label htmlFor="password">Password</label><input id="password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} placeholder="Enter your password"/>
-      {error && <div className="form-error" role="alert">{error}</div>}
-      <button className="auth-submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in securely'}</button>
-    </form>
-    <small className="auth-foot">Access is monitored and limited by your assigned church role.</small>
-  </section></main>;
+const fmt = value => value ? new Intl.DateTimeFormat('en-KE',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value)) : '—';
+const money = groups => Array.isArray(groups) && groups.length ? groups.map(x => (x._id || 'KES')+' '+new Intl.NumberFormat('en-KE').format(Number(x.total||0))).join(' · ') : 'KES 0';
+const human = value => String(value || '').replaceAll('_',' ').replace(/\b\w/g, c=>c.toUpperCase());
+async function api(path, token, options={}) {
+ const response=await fetch(API+path,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{}),...options.headers}});
+ const body=await response.json().catch(()=>({}));
+ if(!response.ok){const error=new Error(body.message||'Request failed ('+response.status+')');error.status=response.status;throw error;}
+ return body;
 }
+function Login({onLogin,busy,error}) {
+ const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
+ return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><div className="brand-mark"><Church size={25}/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div><div className="auth-intro"><div className="eyebrow">ONE CHURCH. ONE VISION.</div><h1>Church leadership, connected.</h1><p>Sign in to your authorised NCBI management workspace.</p></div><form onSubmit={e=>{e.preventDefault();onLogin(email,password);}}><label>Email address</label><input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@church.org"/><label>Password</label><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/>{error&&<div className="form-error" role="alert">{error}</div>}<button className="auth-submit" disabled={busy}>{busy?'Signing in…':'Sign in securely'}</button></form><small className="auth-foot">Access is monitored and limited by your assigned church role.</small></section></main>;
+}
+function Field({label,children}) { return <label className="field"><span>{label}</span>{children}</label>; }
 
-function App() {
-  const [token, setToken] = useState(() => sessionStorage.getItem('ncbi_access_token') || '');
-  const [user, setUser] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [organisations, setOrganisations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [pageError, setPageError] = useState('');
-  const [active, setActive] = useState('Executive dashboard');
-  const [collapsed, setCollapsed] = useState(false);
-  const [query, setQuery] = useState('');
-  const [notice, setNotice] = useState(false);
-  const [dark, setDark] = useState(false);
+function App(){
+ const [token,setToken]=useState(()=>sessionStorage.getItem('ncbi_access_token')||'');
+ const [user,setUser]=useState(null); const [page,setPage]=useState('dashboard');
+ const [collapsed,setCollapsed]=useState(false); const [dark,setDark]=useState(false);
+ const [busy,setBusy]=useState(false); const [loading,setLoading]=useState(true); const [loginError,setLoginError]=useState('');
+ const [error,setError]=useState(''); const [success,setSuccess]=useState('');
+ const [dashboard,setDashboard]=useState(null); const [organisations,setOrganisations]=useState([]);
+ const [rows,setRows]=useState([]); const [pagination,setPagination]=useState({page:1,pages:1,total:0});
+ const [search,setSearch]=useState(''); const [statusFilter,setStatusFilter]=useState('');
+ const [showForm,setShowForm]=useState(false); const [editing,setEditing]=useState(null);
+ const [form,setForm]=useState({}); const [jsonData,setJsonData]=useState('{}');
 
-  const loadWorkspace = useCallback(async accessToken => {
-    setPageError('');
-    const [dashboard, workspace] = await Promise.all([
-      request('/dashboard/summary', accessToken),
-      request('/workspace/organisations', accessToken)
-    ]);
-    setSummary(dashboard);
-    setOrganisations(workspace.organisations || []);
-  }, []);
+ const logout=useCallback(()=>{sessionStorage.removeItem('ncbi_access_token');setToken('');setUser(null);setDashboard(null);setRows([]);},[]);
+ const loadDashboard=useCallback(async t=>{const [d,o]=await Promise.all([api('/dashboard/summary',t),api('/workspace/organisations',t)]);setDashboard(d);setOrganisations(o.organisations||[]);},[]);
+ const loadPage=useCallback(async(t,key=page,p=1)=>{
+   setError(''); setSuccess('');
+   if(key==='dashboard'){await loadDashboard(t);return;}
+   if(key==='organisations'){const r=await api('/workspace/organisations',t);setRows(r.organisations||[]);setPagination({page:1,pages:1,total:r.organisations?.length||0});return;}
+   if(key==='members'||key==='visitors'){const r=await api('/workspace/members?page='+p+'&limit=25',t);setRows(key==='visitors'?(r.members||[]).filter(x=>x.status==='visitor'):r.members||[]);setPagination(r.pagination||{page:p,pages:1,total:0});return;}
+   if(key==='attendance'){const r=await api('/workspace/attendance?page='+p+'&limit=25',t);setRows(r.attendance||[]);setPagination(r.pagination||{page:p,pages:1,total:0});return;}
+   if(key==='finance'){const r=await api('/finance/transactions?page='+p+'&limit=25',t);setRows(r.transactions||[]);setPagination(r.pagination||{page:p,pages:1,total:0});return;}
+   if(configs[key]){const cfg=configs[key];const q=new URLSearchParams({page:String(p),limit:'25'});if(statusFilter)q.set('status',statusFilter);if(search)q.set('search',search);const r=await api('/operations/'+cfg.entity+'?'+q.toString(),t);setRows(r.records||[]);setPagination(r.pagination||{page:p,pages:1,total:0});return;}
+   if(key==='reports'){const [d,a]=await Promise.all([api('/dashboard/summary',t),api('/workspace/attendance/summary',t)]);setDashboard(d);setRows([{id:'summary',...a}]);return;}
+ },[page,loadDashboard,search,statusFilter]);
+ useEffect(()=>{let alive=true;if(!token){setLoading(false);return()=>{alive=false;};}setLoading(true);api('/auth/me',token).then(async r=>{if(!alive)return;setUser(r.user);await loadPage(token,'dashboard',1);}).catch(e=>{if(!alive)return;if(e.status===401)logout();else setError(e.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[token,loadPage,logout]);
+ useEffect(()=>{if(!token||!user)return;loadPage(token,page,1).catch(e=>setError(e.message));},[page,token,user,loadPage]);
+ const login=async(email,password)=>{setBusy(true);setLoginError('');try{const r=await api('/auth/login','',{method:'POST',body:JSON.stringify({email,password})});await loadPage(r.token,'dashboard',1);sessionStorage.setItem('ncbi_access_token',r.token);setUser(r.user);setToken(r.token);}catch(e){setLoginError(e.message);}finally{setBusy(false);setLoading(false);}};
+ const openCreate=()=>{setEditing(null);setForm({status:'active',level:'branch',currency:'KES',direction:'income',category:'offering',paymentMethod:'cash',occurredAt:new Date().toISOString().slice(0,10),heldAt:new Date().toISOString().slice(0,10),startAt:'',endAt:''});setJsonData('{}');setShowForm(true);setError('');setSuccess('');};
+ const openEdit=row=>{setEditing(row);setForm({...row,firstName:row.firstName||'',lastName:row.lastName||'',startAt:row.startAt?new Date(row.startAt).toISOString().slice(0,16):'',endAt:row.endAt?new Date(row.endAt).toISOString().slice(0,16):'',occurredAt:row.occurredAt?new Date(row.occurredAt).toISOString().slice(0,10):'',heldAt:row.heldAt?new Date(row.heldAt).toISOString().slice(0,10):''});setJsonData(JSON.stringify(row.data||{},null,2));setShowForm(true);setError('');};
+ const set=(key,value)=>setForm(old=>({...old,[key]:value}));
+ const submit=async e=>{
+  e.preventDefault();setBusy(true);setError('');setSuccess('');
+  try{
+   let path='',method='POST',payload={};
+   if(page==='organisations'){path='/workspace/organisations';payload={name:form.name,code:form.code,level:form.level,parent:form.parent||undefined,country:form.country,currency:form.currency,contactEmail:form.contactEmail,phone:form.phone};}
+   else if(page==='members'||page==='visitors'){path=editing?'/workspace/members/'+editing._id:'/workspace/members';method=editing?'PATCH':'POST';payload={firstName:form.firstName,lastName:form.lastName,phone:form.phone,email:form.email,status:page==='visitors'?'visitor':form.status,dateOfBirth:form.dateOfBirth,gender:form.gender,joinedAt:form.joinedAt};}
+   else if(page==='attendance'){path='/workspace/attendance';payload={activityName:form.activityName,category:form.category,heldAt:form.heldAt,member:form.member||undefined,visitorName:form.visitorName||undefined,organisation:form.organisation||undefined};}
+   else if(page==='finance'){path='/finance/transactions';payload={direction:form.direction,category:form.category,amount:form.amount,currency:form.currency,occurredAt:form.occurredAt,paymentMethod:form.paymentMethod,reference:form.reference,description:form.description,organisation:form.organisation||undefined};}
+   else {const cfg=configs[page];path='/operations/'+cfg.entity+(editing?'/'+editing._id:'');method=editing?'PATCH':'POST';let data;try{data=JSON.parse(jsonData||'{}');}catch{throw new Error('Additional details must be valid JSON.');}payload={title:form.title,reference:form.reference,status:form.status,startAt:form.startAt||undefined,endAt:form.endAt||undefined,visibility:form.visibility||'organisation',data};}
+   await api(path,token,{method,body:JSON.stringify(payload)});
+   setShowForm(false);setSuccess(editing?'Record updated successfully.':'Record saved successfully.');await loadPage(token,page,1);
+  }catch(err){setError(err.message);}finally{setBusy(false);}
+ };
+ const archive=async row=>{if(!window.confirm('Archive this record? It will no longer appear in the active register.'))return;try{await api('/operations/'+configs[page].entity+'/'+row._id,token,{method:'DELETE'});setSuccess('Record archived.');await loadPage(token,page,1);}catch(e){setError(e.message);}};
+ const financeDecision=async(row,decision)=>{try{await api('/finance/transactions/'+row._id+'/decision',token,{method:'POST',body:JSON.stringify({decision})});setSuccess('Finance transaction '+decision+'d.');await loadPage(token,'finance',pagination.page);}catch(e){setError(e.message);}};
+ const filteredRows=useMemo(()=>{const q=search.toLowerCase();if(!q)return rows;return rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q));},[rows,search]);
+ const activeItem=navGroups.flatMap(g=>g.items).find(x=>x[0]===page);
+ const title=page==='dashboard'?'Executive dashboard':page==='organisations'?'Organisation structure':page==='members'?'Membership':page==='attendance'?'Attendance register':page==='finance'?'Finance & accounting':page==='reports'?'Reports & analytics':(configs[page]?.title||'Workspace');
+ const role=user?.role||'member'; const canWrite=!['member'].includes(role);
+ const refresh=()=>loadPage(token,page,pagination.page||1).catch(e=>setError(e.message));
+ const dateNow=new Intl.DateTimeFormat('en-KE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
+ if(loading)return <div className="loading-screen"><div className="loading-mark"><Church size={27}/></div><b>NCBI Management System</b><span>Securing your workspace…</span></div>;
+ if(!token||!user)return <Login onLogin={login} busy={busy} error={loginError}/>;
 
-  const logout = useCallback(() => {
-    sessionStorage.removeItem('ncbi_access_token');
-    setToken(''); setUser(null); setSummary(null); setOrganisations([]); setError(''); setPageError('');
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    if (!token) { setLoading(false); return () => { alive = false; }; }
-    setLoading(true);
-    request('/auth/me', token).then(async data => {
-      if (!alive) return;
-      setUser(data.user);
-      await loadWorkspace(token);
-    }).catch(err => {
-      if (!alive) return; if (err.status === 401) logout(); else setPageError(err.message || 'Unable to load your workspace.');
-    }).finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [token, loadWorkspace, logout]);
-
-  const login = async (email, password) => {
-    setBusy(true); setError('');
-    try {
-      const result = await request('/auth/login', '', { method: 'POST', body: JSON.stringify({ email, password }) });
-      sessionStorage.setItem('ncbi_access_token', result.token);
-      setUser(result.user); setToken(result.token);
-      await loadWorkspace(result.token);
-    } catch (err) { setError(err.message || 'Unable to sign in. Please try again.'); }
-    finally { setBusy(false); setLoading(false); }
-  };
-
-  const filtered = useMemo(() => navigation.map(group => ({ ...group, items: group.items.filter(item => item.label.toLowerCase().includes(query.toLowerCase())) })).filter(group => group.items.length), [query]);
-  const metrics = summary?.metrics || {};
-  const orgName = user?.organisation?.name || 'Your organisation';
-  const currencyIncome = moneyLabel(metrics.confirmedIncomeThisMonth);
-  const currentDate = new Intl.DateTimeFormat('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-
-  if (loading) return <div className="loading-screen"><div className="loading-mark"><Church size={27}/></div><b>NCBI Management System</b><span>Securing your workspace…</span></div>;
-  if (!token || !user) return <Login onLogin={login} busy={busy} error={error}/>;
-
-  return <div className={dark ? 'app dark' : 'app'}>
-    <aside className={collapsed ? 'sidebar collapsed' : 'sidebar'}>
-      <div className="brand"><div className="brand-mark"><Church size={23}/></div>{!collapsed && <div><strong>NCBI</strong><span>A CALL TO SERVE</span></div>}<button className="icon-button collapse" onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar"><Menu size={18}/></button></div>
-      {!collapsed && <div className="workspace-switch"><div className="workspace-avatar">NC</div><div><b>{orgName}</b><small>{user.role.replaceAll('_', ' ')}</small></div></div>}
-      {!collapsed && <div className="searchbox"><Search size={16}/><input placeholder="Search navigation" value={query} onChange={event => setQuery(event.target.value)}/></div>}
-      <nav>{filtered.map(group => <section key={group.title}><small className="nav-heading">{!collapsed ? group.title : ''}</small>{group.items.map(item => <button key={item.label} title={item.label} className={active === item.label ? 'nav-item selected' : 'nav-item'} onClick={() => setActive(item.label)}><item.icon size={18}/>{!collapsed && <span>{item.label}</span>}</button>)}</section>)}</nav>
-      <div className="sidebar-bottom"><button className="nav-item" onClick={() => setDark(!dark)}><ShieldCheck size={18}/>{!collapsed && <span>{dark ? 'Light appearance' : 'Dark appearance'}</span>}</button><button className="nav-item logout-link" onClick={logout}><LogOut size={18}/>{!collapsed && <span>Sign out</span>}</button>{!collapsed && <div className="profile"><div className="profile-avatar">{user.fullName.split(' ').map(part => part[0]).slice(0,2).join('').toUpperCase()}</div><div><b>{user.fullName}</b><small>{user.email}</small></div></div>}</div>
-    </aside>
-    <main className="main">
-      <header className="topbar"><div><span className="crumb">NCBI /</span> <b>{active}</b></div><div className="top-actions"><span className="period-label">{currentDate.toUpperCase()}</span><button className="icon-button notification" onClick={() => setNotice(!notice)} aria-label="Notifications"><Bell size={19}/></button><button className="top-user" onClick={logout} title="Sign out"><span className="top-avatar">{user.fullName.split(' ').map(part => part[0]).slice(0,2).join('').toUpperCase()}</span><LogOut size={15}/></button></div>{notice && <div className="notification-pop"><b>Notifications</b><p>There are no notification records available yet.</p></div>}</header>
-      <div className="content">
-        {active === 'Executive dashboard' ? <>
-          <div className="welcome"><div><div className="eyebrow">{currentDate.toUpperCase()} <span>•</span> {orgName.toUpperCase()}</div><h1>Welcome, {user.fullName.split(' ')[0]}</h1><p>Your authorised view of NCBI people, stewardship and ministry activity.</p></div><button className="gold-button" onClick={() => setActive('Organisation structure')}><Network size={16}/> View organisation</button></div>
-          <div className="scope-bar"><ShieldCheck size={16}/><span>Authorised scope</span><b>{orgName}</b><span className="scope-dot">•</span><span>{number(summary?.scope)} organisation units accessible</span><button onClick={() => setActive('Organisation structure')}>View structure <ArrowUpRight size={14}/></button></div>
-          {pageError && <div className="page-error" role="alert">{pageError} <button onClick={() => loadWorkspace(token).catch(() => {})}><RefreshCw size={14}/> Retry</button></div>}
-          <div className="section-title"><div><h2>Church at a glance</h2><p>Live indicators from the NCBI database · current month</p></div><button className="refresh-button" onClick={() => loadWorkspace(token).catch(() => {})}><RefreshCw size={14}/> Refresh data</button></div>
-          <div className="stats-grid">
-            <article className="stat-card"><div className="stat-top"><span>Active branches</span><div className="stat-icon"><Church size={19}/></div></div><strong>{number(metrics.branches)}</strong><small>Within your authorised scope</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Registered members</span><div className="stat-icon"><Users size={19}/></div></div><strong>{number(metrics.members)}</strong><small>Members, workers and ministers</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Visitors</span><div className="stat-icon"><HeartHandshake size={19}/></div></div><strong>{number(metrics.visitors)}</strong><small>Recorded as visitors</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Attendance records</span><div className="stat-icon"><Activity size={19}/></div></div><strong>{number(metrics.attendanceRecordsThisMonth)}</strong><small>Check-ins recorded this month</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Confirmed income</span><div className="stat-icon"><CircleDollarSign size={19}/></div></div><strong className="money-value">{currencyIncome}</strong><small>Confirmed transactions this month</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Confirmed expenses</span><div className="stat-icon"><Wallet size={19}/></div></div><strong className="money-value">{moneyLabel(metrics.confirmedExpensesThisMonth)}</strong><small>Confirmed transactions this month</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Pending approvals</span><div className="stat-icon"><ClipboardList size={19}/></div></div><strong>{number(metrics.pendingApprovals)}</strong><small>Records awaiting action</small></article>
-            <article className="stat-card"><div className="stat-top"><span>Organisation units</span><div className="stat-icon"><Network size={19}/></div></div><strong>{number(summary?.scope)}</strong><small>Accessible units including this level</small></article>
-          </div>
-          <div className="bottom-grid live-grid">
-            <article className="panel"><div className="panel-heading"><div><h3>Upcoming programmes</h3><p>Scheduled events in your authorised scope</p></div><button className="text-button" onClick={() => setActive('Events & programmes')}>Open events <ArrowUpRight size={14}/></button></div>
-              {(summary?.upcomingEvents || []).length ? summary.upcomingEvents.map(event => <div className="event-row" key={event._id}><div className="date-tile"><CalendarDays size={18}/></div><div><b>{event.title}</b><small>{dateLabel(event.startAt)} · {event.organisation?.name || 'Organisation'}</small></div></div>) : <div className="empty-state">No upcoming events have been recorded in this scope.</div>}
-            </article>
-            <article className="panel"><div className="panel-heading"><div><h3>Organisation directory</h3><p>Units you are authorised to view</p></div><span className="count-badge">{organisations.length}</span></div>
-              <div className="org-list">{organisations.slice(0,6).map(org => <div className="org-row" key={org._id}><span className="org-dot"/><div><b>{org.name}</b><small>{org.level} · {org.code}</small></div><span className={'status-pill ' + org.status}>{org.status}</span></div>)}</div>
-              {organisations.length > 6 && <small className="muted-note">Showing 6 of {organisations.length} authorised units.</small>}
-            </article>
-          </div>
-          <footer><b>NCBI</b> · ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM. <span>Live data · v0.2.0</span></footer>
-        </> : <section className="module-placeholder panel"><div className="stat-icon"><Network size={22}/></div><div className="eyebrow">NCBI WORKSPACE</div><h1>{active}</h1><p>This module is included in the platform navigation. Its full data-entry and management screens are being connected in the next implementation milestone. No sample records are being presented as live church data.</p><button className="gold-button" onClick={() => setActive('Executive dashboard')}>Return to live dashboard</button></section>}
-      </div>
-    </main>
-  </div>;
+ return <div className={dark?'app dark':'app'}>
+  <aside className={collapsed?'sidebar collapsed':'sidebar'}>
+   <div className="brand"><div className="brand-mark"><Church size={23}/></div>{!collapsed&&<div><strong>NCBI</strong><span>A CALL TO SERVE</span></div>}<button className="icon-button collapse" onClick={()=>setCollapsed(!collapsed)} aria-label="Toggle sidebar"><Menu size={18}/></button></div>
+   {!collapsed&&<div className="workspace-switch"><div className="workspace-avatar">NC</div><div><b>{user.organisation?.name||'NCBI Workspace'}</b><small>{human(role)}</small></div></div>}
+   {!collapsed&&<div className="searchbox"><Search size={16}/><input placeholder="Search modules" value={search} onChange={e=>setSearch(e.target.value)}/></div>}
+   <nav>{navGroups.map(group=><section key={group.title}><small className="nav-heading">{collapsed?'':group.title}</small>{group.items.map(([key,label,Icon])=><button key={key} title={label} className={page===key?'nav-item selected':'nav-item'} onClick={()=>{setPage(key);setShowForm(false);setSearch('');setStatusFilter('');}}><Icon size={18}/>{!collapsed&&<span>{label}</span>}</button>)}</section>)}
+    {!collapsed&&<section><small className="nav-heading">MORE MODULES</small>{[['announcements','Announcements'],['volunteers','Volunteers'],['training','Training'],['property','Property']].map(([key,label])=><button key={key} className={page===key?'nav-item selected':'nav-item'} onClick={()=>setPage(key)}><BookOpen size={18}/><span>{label}</span></button>)}</section>}</nav>
+   <div className="sidebar-bottom"><button className="nav-item" onClick={()=>setDark(!dark)}><ShieldCheck size={18}/>{!collapsed&&<span>{dark?'Light appearance':'Dark appearance'}</span>}</button><button className="nav-item logout-link" onClick={logout}><LogOut size={18}/>{!collapsed&&<span>Sign out</span>}</button>{!collapsed&&<div className="profile"><div className="profile-avatar">{user.fullName.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div><div><b>{user.fullName}</b><small>{user.email}</small></div></div>}</div>
+  </aside>
+  <main className="main">
+   <header className="topbar"><div><span className="crumb">NCBI /</span> <b>{title}</b></div><div className="top-actions"><span className="period-label">{dateNow.toUpperCase()}</span><button className="top-user" onClick={logout} title="Sign out"><span className="top-avatar">{user.fullName.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</span><LogOut size={15}/></button></div></header>
+   <div className="content">
+    {error&&<div className="page-error" role="alert">{error}<button onClick={()=>setError('')}>Dismiss</button></div>}{success&&<div className="page-success" role="status">{success}<button onClick={()=>setSuccess('')}>Dismiss</button></div>}
+    {page==='dashboard'&&<><div className="welcome"><div><div className="eyebrow">{dateNow.toUpperCase()} <span>•</span> {(user.organisation?.name||'NCBI').toUpperCase()}</div><h1>Welcome, {user.fullName.split(' ')[0]}</h1><p>Your authorised view of NCBI people, stewardship and ministry activity.</p></div><button className="gold-button" onClick={()=>setPage('organisations')}><Network size={16}/> View organisation</button></div>
+     <div className="scope-bar"><ShieldCheck size={16}/><span>Authorised scope</span><b>{user.organisation?.name||'NCBI'}</b><span className="scope-dot">•</span><span>{dashboard?.scope||0} organisation units accessible</span></div>
+     <div className="section-title"><div><h2>Church at a glance</h2><p>Live indicators from the NCBI database · current month</p></div><button className="refresh-button" onClick={refresh}><RefreshCw size={14}/> Refresh data</button></div>
+     <div className="stats-grid">{[['Active branches',dashboard?.metrics?.branches,Church],['Registered members',dashboard?.metrics?.members,Users],['Visitors',dashboard?.metrics?.visitors,HeartHandshake],['Attendance records',dashboard?.metrics?.attendanceRecordsThisMonth,Activity],['Confirmed income',money(dashboard?.metrics?.confirmedIncomeThisMonth),CircleDollarSign],['Confirmed expenses',money(dashboard?.metrics?.confirmedExpensesThisMonth),Wallet],['Pending approvals',dashboard?.metrics?.pendingApprovals,ClipboardList],['Organisation units',dashboard?.scope,Network]].map(([label,value,Icon])=><article className="stat-card" key={label}><div className="stat-top"><span>{label}</span><div className="stat-icon"><Icon size={19}/></div></div><strong className={typeof value==='string'?'money-value':''}>{value??0}</strong><small>Live data · authorised scope</small></article>)}</div>
+     <div className="bottom-grid live-grid"><article className="panel"><div className="panel-heading"><div><h3>Upcoming programmes</h3><p>Scheduled events in your authorised scope</p></div><button className="text-button" onClick={()=>setPage('events')}>Open events <ArrowUpRight size={14}/></button></div>{(dashboard?.upcomingEvents||[]).length?dashboard.upcomingEvents.map(ev=><div className="event-row" key={ev._id}><div className="date-tile"><CalendarDays size={18}/></div><div><b>{ev.title}</b><small>{fmt(ev.startAt)} · {ev.organisation?.name||'Organisation'}</small></div></div>):<div className="empty-state">No upcoming events have been recorded.</div>}</article><article className="panel"><div className="panel-heading"><div><h3>Organisation directory</h3><p>Units you can access</p></div><span className="count-badge">{organisations.length}</span></div>{organisations.slice(0,7).map(org=><div className="org-row" key={org._id}><span className="org-dot"/><div><b>{org.name}</b><small>{human(org.level)} · {org.code}</small></div><span className={'status-pill '+org.status}>{human(org.status)}</span></div>)}</article></div>
+    </>}
+    {page!=='dashboard'&&<><div className="module-heading"><div><div className="eyebrow">NCBI MANAGEMENT WORKSPACE</div><h1>{title}</h1><p>{page==='organisations'?'Manage the international, national, regional, district and branch structure.':page==='members'?'Maintain membership records, status and transfers.':page==='visitors'?'Record guests and manage follow-up through your church teams.':page==='attendance'?'Record and review attendance across church services and activities.':page==='finance'?'Record income and expenses with approval and confirmation controls.':page==='reports'?'Review live organisation, membership, attendance and stewardship indicators.':configs[page]?.description}</p></div>{canWrite&&page!=='reports'&&<button className="gold-button" onClick={openCreate}><Plus size={16}/> Add new</button>}</div>
+     {page==='reports'?<div className="report-grid">{[['Members',dashboard?.metrics?.members],['Visitors',dashboard?.metrics?.visitors],['Attendance this month',dashboard?.metrics?.attendanceRecordsThisMonth],['Active branches',dashboard?.metrics?.branches],['Confirmed income',money(dashboard?.metrics?.confirmedIncomeThisMonth)],['Confirmed expenses',money(dashboard?.metrics?.confirmedExpensesThisMonth)]].map(x=><article className="stat-card" key={x[0]}><span>{x[0]}</span><strong>{x[1]??'—'}</strong></article>)}</div>:<>
+      <div className="toolbar"><div className="table-search"><Search size={16}/><input placeholder="Search records…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="toolbar-right">{configs[page]&&<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="">All statuses</option>{['draft','pending','active','scheduled','in_progress','completed','cancelled','closed'].map(s=><option value={s} key={s}>{human(s)}</option>)}</select>}<button className="refresh-button" onClick={refresh}><RefreshCw size={14}/> Refresh</button></div></div>
+      {showForm&&<form className="editor panel" onSubmit={submit}><div className="editor-head"><div><h3>{editing?'Update':'Create'} {title.replace(/&.*/,'').trim()}</h3><p>Fields marked with * are required.</p></div><button type="button" className="icon-button close-editor" onClick={()=>setShowForm(false)}>×</button></div>
+       {page==='organisations'&&<div className="form-grid"><Field label="Organisation name *"><input required value={form.name||''} onChange={e=>set('name',e.target.value)}/></Field><Field label="Unique code *"><input required value={form.code||''} onChange={e=>set('code',e.target.value.toUpperCase())}/></Field><Field label="Hierarchy level *"><select value={form.level||'branch'} onChange={e=>set('level',e.target.value)}>{['international','national','regional','district','branch'].map(x=><option key={x}>{x}</option>)}</select></Field><Field label="Parent organisation"><select value={form.parent||''} onChange={e=>set('parent',e.target.value)}><option value="">Select parent (top-level only if permitted)</option>{organisations.map(o=><option value={o._id} key={o._id}>{o.name} · {o.level}</option>)}</select></Field><Field label="Country"><input value={form.country||'Kenya'} onChange={e=>set('country',e.target.value)}/></Field><Field label="Currency"><input maxLength="3" value={form.currency||'KES'} onChange={e=>set('currency',e.target.value.toUpperCase())}/></Field><Field label="Contact email"><input type="email" value={form.contactEmail||''} onChange={e=>set('contactEmail',e.target.value)}/></Field><Field label="Phone"><input value={form.phone||''} onChange={e=>set('phone',e.target.value)}/></Field></div>}
+       {(page==='members'||page==='visitors')&&<div className="form-grid"><Field label="First name *"><input required value={form.firstName||''} onChange={e=>set('firstName',e.target.value)}/></Field><Field label="Last name *"><input required value={form.lastName||''} onChange={e=>set('lastName',e.target.value)}/></Field><Field label="Phone"><input value={form.phone||''} onChange={e=>set('phone',e.target.value)}/></Field><Field label="Email"><input type="email" value={form.email||''} onChange={e=>set('email',e.target.value)}/></Field><Field label="Status"><select value={page==='visitors'?'visitor':form.status||'member'} disabled={page==='visitors'} onChange={e=>set('status',e.target.value)}>{['visitor','new_believer','member','worker','minister','inactive'].map(s=><option key={s} value={s}>{human(s)}</option>)}</select></Field><Field label="Gender"><select value={form.gender||''} onChange={e=>set('gender',e.target.value)}><option value="">Not specified</option><option>Female</option><option>Male</option><option>Other</option></select></Field><Field label="Date of birth"><input type="date" value={form.dateOfBirth?String(form.dateOfBirth).slice(0,10):''} onChange={e=>set('dateOfBirth',e.target.value)}/></Field><Field label="Date joined"><input type="date" value={form.joinedAt?String(form.joinedAt).slice(0,10):''} onChange={e=>set('joinedAt',e.target.value)}/></Field></div>}
+       {page==='attendance'&&<div className="form-grid"><Field label="Service / activity *"><input required value={form.activityName||''} onChange={e=>set('activityName',e.target.value)} placeholder="Sunday morning service"/></Field><Field label="Category"><select value={form.category||'sunday_service'} onChange={e=>set('category',e.target.value)}>{['sunday_service','midweek_service','prayer','bible_study','department','conference','outreach','other'].map(x=><option key={x} value={x}>{human(x)}</option>)}</select></Field><Field label="Date and time *"><input required type="datetime-local" value={form.heldAt||''} onChange={e=>set('heldAt',e.target.value)}/></Field><Field label="Member ID (optional)"><input value={form.member||''} onChange={e=>set('member',e.target.value)} placeholder="Member record ID"/></Field><Field label="Visitor name (if not a member)"><input value={form.visitorName||''} onChange={e=>set('visitorName',e.target.value)}/></Field></div>}
+       {page==='finance'&&<div className="form-grid"><Field label="Direction *"><select value={form.direction||'income'} onChange={e=>set('direction',e.target.value)}><option value="income">Income</option><option value="expense">Expense</option></select></Field><Field label="Category *"><input required value={form.category||''} onChange={e=>set('category',e.target.value)} placeholder="Offering, tithe, rent…"/></Field><Field label="Amount *"><input required type="number" min="0.01" step="0.01" value={form.amount||''} onChange={e=>set('amount',e.target.value)}/></Field><Field label="Currency"><input maxLength="3" value={form.currency||'KES'} onChange={e=>set('currency',e.target.value.toUpperCase())}/></Field><Field label="Date *"><input required type="date" value={form.occurredAt||''} onChange={e=>set('occurredAt',e.target.value)}/></Field><Field label="Payment method"><select value={form.paymentMethod||'cash'} onChange={e=>set('paymentMethod',e.target.value)}>{['cash','mpesa','bank','cheque','online','other'].map(x=><option key={x}>{x}</option>)}</select></Field><Field label="Receipt / reference"><input value={form.reference||''} onChange={e=>set('reference',e.target.value)}/></Field><Field label="Description"><input value={form.description||''} onChange={e=>set('description',e.target.value)}/></Field></div>}
+       {configs[page]&&<div className="form-grid"><Field label="Record title *"><input required value={form.title||''} onChange={e=>set('title',e.target.value)}/></Field><Field label="Reference"><input value={form.reference||''} onChange={e=>set('reference',e.target.value)}/></Field><Field label="Status"><select value={form.status||'active'} onChange={e=>set('status',e.target.value)}>{['draft','pending','active','scheduled','in_progress','completed','cancelled','closed'].map(s=><option key={s} value={s}>{human(s)}</option>)}</select></Field><Field label="Visibility"><select value={form.visibility||'organisation'} onChange={e=>set('visibility',e.target.value)}><option value="organisation">Organisation</option><option value="team">Team</option><option value="private">Private</option></select></Field><Field label="Start date"><input type="datetime-local" value={form.startAt||''} onChange={e=>set('startAt',e.target.value)}/></Field><Field label="End date"><input type="datetime-local" value={form.endAt||''} onChange={e=>set('endAt',e.target.value)}/></Field><Field label="Additional details (JSON)"><textarea className="json-field" rows="6" value={jsonData} onChange={e=>setJsonData(e.target.value)}/></Field></div>}
+       <div className="editor-actions"><button type="button" className="secondary-button" onClick={()=>setShowForm(false)}>Cancel</button><button className="gold-button" disabled={busy}>{busy?'Saving…':'Save record'}</button></div>
+      </form>}
+      <div className="table-wrap panel"><table><thead><tr>{(page==='organisations'?['Organisation','Code','Level','Parent','Status','Actions']:page==='members'||page==='visitors'?['Name','Phone','Email','Status','Joined','Actions']:page==='attendance'?['Activity','Attendee','Category','Date','Branch']:page==='finance'?['Date','Direction','Category','Amount','Method','Status','Actions']:['Title','Reference','Status','Start date','Last updated','Actions']).map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>
+       {filteredRows.map(row=><tr key={row._id||row.id}>
+        {page==='organisations'?<><td><b>{row.name}</b></td><td>{row.code}</td><td>{human(row.level)}</td><td>{organisations.find(o=>String(o._id)===String(row.parent))?.name||'—'}</td><td><span className={'status-pill '+row.status}>{human(row.status)}</span></td><td><select className="inline-select" value={row.status} onChange={async e=>{try{await api('/workspace/organisations/'+row._id+'/status',token,{method:'PATCH',body:JSON.stringify({status:e.target.value})});refresh();}catch(err){setError(err.message);}}}><option value="pending">Pending</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="archived">Archived</option></select></td></>:
+        page==='members'||page==='visitors'?<><td><b>{row.firstName} {row.lastName}</b><small className="cell-sub">{row.membershipNumber||'No membership number'}</small></td><td>{row.phone||'—'}</td><td>{row.email||'—'}</td><td><span className="status-pill">{human(row.status)}</span></td><td>{fmt(row.joinedAt||row.createdAt)}</td><td><button className="row-action" onClick={()=>openEdit(row)}><Pencil size={14}/> Edit</button></td></>:
+        page==='attendance'?<><td><b>{row.activityName}</b></td><td>{row.member?(row.member.firstName+' '+row.member.lastName):(row.visitorName||'—')}</td><td>{human(row.category)}</td><td>{fmt(row.heldAt)}</td><td>{row.organisation?.name||'—'}</td></>:
+        page==='finance'?<><td>{fmt(row.occurredAt)}</td><td>{human(row.direction)}</td><td>{row.category}</td><td>{row.currency} {Number(row.amount?.$numberDecimal||row.amount||0).toLocaleString('en-KE')}</td><td>{human(row.paymentMethod)}</td><td><span className={'status-pill '+row.status}>{human(row.status)}</span></td><td><div className="row-actions">{row.status==='submitted'&&<button className="row-action approve" onClick={()=>financeDecision(row,'approve')}><CheckCircle size={14}/> Approve</button>}{row.status==='approved'&&<button className="row-action approve" onClick={()=>financeDecision(row,'confirm')}><CheckCircle size={14}/> Confirm</button>}{['submitted','approved'].includes(row.status)&&<button className="row-action reject" onClick={()=>financeDecision(row,'reject')}><XCircle size={14}/> Reject</button>}</div></td></>:
+        <><td><b>{row.title}</b></td><td>{row.reference||'—'}</td><td><span className={'status-pill '+row.status}>{human(row.status)}</span></td><td>{fmt(row.startAt)}</td><td>{fmt(row.updatedAt||row.createdAt)}</td><td><div className="row-actions"><button className="row-action" onClick={()=>openEdit(row)}><Pencil size={14}/> Edit</button><button className="row-action reject" onClick={()=>archive(row)}><Archive size={14}/> Archive</button></div></td></>}
+       </tr>)}
+       {!filteredRows.length&&<tr><td colSpan="8" className="empty-cell">No records found. Add a record or adjust your search.</td></tr>}
+      </tbody></table><div className="table-footer"><span>Showing {filteredRows.length} of {pagination.total||filteredRows.length} records</span><div><button disabled={pagination.page<=1} onClick={()=>loadPage(token,page,pagination.page-1)}><ChevronLeft size={15}/></button><span>Page {pagination.page||1} of {pagination.pages||1}</span><button disabled={pagination.page>=(pagination.pages||1)} onClick={()=>loadPage(token,page,pagination.page+1)}><ChevronRight size={15}/></button></div></div></div>
+     </>}
+    </>}
+    <footer><b>NCBI</b> · ONE CHURCH. ONE VISION. ONE CONNECTED MANAGEMENT SYSTEM. <span>Live database workspace</span></footer>
+   </div>
+  </main>
+ </div>;
 }
 export default App;
