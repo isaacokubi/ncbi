@@ -82,13 +82,17 @@ router.post('/purchase-requests/:id/decision',async(req,res,next)=>{try{
  const decision=String(req.body.decision||''),note=String(req.body.note||'').trim().slice(0,500),ids=await scopedIds(req);
  const item=await PurchaseRequest.findOne({_id:req.params.id,organisation:{$in:ids}});
  if(!item)return res.status(404).json({message:'Purchase request not found'});
- const error=supplierDecisionError({status:item.status,decision,actorId:req.user._id,createdBy:item.createdBy});
+ const error=supplierDecisionError({status:item.status,decision,actorId:req.user._id,createdBy:item.createdBy,approvals:item.approvals||[]});
  if(error)return res.status(409).json({message:error});
  if(decision==='reject'&&!note)return res.status(400).json({message:'A rejection reason is required'});
- item.status=decision==='approve'?'approved':'rejected';item.decidedBy=req.user._id;item.decisionNote=note;
- if(decision==='approve'){item.approvedBy=req.user._id;item.approvedAt=new Date();}
- await item.save();await audit(req,item.organisation,'purchase_request_'+decision,'purchase_request',item,'Purchase request '+item.status,{note});
- res.json({purchaseRequest:item});
+ const policy=await resolveApprovalPolicy(item.organisation,'purchase_request',item.amount);
+ if(policy&&!policy.approverRoles.includes(req.user.role))return res.status(403).json({message:'Your role is not authorised by the purchase request approval matrix'});
+ if(!policy&&!approverRoles.has(req.user.role))return res.status(403).json({message:'Independent procurement approval permission required'});
+ const progress=applyApprovalDecision({record:item,policy,actor:req.user,decision,note});
+ if(progress.error)return res.status(409).json({message:progress.error});
+ await item.save();
+ await audit(req,item.organisation,'purchase_request_'+decision,'purchase_request',item,'Purchase request '+(decision==='reject'?'rejected':progress.complete?'approved':'approval recorded'),{note,remainingApprovals:progress.remaining});
+ res.json({purchaseRequest:item,approvalProgress:{complete:progress.complete,remaining:progress.remaining}});
 }catch(e){next(e);}});
 
 router.get('/invoices',async(req,res,next)=>{try{
