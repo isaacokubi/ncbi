@@ -2,7 +2,8 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
-import { AuditLog, LedgerAccount, JournalEntry, Supplier, PurchaseRequest, SupplierInvoice, SupplierPayment } from '../models/domain.js';
+import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseRequest, SupplierInvoice, SupplierPayment } from '../models/domain.js';
+import { budgetPeriodRange, selectApplicableBudget, budgetPostingDecision } from '../domain/budgetControl.js';
 import { supplierNameError, supplierInvoiceError, supplierPaymentError, supplierDecisionError, invoicePaymentStatus, moneyToMinor } from '../domain/supplierWorkflow.js';
 
 const router=Router();
@@ -117,6 +118,18 @@ router.post('/invoices/:id/decision',async(req,res,next)=>{try{
  if(error)return res.status(409).json({message:error});
  if(decision==='reject'&&!note)return res.status(400).json({message:'A rejection reason is required'});
  if(decision==='approve'){
+  const expenseAccount=await LedgerAccount.findOne({_id:invoice.expenseAccount,organisation:invoice.organisation,active:true,type:'expense'});
+  if(!expenseAccount)return res.status(409).json({message:'The invoice expense account is no longer active'});
+  const budgets=await Budget.find({organisation:invoice.organisation,account:invoice.expenseAccount,fiscalYear:invoice.invoiceDate.getUTCFullYear(),status:'approved'}).lean();
+  const applicable=selectApplicableBudget(budgets,invoice.invoiceDate);
+  if(applicable){
+   const range=budgetPeriodRange(invoice.invoiceDate,applicable.period);
+   const journals=await JournalEntry.find({organisation:invoice.organisation,status:'posted',entryDate:{$gte:range.start,$lte:range.end},'lines.account':invoice.expenseAccount}).select('lines').lean();
+   let posted=0n;
+   for(const journal of journals)for(const line of journal.lines)if(String(line.account)===String(invoice.expenseAccount))posted+=(moneyToMinor(String(line.debit))||0n)-(moneyToMinor(String(line.credit))||0n);
+   const decisionResult=budgetPostingDecision({budgetAmount:String(applicable.amount),postedAmount:(posted/100n).toString()+'.'+(posted%100n).toString().padStart(2,'0'),proposedAmount:String(invoice.amount)});
+   if(!decisionResult.allowed)return res.status(409).json({message:'Approving this supplier invoice would exceed the approved expense budget',budget:decisionResult});
+  }
   const existing=await JournalEntry.findOne({sourceType:'supplier_invoice',sourceId:invoice._id});
   if(!existing){
    const entry=await JournalEntry.create({organisation:invoice.organisation,entryNumber:'SI-'+String(invoice._id),entryDate:invoice.invoiceDate,description:'Supplier invoice '+invoice.invoiceNumber,status:'posted',lines:[{account:invoice.expenseAccount,debit:String(invoice.amount),credit:'0.00'},{account:invoice.payableAccount,debit:'0.00',credit:String(invoice.amount)}],createdBy:invoice.createdBy,approvedBy:req.user._id,postedAt:new Date(),sourceType:'supplier_invoice',sourceId:invoice._id});
