@@ -14,8 +14,12 @@ export function registrationDecisionError(actor, target) {
     return 'Registration approval permission required.';
   }
 
-  if (target?.registrationCategory !== 'non_member') {
-    return 'Administrators may approve non-member applications only. Member applications belong to the selected branch pastor.';
+  if (!['non_member','official'].includes(target?.registrationCategory)) {
+    return 'Administrators may approve non-member and official applications only. Member applications belong to the selected branch pastor.';
+  }
+  if (target?.registrationCategory === 'official') {
+    const rank = { super_admin:100, international_executive:90, national_admin:80, regional_overseer:70, district_pastor:60, branch_pastor:50, branch_admin:45, treasurer:35, department_leader:25, member:10 };
+    if (!target.requestedRole || rank[target.requestedRole] === undefined || rank[target.requestedRole] >= rank[role]) return 'You are not authorised to approve the requested church dashboard.';
   }
 
   if (role === 'branch_admin' && (!actorOrganisation || targetOrganisation !== actorOrganisation)) {
