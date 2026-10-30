@@ -147,3 +147,10 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Super Admin and National Admin can edit the home, about, mission, ministries, branches, programmes, news and contact page copy, card arrays, navigation labels and footer from Administration → Public website.
 - Logo replacement remains in Administration → Church branding. Branch records and public event/announcement content remain sourced from the existing organisation and operations modules.
 - The protected CMS API validates page keys and object shapes, limits the payload to 100 KB and renders user copy as React text rather than executable HTML.
+
+
+## Approved-budget enforcement at journal posting
+- Journal posting now checks positive net debits to active expense accounts against the most specific approved budget available for the journal date (monthly, then quarterly, then annual).
+- The calculation uses decimal minor units rather than floating-point arithmetic. If an approved budget exists and the proposed posting would exceed it, posting is blocked with a conflict response and an audit event.
+- No approved budget configured for an account and period is not interpreted as a zero allocation; posting remains available and the absence of an approved allocation is not silently treated as an approval.
+- This control currently measures posted actual expenditure. It does not yet reserve pending commitments, provide authorised overspend overrides, or provide an atomic cross-request budget reservation under concurrent posting. Those controls and MongoDB concurrency/integration tests remain outstanding.

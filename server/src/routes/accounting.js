@@ -6,6 +6,7 @@ import { LedgerAccount, JournalEntry, Budget, BankReconciliation, AuditLog } fro
 import { Organisation } from '../models/index.js';
 import { buildFinancialStatements } from '../domain/financialStatements.js';
 import { budgetDecisionError, budgetTransition } from '../domain/financePolicy.js';
+import { budgetPeriodRange, budgetPostingDecision, selectApplicableBudget } from '../domain/budgetControl.js';
 
 const router=Router();
 router.use(requireAuth);
@@ -127,6 +128,26 @@ router.post('/journals/:id/post',async(req,res,next)=>{try{
  if(!journal)return res.status(404).json({message:'Journal entry not found'});
  if(String(journal.createdBy)===String(req.user._id))return res.status(403).json({message:'The creator cannot post their own journal'});
  if(journal.status!=='submitted')return res.status(409).json({message:'Only submitted journal entries can be posted'});
+ const expenseAccountIds=[...new Set(journal.lines.map(line=>String(line.account)))];
+ const expenseAccounts=await LedgerAccount.find({_id:{$in:expenseAccountIds},organisation:journal.organisation,type:'expense',active:true}).select('_id code name').lean();
+ const fiscalYear=journal.entryDate.getUTCFullYear();
+ for(const account of expenseAccounts){
+  let proposed=0n;
+  for(const line of journal.lines)if(String(line.account)===String(account._id))proposed+=(cents(line.debit)||0n)-(cents(line.credit)||0n);
+  if(proposed<=0n)continue;
+  const budgets=await Budget.find({organisation:journal.organisation,account:account._id,fiscalYear,status:'approved'}).lean();
+  const applicable=selectApplicableBudget(budgets,journal.entryDate);
+  if(!applicable)continue;
+  const range=budgetPeriodRange(journal.entryDate,applicable.period);
+  const postedJournals=await JournalEntry.find({organisation:journal.organisation,status:'posted',entryDate:{$gte:range.start,$lte:range.end},'lines.account':account._id}).select('lines').lean();
+  let posted=0n;
+  for(const existing of postedJournals)for(const line of existing.lines)if(String(line.account)===String(account._id))posted+=(cents(line.debit)||0n)-(cents(line.credit)||0n);
+  const control=budgetPostingDecision({budgetAmount:String(applicable.amount),postedAmount:amountText(posted),proposedAmount:amountText(proposed)});
+  if(!control.allowed){
+   await AuditLog.create({organisation:journal.organisation,actor:req.user._id,action:'budget_limit_blocked',entity:'journal_entry',recordId:journal._id,summary:'Journal posting blocked by approved budget limit',metadata:{account:account.code,period:applicable.period,budget:String(applicable.amount),posted:amountText(posted),proposed:amountText(proposed),projected:control.projected}});
+   return res.status(409).json({message:`Posting would exceed the approved budget for account ${account.code} – ${account.name}`,account:account.code,period:applicable.period,budget:String(applicable.amount),posted:amountText(posted),proposed:amountText(proposed),projected:control.projected});
+  }
+ }
  journal.status='posted';journal.approvedBy=req.user._id;journal.postedAt=new Date();await journal.save();
  await AuditLog.create({organisation:journal.organisation,actor:req.user._id,action:'post',entity:'journal_entry',recordId:journal._id,summary:'Posted journal '+journal.entryNumber});
  res.json({journal});
