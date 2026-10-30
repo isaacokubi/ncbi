@@ -260,3 +260,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:1050px){.dashboard-hero{padding:24px}.dashboard-lower-grid{gap:14px}.dashboard-stat-card{padding:17px}}
 @media(max-width:760px){.dashboard-page{gap:16px}.dashboard-hero{flex-direction:column;padding:21px;gap:18px}.dashboard-hero-actions{width:100%;align-items:stretch;flex-direction:row;flex-wrap:wrap}.dashboard-hero-actions>*{flex:1;justify-content:center}.dashboard-context{flex-wrap:wrap}.dashboard-lower-grid{grid-template-columns:1fr}.dashboard-link-grid{grid-template-columns:1fr}.dashboard-section-heading h2{font-size:19px}.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dashboard-stat-card{min-height:136px;padding:14px}.dashboard-stat-card>strong{font-size:24px}.dashboard-stat-card>strong.money-value{font-size:15px}.dashboard-stat-card>small{font-size:11px}.module-heading{padding-bottom:16px;margin-bottom:17px}}
 @media(max-width:430px){.dashboard-stats{grid-template-columns:1fr}.dashboard-hero-actions{flex-direction:column}.dashboard-hero-actions>*{width:100%}.dashboard-role-pill{margin-left:0}}
+
+/* Reporting workspaces: visual trends retain their underlying tabular values. */
+.report-chart{height:300px;width:100%;padding:12px 8px 8px;min-width:0}
+.finance-chart{height:275px}
+.report-data-table{margin-top:10px}
+.report-finance-controls{display:flex;align-items:center;gap:10px;margin:14px 0}
+.report-finance-controls label{font-size:12px;color:var(--muted);font-weight:600}
+.report-finance-controls select{min-width:100px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface);color:var(--text)}
+.report-finance-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.report-finance-summary>div{display:flex;flex-direction:column;gap:7px;padding:13px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+.report-finance-summary small{font-size:11px;color:var(--muted)}
+.report-finance-summary b{font-size:clamp(13px,1.3vw,18px);color:var(--purple);overflow-wrap:anywhere}
+.dark .report-finance-summary b{color:#e6d8ed}
+.dark .report-finance-controls select{background:#211a26;color:#eee}
+@media(max-width:700px){.report-chart{height:250px;padding:8px 0}.report-finance-summary{grid-template-columns:1fr}.report-finance-summary>div{padding:11px}}
