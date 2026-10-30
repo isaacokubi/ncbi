@@ -14,7 +14,7 @@ const now = new Date();
 const dateOffset = (days) => new Date(now.getTime() - days * 86400000);
 const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
 const passwordHash = await bcrypt.hash(password, 12);
-const counts = { organisations: 0, users: 0, members: 0, attendance: 0, finance: 0, operations: 0, inventory: 0 };
+const counts = { organisations: 0, users: 0, members: 0, attendance: 0, finance: 0, operations: 0, inventory: 0 };\nconst accountLog = [];
 
 await connectDatabase();
 try {
