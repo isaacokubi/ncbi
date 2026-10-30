@@ -293,3 +293,13 @@ Automated Node policy tests cover headquarters communication approval, approval-
 - Transport now has a separate vehicle maintenance register for routine service, inspections, repairs, licensing, costs, odometer readings and next-service dates, in addition to trip scheduling.
 - Vehicle maintenance records are stored as organisation-scoped operational records and use the existing role checks, validation and audit trail.
 - These workflows still require live role-based acceptance testing with the deployed MongoDB environment; CI checks validate source, policy and client build, not production data or permissions.
+
+
+## Class, roster and fleet workflow hardening (30 October 2026)
+
+- Class enrolment approval is now a dedicated server-side action for senior leadership. The submitter cannot approve their own request, and generic record updates cannot directly change enrolment status or replace attendance history.
+- Class attendance is appended through a dedicated endpoint, validates date/title/status, rejects duplicate learner/session entries, is limited to approved enrolments and retains the most recent 100 sessions with an audit event.
+- Ministry rosters support individual attendance outcomes for each assigned member (present, late, absent or excused). The server rejects attendance entries for people who are not assigned to that roster.
+- The transport workspace includes a separate vehicle maintenance register. It validates service type, service status, dates, odometer and costs, and highlights next-service dates that are overdue. Trip records require a vehicle registration and a return time later than departure.
+- GitHub Actions run [41072992067](https://github.com/isaacokubi/ncbi/actions/runs/41072992067) passed server/client checks, policy tests, terminology tests and the production client build for commit `7e36fb323d3df2072f74e54d81cd0e5107fad952`.
+- These automated checks do not establish that production Cloudinary credentials, MongoDB replica-set transactions, live role assignments or real church workflows have been verified in the deployed environment. Complete those checks with authorised test accounts before declaring production readiness.
