@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ACTION_TERMS, DEFAULT_SITE_CONTENT, EMPTY_STATES, MODULE_PRESENTATION, NAVIGATION_TERMS, ROLE_LABELS, ROLE_PRESENTATION, SUCCESS_MESSAGES } from '../src/content/terminology.js';
+import { ACTION_TERMS, DEFAULT_SITE_CONTENT, mergeSiteContent, EMPTY_STATES, MODULE_PRESENTATION, NAVIGATION_TERMS, ROLE_LABELS, ROLE_PRESENTATION, SUCCESS_MESSAGES } from '../src/content/terminology.js';
 
 test('all governance roles have distinct professional dashboard copy', () => {
   const expectedRoles = ['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer','department_leader'];
@@ -28,7 +28,24 @@ test('public defaults cover each functioning public navigation destination witho
   for (const page of ['home','about','mission','ministries','branches','programmes','news','contact']) {
     assert.ok(DEFAULT_SITE_CONTENT.pages[page], `Missing public page ${page}`);
   }
-  assert.match(DEFAULT_SITE_CONTENT.pages.about.body, /local contexts/);
-  assert.match(DEFAULT_SITE_CONTENT.pages.branches.empty, /directory is being updated/);
-  assert.equal(DEFAULT_SITE_CONTENT.navigation.branches, 'Find a branch');
+  assert.match(DEFAULT_SITE_CONTENT.pages.about.body, /commitment to faith in Jesus Christ/);
+  assert.match(DEFAULT_SITE_CONTENT.pages.branches.empty, /public branch directory is currently being updated/);
+  assert.equal(DEFAULT_SITE_CONTENT.navigation.branches, 'Our branches');
+  assert.ok(DEFAULT_SITE_CONTENT.pages.mission.cards.length >= 4);
+  assert.match(DEFAULT_SITE_CONTENT.pages.programmes.subtitle, /conferences/);
+  assert.match(DEFAULT_SITE_CONTENT.pages.news.subtitle, /official church announcements/);
+});
+
+
+test('legacy public starter copy is upgraded while editor customisations are preserved', () => {
+  const migrated = mergeSiteContent({
+    navigation: { branches: 'Find a branch' },
+    pages: {
+      about: { body: 'New Church Believers International is a Christian church community with congregations serving in their local contexts. NCBI brings people together for worship, fellowship, biblical learning and practical service. Our shared identity is expressed in the call to serve God and care for our neighbours.' },
+      contact: { body: 'A custom contact message approved by NCBI.' }
+    }
+  });
+  assert.match(migrated.pages.about.body, /commitment to faith in Jesus Christ/);
+  assert.equal(migrated.pages.contact.body, 'A custom contact message approved by NCBI.');
+  assert.equal(migrated.navigation.branches, 'Our branches');
 });
