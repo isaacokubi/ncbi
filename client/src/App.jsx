@@ -253,7 +253,7 @@ function App(){
  const loadPage=useCallback(async(t,key=page,p=1)=>{
    setError(''); setSuccess('');
    if(key==='dashboard'){await loadDashboard(t);return;}
-   if(key==='security'||key==='branding'){setRows([]);return;}
+   if(key==='security'||key==='branding'||key==='websiteContent'){setRows([]);return;}
    if(key==='registrations'){const r=await api('/auth/registrations/pending',t);setRows(r.registrations||[]);setPagination({page:1,pages:1,total:(r.registrations||[]).length});return;}
    if(key==='organisations'){const r=await api('/workspace/organisations',t);setRows(r.organisations||[]);setPagination({page:1,pages:1,total:r.organisations?.length||0});return;}
    if(key==='users'){const [r,m]=await Promise.all([api('/workspace/users',t),api('/workspace/members?limit=100',t)]);setRows(r.users||[]);setMemberOptions(m.members||[]);setPagination({page:1,pages:1,total:r.users?.length||0});return;}
