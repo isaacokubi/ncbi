@@ -1369,3 +1369,37 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
     transform: scaleX(1);
   }
 }
+
+
+/* Member portal production polish: consistent section cards, clear loading
+   feedback, responsive action controls and accessible refresh animation. */
+.member-portal{width:100%;max-width:1440px;margin-inline:auto;gap:20px}
+.member-portal .panel{min-width:0;border-radius:14px;box-shadow:0 8px 26px rgba(38,18,48,.055)}
+.member-portal .portal-welcome{border-left:4px solid var(--gold);padding:26px 28px}
+.member-portal .portal-kpi{border-radius:13px;box-shadow:0 5px 18px rgba(38,18,48,.045);transition:transform .18s ease,box-shadow .18s ease}
+.member-portal .portal-kpi:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(38,18,48,.09)}
+.member-portal .portal-feature,.member-portal .portal-membership{padding:21px}
+.member-portal .portal-feature .panel-heading{margin-bottom:14px}
+.member-portal .portal-feature .panel-heading h3,.member-portal .portal-membership .panel-heading h3{font-size:17px}
+.member-portal .table-wrap{max-width:100%;overflow-x:auto}
+.member-portal table{min-width:520px}
+.member-portal .empty-state{padding:16px;border:1px dashed var(--line);border-radius:10px;background:rgba(128,96,34,.035)}
+.portal-loading{display:flex;align-items:center;gap:11px;padding:18px 20px;color:var(--muted);font-size:13px}
+.module-actions .secondary-button:disabled{opacity:.65;cursor:wait}
+.spin{animation:ncbiPortalSpin .9s linear infinite}
+@keyframes ncbiPortalSpin{to{transform:rotate(360deg)}}
+.security-workspace{width:100%;max-width:760px}
+.security-workspace>h2{font-size:22px;color:var(--purple);margin:0}
+.security-workspace>p{max-width:680px;line-height:1.65}
+.security-card{gap:16px}
+.security-card input:focus-visible{outline:3px solid rgba(154,116,45,.22);border-color:var(--gold)}
+@media(max-width:720px){
+ .member-portal{gap:13px}
+ .member-portal .portal-welcome{padding:18px}
+ .member-portal .portal-feature,.member-portal .portal-membership{padding:15px}
+ .member-portal .portal-welcome-actions{width:100%;align-items:stretch}
+ .member-portal .portal-welcome-actions .gold-button{width:100%;justify-content:center}
+ .module-actions{width:100%}
+ .module-actions .secondary-button{width:100%;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){.member-portal .portal-kpi,.spin{animation:none;transition:none}}
