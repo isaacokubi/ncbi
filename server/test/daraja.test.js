@@ -10,7 +10,7 @@ test('Daraja phone normalisation accepts Kenyan mobile formats',()=>{
 });
 
 test('Daraja phone normalisation rejects invalid or non-Kenyan numbers',()=>{
- assert.equal(normalizeKenyanPhone('23456789'),null);
+ assert.equal(normalizeKenyanPhone('123456789'),null);
  assert.equal(normalizeKenyanPhone('070012345'),null);
  assert.equal(normalizeKenyanPhone('+1 415 555 0100'),null);
  assert.equal(normalizeKenyanPhone(''),null);
