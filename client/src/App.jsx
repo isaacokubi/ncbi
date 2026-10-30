@@ -17,7 +17,7 @@ const seniorRoles=['super_admin','international_executive','national_admin','reg
 const branchAdminRoles=[...seniorRoles,'branch_admin'];
 function visibleForRole(key,role){
  if(role==='member')return key==='memberPortal'||key==='security';
- if(key==='registrations')return ['super_admin','international_executive','national_admin','branch_pastor'].includes(role);
+ if(key==='registrations')return branchAdminRoles.includes(role);
  if(role==='treasurer')return ['dashboard','security','finance','payments','accounts','journals','budgets','reconciliation','reports'].includes(key);
  if(role==='department_leader')return ['dashboard','security','attendance','departments','events','discipleship','services'].includes(key);
  if(key==='memberPortal')return false;
