@@ -751,6 +751,12 @@ router.patch('/:entity/:id', async (req, res, next) => {
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+      if (entity === 'member_enrolment' && payload.attendanceSessions !== undefined) {
+        if (!Array.isArray(payload.attendanceSessions) || payload.attendanceSessions.length > 100) return res.status(400).json({ message: 'Attendance history must contain no more than 100 sessions' });
+        for (const session of payload.attendanceSessions) {
+          if (!session || typeof session.sessionTitle !== 'string' || !session.sessionTitle.trim() || session.sessionTitle.length > 160 || !['present','late','absent','excused'].includes(session.attendanceStatus) || Number.isNaN(new Date(session.sessionDate).getTime())) return res.status(400).json({ message: 'Each attendance entry needs a valid date, session title and attendance status' });
+        }
+      }
       const memberLinkError = await validateLinkedMember(entity, payload, record.organisation);
       if (memberLinkError) return res.status(400).json({ message: memberLinkError });
       const structuredDataError = validateStructuredOperationData(entity, payload);
