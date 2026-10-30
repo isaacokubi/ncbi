@@ -38,7 +38,7 @@ async function validateVolunteerRoster(entity, data, organisation, excludeId=nul
   if (memberIds.some(id => !mongoose.isValidObjectId(id)) || new Set(memberIds).size !== memberIds.length) return 'Roster member selections must be valid and unique';
   const eligible = await Member.find({ _id: { $in: memberIds }, homeOrganisation: organisation, status: { $in: ['new_believer','member','worker','minister'] } }).select('_id firstName lastName').lean();
   if (eligible.length !== memberIds.length) return 'Every assigned person must be an eligible member of this church organisation';
-  data.assignedMembers = eligible.map(member => member.firstName + ' ' + member.lastName).join(', ') + (data.rosterNotes ? ' · ' + data.rosterNotes : '');
+  data.assignedMembers = eligible.map(member => member.firstName + ' ' + member.lastName).join(', ') + (data.assignmentNotes ? ' · ' + data.assignmentNotes : '');
   if (data.serviceDate && data.serviceTime) {
     const conflictFilter = { organisation, entity: 'volunteer_schedule', status: { $nin: ['archived','cancelled'] }, 'data.serviceDate': data.serviceDate, 'data.serviceTime': data.serviceTime, 'data.assignedMemberIds': { $in: memberIds } };
     if (excludeId) conflictFilter._id = { $ne: excludeId };
