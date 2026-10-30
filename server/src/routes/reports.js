@@ -103,14 +103,8 @@ router.get('/overview', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-function csvCell(value) {
-  let text = value === null || value === undefined ? '' : String(value);
-  if (/^[\s]*[=+\-@]/.test(text)) text = "'" + text;
-  return '"' + text.replaceAll('"', '""') + '"';
-}
-function csvDocument(rows) {
-  return ['section,period,metric,dimension,value,currency', ...rows.map(row => row.map(csvCell).join(','))].join('\r\n') + '\r\n';
-}
+import { csvDocument } from '../domain/reportCsv.js';
+
 router.get('/overview.csv', async (req, res, next) => {
   try {
     const months = Math.min(24, Math.max(3, Number.parseInt(req.query.months, 10) || 12));
