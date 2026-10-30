@@ -104,3 +104,6 @@
 .dark .module-heading p{color:#b5a9ba}
 @media(max-width:850px){.module-heading{align-items:flex-start;flex-direction:column}.report-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.toolbar{align-items:stretch;flex-direction:column}.table-search{max-width:none}.toolbar-right{justify-content:space-between}.form-grid{grid-template-columns:1fr}.report-grid{grid-template-columns:1fr}.module-heading h1{font-size:23px}.editor{padding:13px}.table-footer{gap:8px;flex-direction:column;align-items:flex-start}}
+
+.module-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.field-help{grid-column:1/-1;color:var(--muted);font-size:10px;line-height:1.6}
