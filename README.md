@@ -61,3 +61,12 @@ Attendance submissions are validated before persistence: activity names, dates, 
 Organisation scopes are resolved server-side from the hierarchy; client-supplied organisation IDs are never accepted without checking the user's permitted subtree. Financial values use Decimal128. Sensitive pastoral data should undergo a privacy impact assessment and field-level access review before production. This codebase is an implementation baseline, not a claim of production certification.
 
 Run `npm run check` and `npm run build` before deployment. Integration, migration, backup/restore, security, accessibility and user acceptance testing remain required.
+
+
+## Public website content management
+
+The public website is editable from the authenticated workspace by **Super Admin** and **National Admin** accounts. Open **Administration → Public website** to manage the public homepage, About NCBI, mission, ministries, branch directory introduction, programmes introduction, news introduction, contact page, navigation labels and footer copy. The editor stores structured page content in MongoDB and publishes it through the public content API; visitors do not need an account to read it.
+
+The church emblem is managed separately under **Administration → Church branding**. Branch directory entries are sourced from active branch organisations. Public programmes and news/announcements remain managed through the Events & Programmes and Announcements workspaces and appear on the website only when their records are explicitly marked public and meet the publication status/date rules.
+
+Website content changes are restricted server-side to super_admin and national_admin accounts. The public read endpoint exposes only published website copy and public branch/event/announcement records; the editor endpoint requires an authenticated authorised account. Website page content is limited to 100 KB.
