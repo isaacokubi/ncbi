@@ -12,7 +12,6 @@ if (!password || password.length < 6) {
 
 const now = new Date();
 const dateOffset = (days) => new Date(now.getTime() - days * 86400000);
-const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
 const passwordHash = await bcrypt.hash(password, 12);
 const counts = { organisations: 0, users: 0, members: 0, attendance: 0, finance: 0, operations: 0, inventory: 0 };
 const accountLog = [];
@@ -75,6 +74,7 @@ try {
   }
 
   async function operation(org, actor, entity, reference, title, data = {}, status = 'active', visibility = 'organisation') {
+    const existing = await OperationsRecord.exists({ organisation: org._id, entity, reference });
     const doc = await OperationsRecord.findOneAndUpdate(
       { organisation: org._id, entity, reference },
       { $setOnInsert: {
@@ -84,7 +84,7 @@ try {
       } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    if (doc.createdAt && Math.abs(now - doc.createdAt) < 5000) counts.operations += 1;
+    if (!existing) counts.operations += 1;
     return doc;
   }
 
@@ -153,9 +153,8 @@ try {
   for (let i = 0; i < nationals.length; i += 1) {
     await user({ fullName: `${nationals[i].name} Administrator`, email: `national.${nationalSpecs[i][1].toLowerCase()}@demo.ncbi.org`, role: 'national_admin', organisation: nationals[i] });
   }
-  const regionalUsers = [];
   for (let i = 0; i < regions.length; i += 1) {
-    regionalUsers.push(await user({ fullName: `${regions[i].name} Overseer`, email: `overseer.${regionSpecs[i][1].toLowerCase()}@demo.ncbi.org`, role: 'regional_overseer', organisation: regions[i] }));
+    await user({ fullName: `${regions[i].name} Overseer`, email: `overseer.${regionSpecs[i][1].toLowerCase()}@demo.ncbi.org`, role: 'regional_overseer', organisation: regions[i] }));
   }
   const districtUsers = [];
   for (let i = 0; i < districts.length; i += 1) {
@@ -172,7 +171,6 @@ try {
     branchActors.push({ pastor, admin, treasurer, leader, district: districtUsers[branchSpecs[i][2]], national: nationals[[0,0,0,0,1][i]] });
   }
 
-  const accountByOrg = new Map();
   async function account(org, code, name, type, normalBalance) {
     const doc = await LedgerAccount.findOneAndUpdate(
       { organisation: org._id, code },
@@ -188,7 +186,6 @@ try {
     const cash = await account(org, '1000', 'Cash and Mobile Money', 'asset', 'debit');
     const income = await account(org, '4000', 'Tithes and Offerings', 'income', 'credit');
     const expense = await account(org, '5000', 'Ministry and Operations', 'expense', 'debit');
-    accountByOrg.set(String(org._id), { cash, income, expense });
 
     const members = [];
     const firstNames = ['Alice','Brian','Carol','David','Esther','Faith','George','Hannah','Isaac','Janet','Kevin','Lydia','Moses','Naomi','Oscar','Priscilla','Samuel','Tabitha','Victor','Winnie','Yusuf','Zawadi','Peter','Ruth','Daniel'];
@@ -255,12 +252,31 @@ try {
     await operation(org, actors.pastor, 'announcement', `DEMO-${b}-NOTICE`, 'Community Prayer and Outreach Week', { message: 'Join the church family for prayer, visitation and community service.', public: true }, 'active', 'public');
     await operation(org, actors.pastor, 'project', `DEMO-${b}-PROJECT`, 'Sanctuary Improvement Project', { budget: 250000 + b * 50000, progressPercent: 20 + b * 12 }, 'in_progress');
     await operation(org, actors.pastor, 'visitor_follow_up', `DEMO-${b}-FOLLOWUP`, 'New Visitor Follow-up List', { assignedTeam: 'Welcome Team', followUpsDue: 5 + b });
-    const inventory = await InventoryItem.findOneAndUpdate(
+    const inventoryExists = await InventoryItem.exists({ organisation: org._id, itemCode: 'DEMO-CHAIRS' });
+    await InventoryItem.findOneAndUpdate(
       { organisation: org._id, itemCode: 'DEMO-CHAIRS' },
       { $setOnInsert: { organisation: org._id, itemCode: 'DEMO-CHAIRS', itemName: 'Stacking Church Chairs', category: 'Furniture', unit: 'pieces', location: 'Main sanctuary store', reorderLevel: 20, balance: 120 + b * 10, active: true, createdBy: actors.admin._id, updatedBy: actors.admin._id } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    if (inventory) counts.inventory += 1;
+    if (!inventoryExists) counts.inventory += 1;
+  }
+
+  const seededBranches = await Organisation.find({ code: { $in: branchSpecs.map((item) => item[1]) }, level: 'branch' }).select('_id').lean();
+  const integrity = {
+    internationalOffices: await Organisation.countDocuments({ code: { $in: ['NCBI','NCBI-INT-EA','NCBI-INT-SA'] }, level: 'international', status: 'active' }),
+    nationalOffices: await Organisation.countDocuments({ code: { $in: nationalSpecs.map((item) => item[1]) }, level: 'national', status: 'active' }),
+    regions: await Organisation.countDocuments({ code: { $in: regionSpecs.map((item) => item[1]) }, level: 'regional', status: 'active' }),
+    districts: await Organisation.countDocuments({ code: { $in: districtSpecs.map((item) => item[1]) }, level: 'district', status: 'active' }),
+    churches: seededBranches.length,
+    demoUsers: await User.countDocuments({ email: /@demo\\.ncbi\\.org$/ }),
+    demoMembers: await Member.countDocuments({ membershipNumber: /^NCBI-(?:V)?[0-9]{1,2}-/ }),
+    demoAttendance: await Attendance.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, activityName: 'Sunday Celebration Service' }),
+    demoFinance: await FinanceTransaction.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-NCBI-CH-/ }),
+    demoOperations: await OperationsRecord.countDocuments({ organisation: { $in: seededBranches.map((item) => item._id) }, reference: /^DEMO-/ })
+  };
+  const expected = { internationalOffices: 3, nationalOffices: 5, regions: 8, districts: 10, churches: 5, demoUsers: 46, demoMembers: 190, demoAttendance: 660, demoFinance: 60, demoOperations: 30 };
+  for (const [key, value] of Object.entries(expected)) {
+    if (integrity[key] !== value) throw new Error(`Seed integrity check failed for ${key}: expected ${value}, found ${integrity[key]}.`);
   }
 
   console.log('NCBI demo data seed completed (idempotent; existing unrelated records preserved).');
