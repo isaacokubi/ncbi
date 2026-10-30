@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Organisation } from '../models/index.js';
+import { User, Organisation, Member } from '../models/index.js';
 import { AuditLog } from '../models/domain.js';
 import { requireAuth } from '../middleware/auth.js';
 import { passwordChangeError } from '../domain/authPolicy.js';
@@ -39,14 +39,14 @@ router.get('/registration/branches', async (_req, res, next) => {
 
 router.post('/register', async (req, res, next) => {
   try {
-    const fullName = String(req.body.fullName || '').trim().replace(/\\s+/g, ' ');
+    const fullName = String(req.body.fullName || '').trim().replace(/\s+/g, ' ');
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
     const phone = String(req.body.phone || '').trim();
     const organisationId = String(req.body.organisation || '').trim();
     const category = String(req.body.category || '');
     const membershipNumber = String(req.body.membershipNumber || '').trim();
-    if (fullName.length < 3 || fullName.length > 120 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member'].includes(category)) {
+    if (fullName.length < 3 || fullName.length > 120 || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || password.length < 6 || password.length > 128 || !phone || phone.length > 40 || !organisationId || !['member','non_member'].includes(category)) {
       return res.status(400).json({ message: 'Enter a valid name, email, phone, password (at least 6 characters), account category and church branch.' });
     }
     const branch = await Organisation.findOne({ _id: organisationId, level: 'branch', status: 'active' }).select('_id').lean();
@@ -103,6 +103,28 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
       if (target.registrationCategory !== 'member' || String(target.organisation) !== String(ownBranch)) return res.status(403).json({ message: 'Pastors may approve member applications only for their assigned branch.' });
     } else if (target.registrationCategory !== 'non_member') {
       return res.status(403).json({ message: 'Administrators may approve non-member applications only. Member applications belong to the selected branch pastor.' });
+    }
+    if (decision === 'approve' && target.registrationCategory === 'member') {
+      const verifiedMember = await Member.findOne({
+        homeOrganisation: target.organisation,
+        membershipNumber: target.claimedMembershipNumber,
+        status: { $in: ['new_believer','member','worker','minister'] }
+      }).select('_id').lean();
+      if (!verifiedMember) return res.status(409).json({ message: 'Membership could not be verified in this branch. Check the membership number and member record before approving.' });
+      if (await User.exists({ memberProfile: verifiedMember._id, _id: { $ne: target._id } })) {
+        return res.status(409).json({ message: 'This member already has a portal account.' });
+      }
+      target.memberProfile = verifiedMember._id;
+    }
+    if (decision === 'approve' && target.registrationCategory === 'non_member') {
+      const names = target.fullName.split(/\s+/);
+      const visitor = await Member.create({
+        firstName: names.shift() || target.fullName,
+        lastName: names.join(' ') || 'Visitor',
+        phone: target.registrationPhone, email: target.email,
+        status: 'visitor', homeOrganisation: target.organisation
+      });
+      target.memberProfile = visitor._id;
     }
     target.accountApproval = decision === 'approve' ? 'approved' : 'rejected';
     target.active = decision === 'approve';
