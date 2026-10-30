@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { LedgerAccount, JournalEntry, Budget, BankReconciliation, AuditLog } from '../models/domain.js';
+import { Organisation } from '../models/index.js';
+import { buildFinancialStatements } from '../domain/financialStatements.js';
 
 const router=Router();
 router.use(requireAuth);
@@ -16,6 +18,36 @@ const cents=value=>{
 };
 const amountText=value=>{const negative=value<0n;const n=negative?-value:value;return (negative?'-':'')+(n/100n).toString()+'.'+(n%100n).toString().padStart(2,'0');};
 const canFinance=req=>financeRoles.has(req.user.role);
+
+router.get('/statements',async(req,res,next)=>{try{
+ if(!canFinance(req))return res.status(403).json({message:'Finance access denied'});
+ const accessibleIds=await accessibleOrganisationIds(req.user);
+ let organisationsFilter={_id:{$in:accessibleIds},status:{$ne:'archived'}};
+ if(req.query.organisation){
+  if(!mongoose.isValidObjectId(req.query.organisation)||!accessibleIds.some(id=>String(id)===String(req.query.organisation)))return res.status(403).json({message:'Organisation outside your authorised scope'});
+  organisationsFilter={_id:req.query.organisation,status:{$ne:'archived'}};
+ }
+ const now=new Date();
+ const fromText=String(req.query.from||`${now.getUTCFullYear()}-01-01`);
+ const toText=String(req.query.to||now.toISOString().slice(0,10));
+ const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(new Date(value+'T00:00:00.000Z').getTime())&&new Date(value+'T00:00:00.000Z').toISOString().slice(0,10)===value;
+ if(!validDate(fromText)||!validDate(toText)||fromText>toText)return res.status(400).json({message:'Use valid from/to dates in YYYY-MM-DD format with from on or before to'});
+ const fromDate=new Date(fromText+'T00:00:00.000Z');
+ const toDate=new Date(toText+'T23:59:59.999Z');
+ const organisations=await Organisation.find(organisationsFilter).select('name code currency').sort({name:1}).lean();
+ const organisationIds=organisations.map(org=>org._id);
+ const [accounts,ledgerTotals]=await Promise.all([
+  LedgerAccount.find({organisation:{$in:organisationIds}}).select('organisation code name type').sort({code:1}).lean(),
+  JournalEntry.aggregate([
+   {$match:{organisation:{$in:organisationIds},status:'posted',entryDate:{$lte:toDate}}},
+   {$unwind:'$lines'},
+   {$group:{_id:{organisation:'$organisation',account:'$lines.account'},debit:{$sum:'$lines.debit'},credit:{$sum:'$lines.credit'},periodDebit:{$sum:{$cond:[{$gte:['$entryDate',fromDate]},'$lines.debit',{$toDecimal:'0'}]}},periodCredit:{$sum:{$cond:[{$gte:['$entryDate',fromDate]},'$lines.credit',{$toDecimal:'0'}]}}}}
+  ])
+ ]);
+ const statements=buildFinancialStatements({organisations,accounts,ledgerTotals,from:fromText,to:toText});
+ res.set('Cache-Control','no-store');
+ res.json({statements,generatedAt:new Date().toISOString(),source:'posted_journals_only'});
+}catch(error){next(error);}});
 
 router.get('/accounts',async(req,res,next)=>{try{
  if(!canFinance(req))return res.status(403).json({message:'Finance access denied'});
