@@ -10,6 +10,7 @@ export function canSeeUpcomingEvents(user) { return user.role !== 'department_le
 export function dashboardPendingApprovalsForRole(role, breakdown) {
   const categories = role === 'treasurer' ? ['finance','budgets']
     : role === 'department_leader' ? []
+    : role === 'branch_admin' ? ['registrations','operations']
     : ['registrations','organisations','finance','budgets','operations'];
   return categories.reduce((total, key) => total + Math.max(0, Number(breakdown?.[key]) || 0), 0);
 }
