@@ -10,6 +10,7 @@ import { accessibleOrganisationIds, assertOrganisationAccess } from '../middlewa
 import { validateEventRegistrationInput, validateEventRegistrationStatus } from '../domain/eventRegistrationPolicy.js';
 import { canCheckInWithQr, validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
 import { canReadOperationsEntity } from '../domain/workspaceEntityPolicy.js';
+import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -193,7 +194,53 @@ router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// Keep this fixed path before /:entity so "audit" is not parsed as an entity name.
+
+const visitorManagers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin']);
+router.get('/visitors/follow-up/overview', async (req, res, next) => {
+  try {
+    if (!visitorManagers.has(req.user.role)) return res.status(403).json({ message: 'Visitor follow-up management permission required' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const now = new Date();
+    const records = await OperationsRecord.find({ entity: 'visitor_follow_up', organisation: { $in: ids }, status: { $in: ['pending','in_progress','scheduled'] } })
+      .select('title organisation status assignedTo data startAt createdAt').sort({ 'data.nextFollowUpAt': 1 }).limit(500).lean();
+    const due = records.filter(r => r.data?.nextFollowUpAt && new Date(r.data.nextFollowUpAt) <= now);
+    const overdue = due.filter(r => new Date(r.data.nextFollowUpAt) < new Date(now.getTime() - 86400000));
+    const unassigned = records.filter(r => !r.assignedTo?.length);
+    res.set('Cache-Control', 'private, no-store').json({ totals: { open: records.length, due: due.length, overdue: overdue.length, unassigned: unassigned.length }, due: due.slice(0, 50), unassigned: unassigned.slice(0, 50) });
+  } catch (error) { next(error); }
+});
+router.post('/visitors/:id/follow-up', async (req, res, next) => {
+  try {
+    if (!visitorManagers.has(req.user.role)) return res.status(403).json({ message: 'Visitor follow-up management permission required' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Visitor record not found' });
+    const validation = validateVisitorFollowUp(req.body, new Date());
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+    const ids = await accessibleOrganisationIds(req.user);
+    const filter = { _id: req.params.id, entity: 'visitor_follow_up', organisation: { $in: ids }, status: { $ne: 'archived' } };
+    if (['branch_pastor','branch_admin'].includes(req.user.role)) filter.organisation = req.user.organisation?._id ?? req.user.organisation;
+    const record = await OperationsRecord.findOne(filter);
+    if (!record) return res.status(404).json({ message: 'Visitor record not found' });
+    let assignedTo = record.assignedTo || [];
+    if (req.body.assignedTo !== undefined) {
+      if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid follow-up officer' });
+      const assignee = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, active: true, role: { $in: [...visitorManagers, 'department_leader'] } }).select('_id').lean();
+      if (!assignee) return res.status(400).json({ message: 'Follow-up officer must be an active authorised user in the same church branch' });
+      assignedTo = [assignee._id];
+    } else if (!assignedTo.length) assignedTo = [req.user._id];
+    const history = Array.isArray(record.data?.followUpHistory) ? record.data.followUpHistory : [];
+    if (history.length >= 100) return res.status(409).json({ message: 'Follow-up history limit reached; create a continuation record' });
+    history.push({ ...validation.value, actor: req.user._id, recordedAt: new Date() });
+    record.assignedTo = assignedTo;
+    record.status = validation.value.status;
+    record.data = { ...record.data, followUpHistory: history, lastContactAt: new Date(), lastContactMethod: validation.value.contactMethod, lastOutcome: validation.value.outcome, nextFollowUpAt: validation.value.nextFollowUpAt, followUpNote: validation.value.note };
+    record.updatedBy = req.user._id;
+    await record.save();
+    await audit(req, 'visitor-follow-up-recorded', 'visitor_follow_up', record, 'Recorded visitor contact and next action');
+    res.set('Cache-Control', 'private, no-store').json({ record });
+  } catch (error) { next(error); }
+});
+
+// Keep this fixed path before /:entity so audit is not parsed as an entity name.
 router.get('/audit/logs', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'), async (req, res, next) => {
   try {
     const ids = await accessibleOrganisationIds(req.user);
