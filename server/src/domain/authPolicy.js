@@ -1,0 +1,18 @@
+export const MIN_PASSWORD_LENGTH = 6;
+
+export function tokenVersionMatches(tokenVersion, currentVersion) {
+  return Number(tokenVersion || 0) === Number(currentVersion || 0);
+}
+
+export function passwordLengthError(password, label = 'Password') {
+  if (String(password || '').length < MIN_PASSWORD_LENGTH) return `${label} must be at least ${MIN_PASSWORD_LENGTH} characters`;
+  return null;
+}
+
+export function passwordChangeError(currentPassword, newPassword) {
+  if (!currentPassword) return 'Enter your current password';
+  const lengthError = passwordLengthError(newPassword, 'New password');
+  if (lengthError) return lengthError;
+  if (currentPassword === newPassword) return 'Your new password must be different from your current password';
+  return null;
+}

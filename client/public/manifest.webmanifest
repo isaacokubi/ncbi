@@ -1,0 +1,11 @@
+{
+  "name": "NCBI Church Management System",
+  "short_name": "NCBI",
+  "description": "New Church Believers International — A Call to Serve",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#220031",
+  "theme_color": "#220031",
+  "icons": [{ "src": "/ncbi-logo.jpg?v=20261030-2", "sizes": "any", "type": "image/jpeg", "purpose": "any maskable" }]
+}
