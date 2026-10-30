@@ -118,32 +118,37 @@ async function api(path, token, options={}) {
  return body;
 }
 function Registration({onLogin,onPublic,brandLogo}) {
- const [branches,setBranches]=useState([]); const [loading,setLoading]=useState(true);
+ const [branches,setBranches]=useState([]); const [organisations,setOrganisations]=useState([]); const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [message,setMessage]=useState('');
- const [form,setForm]=useState({fullName:'',email:'',phone:'',password:'',category:'member',organisation:'',membershipNumber:''});
+ const [form,setForm]=useState({fullName:'',email:'',phone:'',password:'',category:'member',requestedRole:'',organisation:'',membershipNumber:''});
  const set=(key,value)=>setForm(current=>({...current,[key]:value}));
- useEffect(()=>{api('/auth/registration/branches','').then(r=>setBranches(r.branches||[])).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
- const submit=async e=>{e.preventDefault();setBusy(true);setError('');setMessage('');try{const r=await api('/auth/register','',{method:'POST',body:JSON.stringify(form)});setMessage(r.message);setForm({fullName:'',email:'',phone:'',password:'',category:'member',organisation:'',membershipNumber:''});}catch(e){setError(e.message);}finally{setBusy(false);}};
+ const roleOptions=[['international_executive','International Executive','international'],['national_admin','National Administrator','national'],['regional_overseer','Regional Overseer','regional'],['district_pastor','District Pastor','district'],['branch_pastor','Branch Pastor','branch'],['branch_admin','Branch Administrator','branch'],['treasurer','Treasurer','multi'],['department_leader','Department / Ministry Leader','multi']];
+ const selectedRole=roleOptions.find(item=>item[0]===form.requestedRole);
+ const eligibleOrganisations=form.category==='official'?organisations.filter(org=>selectedRole&&(selectedRole[2]==='multi'?['branch','district','regional','national'].includes(org.level):org.level===selectedRole[2])):branches;
+ useEffect(()=>{api('/auth/registration/branches','').then(r=>{setBranches(r.branches||[]);setOrganisations(r.organisations||r.branches||[]);}).catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
+ const submit=async e=>{e.preventDefault();setBusy(true);setError('');setMessage('');try{const r=await api('/auth/register','',{method:'POST',body:JSON.stringify(form)});setMessage(r.message);setForm({fullName:'',email:'',phone:'',password:'',category:'member',requestedRole:'',organisation:'',membershipNumber:''});}catch(e){setError(e.message);}finally{setBusy(false);}};
+ const changeCategory=value=>setForm(current=>({...current,category:value,requestedRole:'',organisation:'',membershipNumber:''}));
  return <main className="auth-screen"><section className="auth-card registration-card">
   <div className="auth-brand"><div className="brand-mark"><img src={brandLogo||"/ncbi-logo.jpg"} onError={e=>{if(!e.currentTarget.dataset.fallback){e.currentTarget.dataset.fallback="true";e.currentTarget.src="/ncbi-logo.jpg";}else{e.currentTarget.style.visibility="hidden";}}} alt="NCBI emblem"/></div><div><strong>NCBI</strong><span>NEW CHURCH BELIEVERS INTERNATIONAL</span></div></div>
-  <div className="auth-intro"><div className="eyebrow">JOIN THE NCBI FAMILY</div><h1>Request an account.</h1><p>All registrations are reviewed before access is granted to protect the NCBI church community.</p></div>
+  <div className="auth-intro"><div className="eyebrow">JOIN THE NCBI FAMILY</div><h1>Request an account.</h1><p>Choose whether you are applying as a church member, church official or visitor. All applications are reviewed before access is granted.</p></div>
   {message?<div className="registration-success" role="status"><CheckCircle size={22}/><b>Application submitted</b><p>{message}</p><button className="auth-submit" onClick={onLogin}>Return to sign in</button></div>:<form onSubmit={submit}>
    <label>Full name</label><input required minLength="3" maxLength="120" autoComplete="name" value={form.fullName} onChange={e=>set('fullName',e.target.value)} placeholder="Your full name"/>
    <label>Email address</label><input required type="email" autoComplete="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@example.com"/>
    <label>Phone number</label><input required type="tel" autoComplete="tel" value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="+254…"/>
-   <label>Account category</label><select value={form.category} onChange={e=>set('category',e.target.value)}><option value="member">Existing church member</option><option value="non_member">Non-member / visitor</option></select>
+   <label>Account category</label><select value={form.category} onChange={e=>changeCategory(e.target.value)}><option value="member">Existing church member</option><option value="official">Church official / ministry leader</option><option value="non_member">Non-member / visitor</option></select>
+   {form.category==='official'&&<><label>Official church dashboard / role requested</label><select required value={form.requestedRole} onChange={e=>setForm(current=>({...current,requestedRole:e.target.value,organisation:''}))}><option value="">Select the official role you hold</option>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><small className="field-help">Select the office you have been appointed to. Your appointment and authority will be verified by NCBI leadership before the dashboard is assigned.</small></>}
    {form.category==='member'&&<><label>Membership number</label><input required value={form.membershipNumber} onChange={e=>set('membershipNumber',e.target.value)} placeholder="Your NCBI membership number"/><small className="field-help">Your branch pastor will verify this membership before approving access.</small></>}
-   <label>Church branch</label><select required disabled={loading||!branches.length} value={form.organisation} onChange={e=>set('organisation',e.target.value)}><option value="">{loading?'Loading active branches…':'Select your NCBI branch'}</option>{branches.map(b=><option key={b._id} value={b._id}>{b.name}{b.country?' · '+b.country:''}</option>)}</select>
-   {!loading&&!branches.length&&<small className="field-help">No active branches are available for registration. Please contact the NCBI office.</small>}
+   <label>{form.category==='official'?'Church organisation / level':'Church branch'}</label><select required disabled={loading||!eligibleOrganisations.length} value={form.organisation} onChange={e=>set('organisation',e.target.value)}><option value="">{loading?'Loading active church units…':form.category==='official'&&!form.requestedRole?'Select an official role first':eligibleOrganisations.length?'Select your NCBI church unit':'No active organisation is available for this role'}</option>{eligibleOrganisations.map(org=><option key={org._id} value={org._id}>{org.name}{org.level?' · '+human(org.level):''}{org.country?' · '+org.country:''}</option>)}</select>
+   {form.category==='official'&&<small className="field-help">Super Admin access is invitation-only and cannot be requested through public registration.</small>}
+   {form.category!=='official'&&!loading&&!branches.length&&<small className="field-help">No active branches are available for registration. Please contact the NCBI office.</small>}
    <label>Create password</label><input required type="password" minLength="6" maxLength="128" autoComplete="new-password" value={form.password} onChange={e=>set('password',e.target.value)} placeholder="At least 6 characters"/>
    {error&&<div className="form-error" role="alert">{error}</div>}
-   <button className="auth-submit" disabled={busy||loading||!branches.length}>{busy?'Submitting…':'Submit registration'}</button>
+   <button className="auth-submit" disabled={busy||loading||!eligibleOrganisations.length||(form.category==='official'&&!form.requestedRole)}>{busy?'Submitting…':'Submit registration'}</button>
   </form>}
-  <small className="auth-foot">Member applications go to the selected branch pastor. Non-member applications go to NCBI administrators. Submission does not grant access.</small>
+  <small className="auth-foot">Member applications go to the selected branch pastor. Official role requests go to authorised NCBI administrators for appointment verification. Visitor applications go to NCBI administrators. Submission does not grant access or privileges.</small>
   <button type="button" className="text-button auth-public-link" onClick={onPublic}>Back to NCBI public website</button>
  </section></main>;
 }
-
 
 function DocumentFilesPanel({ token, documents, onError, onSuccess }) {
  const [selectedId,setSelectedId]=useState('');
