@@ -68,7 +68,12 @@ const budgetSchema = new Schema({
   period: { type: String, enum: ['annual','q1','q2','q3','q4','jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'], default: 'annual' },
   amount: { type: Schema.Types.Decimal128, required: true },
   notes: { type: String, maxlength: 300 },
-  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+  status: { type: String, enum: ['submitted','approved','rejected'], default: 'submitted', index: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  approvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  decidedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  approvedAt: Date,
+  decisionNote: { type: String, maxlength: 300 }
 }, { timestamps: true });
 budgetSchema.index({ organisation: 1, account: 1, fiscalYear: 1, period: 1 }, { unique: true });
 

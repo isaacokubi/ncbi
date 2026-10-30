@@ -5,6 +5,7 @@ import { accessibleOrganisationIds, assertOrganisationAccess } from '../middlewa
 import { LedgerAccount, JournalEntry, Budget, BankReconciliation, AuditLog } from '../models/domain.js';
 import { Organisation } from '../models/index.js';
 import { buildFinancialStatements } from '../domain/financialStatements.js';
+import { budgetDecisionError, budgetTransition } from '../domain/financePolicy.js';
 
 const router=Router();
 router.use(requireAuth);
@@ -143,7 +144,7 @@ router.get('/budgets',async(req,res,next)=>{try{
  if(!canFinance(req))return res.status(403).json({message:'Finance access denied'});
  const ids=await accessibleOrganisationIds(req.user);const filter={organisation:{$in:ids}};
  if(req.query.year)filter.fiscalYear=Number(req.query.year);
- const budgets=await Budget.find(filter).populate('account','code name type').populate('organisation','name code').sort({fiscalYear:-1,period:1}).lean();
+ const budgets=(await Budget.find(filter).populate('account','code name type').populate('organisation','name code currency').populate('approvedBy','fullName').populate('decidedBy','fullName').sort({fiscalYear:-1,period:1}).lean()).map(budget=>({...budget,status:budget.status||'submitted'}));
  res.json({budgets});
 }catch(e){next(e);}});
 router.post('/budgets',async(req,res,next)=>{try{
@@ -156,7 +157,25 @@ router.post('/budgets',async(req,res,next)=>{try{
  const ledger=await LedgerAccount.findOne({_id:account,organisation:org,type:'expense',active:true});
  if(!ledger)return res.status(400).json({message:'Budget must be assigned to an active expense account'});
  const budget=await Budget.create({organisation:org,account,fiscalYear:Number(fiscalYear),period,amount:amountText(value),notes,createdBy:req.user._id});
+ await AuditLog.create({organisation:org,actor:req.user._id,action:'budget_submit',entity:'budget',recordId:budget._id,summary:`Submitted budget for ${budget.fiscalYear} ${budget.period}`,metadata:{account:budget.account,amount:String(budget.amount)}});
  res.status(201).json({budget});
+}catch(e){next(e);}});
+router.post('/budgets/:id/decision',async(req,res,next)=>{try{
+ if(!approvers.has(req.user.role))return res.status(403).json({message:'Independent budget approval permission required'});
+ const decision=String(req.body.decision||'');
+ if(!['approve','reject'].includes(decision))return res.status(400).json({message:'Decision must be approve or reject'});
+ const ids=await accessibleOrganisationIds(req.user);
+ const budget=await Budget.findOne({_id:req.params.id,organisation:{$in:ids}});
+ if(!budget)return res.status(404).json({message:'Budget not found'});
+ const separationError=budgetDecisionError(budget,req.user._id);
+ if(separationError)return res.status(403).json({message:separationError});
+ const transition=budgetTransition(budget.status||'submitted',decision);
+ if(!transition.allowed)return res.status(409).json({message:`Cannot ${decision} a budget in ${budget.status||'submitted'} state`});
+ const note=String(req.body.note||'').trim().slice(0,300);
+ if(decision==='reject'&&!note)return res.status(400).json({message:'Provide a reason when rejecting a budget'});
+ budget.status=transition.status;budget.decidedBy=req.user._id;if(decision==='approve'){budget.approvedBy=req.user._id;budget.approvedAt=new Date();}budget.decisionNote=note;await budget.save();
+ await AuditLog.create({organisation:budget.organisation,actor:req.user._id,action:'budget_'+decision,entity:'budget',recordId:budget._id,summary:`Budget ${transition.status}: ${budget.fiscalYear} ${budget.period}`,metadata:{account:budget.account,amount:String(budget.amount),note}});
+ res.json({budget});
 }catch(e){next(e);}});
 
 router.get('/reconciliations',async(req,res,next)=>{try{

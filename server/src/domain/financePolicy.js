@@ -24,6 +24,19 @@ export function financeDecisionError(transaction, decision, actorId) {
   }
   return null;
 }
+
+export function budgetTransition(currentStatus, decision) {
+  if (currentStatus !== 'submitted' || !['approve', 'reject'].includes(decision)) {
+    return { allowed: false, status: currentStatus };
+  }
+  return { allowed: true, status: decision === 'approve' ? 'approved' : 'rejected' };
+}
+
+export function budgetDecisionError(budget, actorId) {
+  return String(budget.createdBy) === String(actorId)
+    ? 'The budget requester cannot approve or reject their own budget'
+    : null;
+}
 export function isValidPositiveAmount(value) {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 && amount <= 100000000000;

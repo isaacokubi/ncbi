@@ -30,7 +30,7 @@ There is no default administrator. Public registration creates only an inactive,
 - `GET/POST /api/operations/:entity`, `PATCH/DELETE /api/operations/:entity/:id`
 - `POST /api/operations/events/:id/register`, `PATCH /api/operations/events/:id/register/cancel`, `GET /api/operations/events/:id/registrations`, `PATCH /api/operations/event-registrations/:id/status`
 - `GET/POST /api/finance/transactions`, `POST /api/finance/transactions/:id/decision` (confirmation posts a balanced journal to the general ledger)
-- `GET/POST /api/accounting/accounts` (including standard NCBI chart provisioning), `GET/POST /api/accounting/journals`, `GET/POST /api/accounting/budgets`, `GET/POST /api/accounting/reconciliations`
+- `GET/POST /api/accounting/accounts` (including standard NCBI chart provisioning), `GET/POST /api/accounting/journals`, `GET/POST /api/accounting/budgets`, `POST /api/accounting/budgets/:id/decision`, `GET/POST /api/accounting/reconciliations`
 - `/api/payments/mpesa/stk-push` and secret-protected Daraja callback; credentials and deployed callback URL are required for live collections
 - `GET/POST /api/workspace/users`, `PATCH /api/workspace/users/:id/status` (role-hierarchy constrained user administration)
 - `GET /api/documents/:id/files`, `POST /api/documents/:id/files`, `GET /api/documents/files/:fileId/download` — authenticated private document files and append-only version history (10 MiB maximum)

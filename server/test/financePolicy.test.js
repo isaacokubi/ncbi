@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { financeTransition, financeDecisionError, isValidPositiveAmount } from '../src/domain/financePolicy.js';
+import { financeTransition, financeDecisionError, budgetTransition, budgetDecisionError, isValidPositiveAmount } from '../src/domain/financePolicy.js';
 
 test('finance workflow requires approval before confirmation', () => {
   assert.deepEqual(financeTransition('submitted','confirm'), { allowed: false, status: 'submitted' });
@@ -27,4 +27,12 @@ test('only another authorised person can void a confirmed transaction', () => {
   const transaction = { status: 'confirmed', createdBy: 'requester' };
   assert.match(financeDecisionError(transaction, 'void', 'requester'), /requester cannot void/);
   assert.equal(financeDecisionError(transaction, 'void', 'finance_lead'), null);
+});
+test('budget approval is a one-way decision and the requester cannot decide it', () => {
+  assert.deepEqual(budgetTransition('submitted', 'approve'), { allowed: true, status: 'approved' });
+  assert.deepEqual(budgetTransition('submitted', 'reject'), { allowed: true, status: 'rejected' });
+  assert.equal(budgetTransition('approved', 'reject').allowed, false);
+  assert.equal(budgetTransition('submitted', 'void').allowed, false);
+  assert.match(budgetDecisionError({ createdBy: 'requester' }, 'requester'), /requester cannot approve/);
+  assert.equal(budgetDecisionError({ createdBy: 'requester' }, 'independent_approver'), null);
 });
