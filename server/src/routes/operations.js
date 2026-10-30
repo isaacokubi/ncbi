@@ -14,7 +14,7 @@ import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
 import { validateAnnouncementRecord } from '../domain/announcementPolicy.js';
 import { InventoryItem, InventoryMovement } from '../models/domain.js';
 import { inventoryItemInputError, inventoryMovementInputError, inventoryMovementDelta } from '../domain/inventoryPolicy.js';
-import { communicationApprovalError, validateAttendanceSessions } from '../domain/operationalWorkflowPolicy.js';
+import { communicationApprovalError, validateAttendanceSessions, rosterTimeConflict } from '../domain/operationalWorkflowPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -45,7 +45,7 @@ async function validateVolunteerRoster(entity, data, organisation, excludeId=nul
   const conflicts = await OperationsRecord.find(conflictFilter).select('title data.ministryTeam data.assignedMemberIds data.serviceTime data.serviceEndTime').lean();
   for (const conflict of conflicts) {
     const otherStart=String(conflict.data?.serviceTime||''),otherEnd=String(conflict.data?.serviceEndTime||otherStart);
-    const overlaps=otherStart && otherEnd && otherStart < data.serviceEndTime && otherEnd > data.serviceTime;
+    const overlaps=rosterTimeConflict(data.serviceTime,data.serviceEndTime,otherStart,otherEnd);
     const sameMember=(conflict.data?.assignedMemberIds||[]).some(id=>memberIds.includes(String(id)));
     if(overlaps&&(sameMember||String(conflict.data?.ministryTeam||'').toLowerCase()===String(data.ministryTeam||'').toLowerCase())) return sameMember ? 'One or more selected members are already rostered for '+conflict.title+' during this time' : 'This ministry team already has an overlapping roster for '+conflict.title;
   }

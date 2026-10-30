@@ -13,3 +13,8 @@ export function validateAttendanceSessions(sessions) {
   }
   return null;
 }
+
+export function rosterTimeConflict(start,end,otherStart,otherEnd) {
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(start||''))||!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(end||''))||!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(otherStart||''))||!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(otherEnd||''))) return false;
+  return otherStart < end && otherEnd > start;
+}

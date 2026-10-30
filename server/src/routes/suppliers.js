@@ -6,6 +6,7 @@ import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseReques
 import { approvalProgress } from '../domain/approvalMatrix.js';
 import { budgetPeriodRange, selectApplicableBudget, budgetPostingDecision } from '../domain/budgetControl.js';
 import { supplierNameError, supplierInvoiceError, supplierPaymentError, supplierDecisionError, invoicePaymentStatus, moneyToMinor, supplierQuoteError } from '../domain/supplierWorkflow.js';
+import { rosterTimeConflict } from '../domain/operationalWorkflowPolicy.js';
 
 const router=Router();
 router.use(requireAuth);
@@ -93,8 +94,10 @@ router.post('/purchase-requests/:id/select-quote',async(req,res,next)=>{try{
  try{await session.withTransaction(async()=>{
   const purchaseRequest=await PurchaseRequest.findOne({_id:req.params.id,organisation:{$in:ids},status:'approved',selectedQuote:null}).session(session);
   if(!purchaseRequest)throw Object.assign(new Error('Purchase request must be approved and have no purchase order before selecting a quotation'),{status:409});
+  if(String(purchaseRequest.createdBy)===String(req.user._id))throw Object.assign(new Error('The requester cannot select the winning supplier quotation'),{status:403});
   const quote=await PurchaseQuote.findOne({_id:req.body.quote,organisation:purchaseRequest.organisation,purchaseRequest:purchaseRequest._id,status:'submitted'}).session(session);
   if(!quote)throw Object.assign(new Error('Quotation not found or already decided'),{status:404});
+  if(String(quote.createdBy)===String(req.user._id))throw Object.assign(new Error('The quotation submitter cannot select their own quotation'),{status:403});
   if(String(quote.currency)!==purchaseRequest.currency||moneyToMinor(String(quote.amount))>moneyToMinor(String(purchaseRequest.amount)))throw Object.assign(new Error('Selected quotation exceeds the approved request amount or uses a different currency; obtain a revised approval first'),{status:409});
   purchaseRequest.supplier=quote.supplier;purchaseRequest.selectedQuote=quote._id;purchaseRequest.status='ordered';purchaseRequest.purchaseOrderNumber='PO-'+purchaseRequest.requestNumber;purchaseRequest.orderedAt=new Date();await purchaseRequest.save({session});
   quote.status='selected';quote.decidedBy=req.user._id;quote.decidedAt=new Date();await quote.save({session});

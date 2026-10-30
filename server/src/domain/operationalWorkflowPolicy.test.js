@@ -17,3 +17,10 @@ test('class attendance entries are bounded and validated',()=>{
  assert.match(validateAttendanceSessions([{...valid[0],attendanceStatus:'unknown'}]),/valid date/);
  assert.match(validateAttendanceSessions(Array.from({length:101},(_,i)=>({...valid[0],sessionTitle:'Lesson '+i}))),/100 sessions/);
 });
+
+import { rosterTimeConflict } from './operationalWorkflowPolicy.js';
+test('volunteer shift overlap detection handles intersecting and adjacent times',()=>{
+ assert.equal(rosterTimeConflict('09:00','11:00','10:30','12:00'),true);
+ assert.equal(rosterTimeConflict('09:00','11:00','11:00','12:00'),false);
+ assert.equal(rosterTimeConflict('09:00','10:00','10:30','11:00'),false);
+});
