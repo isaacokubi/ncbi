@@ -16,6 +16,8 @@ export function dashboardPendingApprovalsForRole(role, breakdown) {
 }
 
 export function dashboardMetricsForRole(role, metrics) {
+  // Keep each dashboard focused on indicators relevant to that role's authority.
+  // The organisation scope is independently enforced by accessibleOrganisationIds.
   if (role === 'super_admin') return {
     organisationUnits: metrics.organisationUnits,
     activeOrganisations: metrics.activeOrganisations,
@@ -24,8 +26,6 @@ export function dashboardMetricsForRole(role, metrics) {
     branches: metrics.branches
   };
   if (role === 'international_executive') return {
-    activeOrganisations: metrics.activeOrganisations,
-    activeUsers: metrics.activeUsers,
     nationalOffices: metrics.nationalOffices,
     regionalUnits: metrics.regionalUnits,
     districtUnits: metrics.districtUnits,
@@ -48,10 +48,47 @@ export function dashboardMetricsForRole(role, metrics) {
     confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
     pendingApprovals: metrics.pendingApprovals
   };
-  if (role === 'department_leader') return { attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth };
-  if (role === 'treasurer') return { confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth, confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth };
-  if (role === 'branch_admin') return { branches: metrics.branches, members: metrics.members, visitors: metrics.visitors, attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth, pendingApprovals: metrics.pendingApprovals };
-  return metrics;
+  if (role === 'regional_overseer') return {
+    districtUnits: metrics.districtUnits,
+    branches: metrics.branches,
+    members: metrics.members,
+    visitors: metrics.visitors,
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
+    confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
+    confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
+    pendingApprovals: metrics.pendingApprovals
+  };
+  if (role === 'district_pastor') return {
+    branches: metrics.branches,
+    members: metrics.members,
+    visitors: metrics.visitors,
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
+    confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
+    confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
+    pendingApprovals: metrics.pendingApprovals
+  };
+  if (role === 'branch_pastor') return {
+    members: metrics.members,
+    visitors: metrics.visitors,
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
+    confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
+    confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth,
+    pendingApprovals: metrics.pendingApprovals
+  };
+  if (role === 'branch_admin') return {
+    members: metrics.members,
+    visitors: metrics.visitors,
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth,
+    pendingApprovals: metrics.pendingApprovals
+  };
+  if (role === 'department_leader') return {
+    attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth
+  };
+  if (role === 'treasurer') return {
+    confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth,
+    confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth
+  };
+  return {};
 }
 export function reportPayloadForRole(role, payload) {
   if (role !== 'treasurer') return payload;
