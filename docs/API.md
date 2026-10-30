@@ -40,7 +40,7 @@ A record accepts `title`, optional `organisation`, `reference`, `status`, `start
 Only separate authorised approvers can approve a submitted transaction. Confirmation requires prior approval. No unverified transaction contributes to dashboard totals.
 
 ## Accounting
-- `GET/POST /api/accounting/accounts` — chart of accounts; `PATCH /api/accounting/accounts/:id/status` toggles an account.
+- `GET/POST /api/accounting/accounts` — chart of accounts; `POST /api/accounting/accounts/seed-defaults` installs the idempotent standard NCBI chart without overwriting existing account codes. `PATCH /api/accounting/accounts/:id/status` toggles an account.
 - `GET/POST /api/accounting/journals` — submit a balanced double-entry journal.
 - `POST /api/accounting/journals/:id/post` — independent approver posts a submitted journal; creator self-posting is blocked.
 - `POST /api/accounting/journals/:id/reject` — independent approver rejects a submitted journal.
