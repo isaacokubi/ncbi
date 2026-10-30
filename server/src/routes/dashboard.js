@@ -12,9 +12,15 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
     const ids = await accessibleOrganisationIds(req.user);
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const [branches, members, visitors, attendance, income, expenses, upcomingEvents,
+    const [branches, nationalOffices, regionalUnits, districtUnits, activeOrganisations, activeUsers, pendingAccounts, members, visitors, attendance, income, expenses, upcomingEvents,
       pendingOperational, pendingRegistrations, pendingOrganisations, pendingFinance, pendingBudgets] = await Promise.all([
       Organisation.countDocuments({ _id: { $in: ids }, level: 'branch', status: 'active' }),
+      Organisation.countDocuments({ _id: { $in: ids }, level: 'national', status: 'active' }),
+      Organisation.countDocuments({ _id: { $in: ids }, level: 'regional', status: 'active' }),
+      Organisation.countDocuments({ _id: { $in: ids }, level: 'district', status: 'active' }),
+      Organisation.countDocuments({ _id: { $in: ids }, status: 'active' }),
+      User.countDocuments({ organisation: { $in: ids }, active: true, accountApproval: 'approved' }),
+      User.countDocuments({ organisation: { $in: ids }, accountApproval: 'pending' }),
       Member.countDocuments({ homeOrganisation: { $in: ids }, status: { $in: ['member','worker','minister'] } }),
       Member.countDocuments({ homeOrganisation: { $in: ids }, status: 'visitor' }),
       Attendance.countDocuments(attendanceDashboardFilter(req.user, ids, start)),
@@ -39,7 +45,8 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
     };
     const pendingApprovals = dashboardPendingApprovalsForRole(req.user.role, approvalBreakdown);
     const metrics = dashboardMetricsForRole(req.user.role, {
-      branches, members, visitors, attendanceRecordsThisMonth: attendance,
+      organisationUnits: ids.length, activeOrganisations, activeUsers, pendingAccounts,
+      nationalOffices, regionalUnits, districtUnits, branches, members, visitors, attendanceRecordsThisMonth: attendance,
       confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals
     });
     const visibleApprovalBreakdown = req.user.role === 'treasurer' || req.user.role === 'department_leader' ? {}
