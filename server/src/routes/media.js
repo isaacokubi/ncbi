@@ -22,7 +22,7 @@ const signatures = {
  'video/webm': b => b.length>4 && b.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3]))
 };
 const extensions = {'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','video/mp4':'.mp4','video/webm':'.webm'};
-function storageRoot(){const value=process.env.DOCUMENT_STORAGE_DIR;if(!value||!path.isAbsolute(value))throw Object.assign(new Error('Church media storage is not configured. Set DOCUMENT_STORAGE_DIR to a persistent disk path.'),{status:503});return path.resolve(value);}
+function storageRoot(){const value=process.env.CHURCH_MEDIA_STORAGE_DIR||process.env.DOCUMENT_STORAGE_DIR;if(!value||!path.isAbsolute(value))throw Object.assign(new Error('Church media storage is not configured. Set DOCUMENT_STORAGE_DIR to a persistent disk path.'),{status:503});return path.resolve(value);}
 function safeName(value,ext){const base=path.basename(String(value||'church-media')).replace(/[\r\n"]/g,'').replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,110);return (base.replace(/\.[^.]*$/,'')||'church-media')+ext;}
 export function parseByteRange(header,size){
  if(!header)return null;
