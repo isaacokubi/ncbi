@@ -56,7 +56,7 @@ const financeSchema = new Schema({
   occurredAt: { type: Date, required: true },
   status: { type: String, enum: ['draft', 'submitted', 'approved', 'rejected', 'confirmed', 'voided'], default: 'draft', index: true },
   paymentMethod: { type: String, enum: ['cash', 'mpesa', 'bank', 'cheque', 'online', 'other'], default: 'other' },
-  reference: String, description: String,
+  reference: String, description: String,\n  debitAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },\n  creditAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },\n  journalEntry: { type: Schema.Types.ObjectId, ref: 'JournalEntry', default: null },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   approvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   approvedAt: Date
