@@ -192,7 +192,7 @@ export const DEFAULT_SITE_CONTENT = {
       titleLine2: 'There is a place for you.',
       body: 'Whether you are looking for a congregation, seeking prayer, enquiring about membership or wishing to learn more about our ministries, we welcome your enquiry. Explore the branch directory to connect with a local church, or use the member and staff portal if you already have an NCBI account.',
       branchesCta: 'Find a congregation',
-      signInCta: 'Access the NCBI portal'
+      signInCta: 'Access the NCBI portal', contactEmail: '', phone: '', whatsapp: '', physicalAddress: '', postalAddress: '', officeHours: ''
     }
   },
   footer: { brand: 'NEW CHURCH BELIEVERS INTERNATIONAL', strapline: 'ONE CHURCH. ONE VISION. UNITED IN CHRIST AND COMMITTED TO SERVICE.', motto: 'FAITH IN ACTION. SERVICE WITH PURPOSE.' }
