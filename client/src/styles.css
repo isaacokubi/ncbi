@@ -1865,3 +1865,60 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
   .bishop-name{font-size:18px;padding:9px 10px}
   .public-art-caption{width:100%;margin:12px auto 0}
 }
+
+
+/* Final homepage portrait sizing override: defeat legacy emblem rules that forced it into a 250px circle. */
+.public-hero-inner{
+  grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr)!important;
+  align-items:center;
+  gap:clamp(20px,3vw,46px);
+}
+.public-hero-art{
+  min-width:0;
+  min-height:0!important;
+  width:100%;
+}
+.public-hero-art .public-art-frame{
+  width:100%!important;
+  max-width:780px!important;
+  margin-inline:auto;
+  align-items:stretch;
+}
+.public-hero-art .public-art-emblem.bishop-portrait{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  height:clamp(560px,76vh,760px)!important;
+  min-height:560px!important;
+  padding:0!important;
+  border:3px solid var(--champagne,#c8a64e)!important;
+  border-radius:28px!important;
+  overflow:hidden!important;
+  background:#160b28!important;
+  box-shadow:0 25px 65px #12051f55!important;
+}
+.public-hero-art .public-art-emblem.bishop-portrait::before{
+  display:none!important;
+  content:none!important;
+}
+.public-hero-art .public-art-emblem.bishop-portrait img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  object-fit:cover!important;
+  object-position:center 20%!important;
+  border-radius:0!important;
+}
+.public-hero-art .bishop-name{width:100%;margin-top:10px}
+.public-hero-art .public-art-caption{width:100%;max-width:100%;margin:14px 0 0;position:relative;inset:auto}
+@media(max-width:900px){
+  .public-hero-inner{grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)!important;gap:18px}
+  .public-hero-art .public-art-emblem.bishop-portrait{height:clamp(500px,66vh,620px)!important;min-height:500px!important}
+}
+@media(max-width:720px){
+  .public-hero-inner{grid-template-columns:minmax(0,1fr)!important}
+  .public-hero-art{width:100%;margin-top:20px}
+  .public-hero-art .public-art-frame{width:100%!important;max-width:620px!important}
+  .public-hero-art .public-art-emblem.bishop-portrait{height:clamp(480px,115vw,640px)!important;min-height:480px!important}
+}
