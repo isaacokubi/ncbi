@@ -2,6 +2,7 @@ const headquartersRoles = new Set(['super_admin','international_executive','nati
 const approvalStates = new Set(['draft','pending','approved','rejected','published']);
 export function communicationApprovalError(role,currentStatus,nextStatus) {
   if (!approvalStates.has(nextStatus)) return {status:400,message:'Select a valid communication approval status'};
+  if (currentStatus == null && ['approved','rejected','published'].includes(nextStatus)) return {status:409,message:'Create the communication as a draft or pending submission before a headquarters review decision'};
   if (['approved','rejected','published'].includes(nextStatus) && !headquartersRoles.has(role)) return {status:403,message:'Only headquarters leadership may approve, reject or publish church communications'};
   if (nextStatus==='published' && currentStatus!=='approved') return {status:409,message:'Approve the communication before publishing it'};
   return null;
