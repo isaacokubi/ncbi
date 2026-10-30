@@ -1243,3 +1243,27 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
   .public-nav-actions .public-register-button,
   .public-nav-actions .public-login-button { padding-inline: 11px; }
 }
+
+
+/* Make every top-level navigation item use the visible Contact Us accent color. */
+@media (min-width: 761px) {
+  .public-nav > a,
+  .public-nav > a:visited,
+  .public-nav-group > summary {
+    color: #dfcc80 !important;
+  }
+  .public-nav > a:hover,
+  .public-nav-group > summary:hover,
+  .public-nav > a[aria-current="page"],
+  .public-nav-group:has(.public-nav-dropdown a[aria-current="page"]) > summary {
+    color: #fff2c8 !important;
+  }
+  .public-nav-group > summary svg { color: inherit; }
+}
+@media (max-width: 760px) {
+  .public-nav > a,
+  .public-nav-group > summary {
+    color: #dfcc80 !important;
+  }
+  .public-nav-group > summary svg { color: inherit; }
+}
