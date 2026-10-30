@@ -1,0 +1,15 @@
+{
+  "name": "ncbi-church-management",
+  "version": "0.1.0",
+  "private": true,
+  "description": "New Church Believers International integrated church management platform",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm run start -w server",
+    "check": "npm run check -w server && npm run check -w client"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" },
+  "engines": { "node": ">=20.0.0" }
+}
