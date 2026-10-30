@@ -75,3 +75,15 @@ The public website is editable from the authenticated workspace by **Super Admin
 The church emblem is managed separately under **Administration → Church branding**. Branch directory entries are sourced from active branch organisations. Public programmes and news/announcements remain managed through the Events & Programmes and Announcements workspaces and appear on the website only when their records are explicitly marked public and meet the publication status/date rules.
 
 Website content changes are restricted server-side to super_admin and national_admin accounts. The public read endpoint exposes only published website copy and public branch/event/announcement records; the editor endpoint requires an authenticated authorised account. Website page content is limited to 100 KB.
+
+## Comprehensive demo data for dashboard verification
+
+After provisioning the initial NCBI platform administrator and configuring `MONGODB_URI`, set `SEED_COMMON_PASSWORD` in `server/.env` to a private demo-only password (at least six characters). From the repository root run:
+
+```bash
+npm run seed-demo-data -w server
+```
+
+The idempotent seeder requires the existing active `NCBI` international root and an active platform administrator. It never deletes unrelated records or changes existing accounts with conflicting roles/hierarchy. It creates a synthetic multi-level organisation tree containing three international offices (including the existing NCBI root), five national offices, eight regions, ten districts and five named church branches across Kenya and Uganda. It provisions governance users (international executives, national administrators, regional overseers, district pastors, five branch pastors, branch administrators, treasurers and ministry leaders), 150 member profiles plus 40 visitor profiles, recent Sunday attendance, confirmed sample income/expense transactions, ministry departments, events, announcements, projects, visitor follow-up records and opening inventory.
+
+All generated finance references and operational records are marked `DEMO`; finance entries are synthetic confirmed examples and are not real M-Pesa collections. The seeder is safe to rerun: it uses stable organisation codes, account emails, membership numbers and record references, and prints created counts plus database totals. Use the demo accounts only in a non-production database. Do not run this seeder against a live church database.
