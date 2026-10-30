@@ -91,7 +91,7 @@ export const MODULE_PRESENTATION = Object.freeze({
 });
 
 export const ACTION_TERMS = Object.freeze({
-  create: { members: 'Register a congregant', visitors: 'Register a first-time guest', attendance: 'Record service attendance', departments: 'Establish a ministry department', events: 'Schedule a church programme', budgets: 'Prepare a budget proposal', finance: 'Record a financial transaction', payments: 'Initiate a payment request', journals: 'Prepare a journal entry', reconciliation: 'Start a bank reconciliation' },
+  create: { members: 'Register a congregant', visitors: 'Register a first-time guest', attendance: 'Record service attendance', departments: 'Establish a ministry department', events: 'Schedule a church programme', announcements: 'Publish a news announcement', budgets: 'Prepare a budget proposal', finance: 'Record a financial transaction', payments: 'Initiate a payment request', journals: 'Prepare a journal entry', reconciliation: 'Start a bank reconciliation' },
   save: { members: 'Save membership details', visitors: 'Save guest details', finance: 'Submit financial transaction', budgets: 'Submit budget proposal', attendance: 'Record attendance', journals: 'Submit journal for review', events: 'Save programme details' }
 });
 
@@ -117,6 +117,7 @@ export const SUCCESS_MESSAGES = Object.freeze({
   budgets: 'The budget proposal was submitted and is awaiting review by an authorised approver.',
   journals: 'The journal entry was submitted for independent review.',
   events: 'The programme details have been saved successfully.',
+  announcements: 'The news announcement has been published to the public website.',
   departments: 'The ministry department details have been saved successfully.',
   documents: 'The institutional record has been saved successfully.'
 });
