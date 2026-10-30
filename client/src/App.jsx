@@ -15,8 +15,8 @@ const navGroups = [
 const financePageKeys=new Set(['finance','payments','accounts','journals','budgets','reconciliation']);
 function visibleForRole(key,role){
  if(role==='member')return key==='memberPortal';
- if(role==='treasurer')return key==='dashboard'||financePageKeys.has(key)||key==='reports';
- if(role==='department_leader')return ['dashboard','attendance','departments','events','discipleship','services'].includes(key);
+ if(role==='treasurer')return key==='dashboard'||key==='security'||financePageKeys.has(key)||key==='reports';
+ if(role==='department_leader')return ['dashboard','security','attendance','departments','events','discipleship','services'].includes(key);
  if(key==='memberPortal')return false;
  if(key==='reports')return ['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(role);
  if(key==='audit')return ['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'].includes(role);

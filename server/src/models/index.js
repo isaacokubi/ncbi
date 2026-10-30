@@ -21,7 +21,8 @@ const userSchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
   memberProfile: { type: Schema.Types.ObjectId, ref: 'Member', default: null, index: true },
   permissions: [{ type: String }],
-  active: { type: Boolean, default: true }
+  active: { type: Boolean, default: true },
+  tokenVersion: { type: Number, default: 0, select: true }
 }, timestamps);
 
 userSchema.index({ memberProfile: 1 }, { unique: true, partialFilterExpression: { memberProfile: { $type: 'objectId' } } });

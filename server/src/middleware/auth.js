@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
+import { tokenVersionMatches } from '../domain/authPolicy.js';
 
 export async function requireAuth(req, res, next) {
   try {

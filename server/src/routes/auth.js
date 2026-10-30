@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { passwordChangeError } from '../domain/authPolicy.js';
 
 const router = Router();
 
