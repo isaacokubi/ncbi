@@ -312,6 +312,10 @@ router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
     const status = req.body.status === undefined ? record.status : String(req.body.status);
     if (!['pending','in_progress','completed'].includes(status)) return res.status(400).json({ message: 'Status must be pending, in_progress or completed' });
     let assignedTo = record.assignedTo || [];
+    if (entity === 'communications' && req.body.data?.approvalStatus !== undefined && req.body.data.approvalStatus !== record.data?.approvalStatus) {
+      if (['approved','published'].includes(req.body.data.approvalStatus) && !['super_admin','international_executive','national_admin'].includes(req.user.role)) return res.status(403).json({ message: 'Only headquarters leadership may approve or publish church communications' });
+      if (req.body.data.approvalStatus === 'published' && record.data?.approvalStatus !== 'approved') return res.status(409).json({ message: 'Approve the communication before publishing it' });
+    }
     if (req.body.assignedTo !== undefined) {
       if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid pastoral assignee' });
       const pastor = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean();
@@ -691,6 +695,11 @@ router.post('/:entity', async (req, res, next) => {
     if (entity === 'announcement') {
       const policy = validateAnnouncementRecord({ title, data: payload, visibility: visibility || 'organisation' }, req.user);
       if (!policy.valid) return res.status(policy.status).json({ message: policy.message });
+    }
+    if (entity === 'member_enrolment') {
+      if (!payload.memberId || !String(payload.programmeName || '').trim() || !['discipleship','membership','baptism','leadership','other'].includes(payload.programmeType)) return res.status(400).json({ message: 'Select a member, programme name and valid programme type' });
+      const duplicate = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_enrolment', status: { $ne: 'archived' }, 'data.memberId': String(payload.memberId), 'data.programmeName': String(payload.programmeName).trim() }).select('_id').lean();
+      if (duplicate) return res.status(409).json({ message: 'This member already has an active enrolment for this programme' });
     }
     const memberLinkError = await validateLinkedMember(entity, payload, targetOrg);
     if (memberLinkError) return res.status(400).json({ message: memberLinkError });
