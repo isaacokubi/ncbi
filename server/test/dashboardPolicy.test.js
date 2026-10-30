@@ -29,8 +29,8 @@ import { dashboardPendingApprovalsForRole } from '../src/domain/dashboardPolicy.
 test('pending approvals include registrations, organisation requests, finance, budgets and operational records',()=>{
  assert.equal(dashboardPendingApprovalsForRole('super_admin',{registrations:2,organisations:1,finance:3,budgets:4,operations:5}),15);
 });
-test('treasurer pending approvals are limited to finance and budget decisions',()=>{
- assert.equal(dashboardPendingApprovalsForRole('treasurer',{registrations:8,organisations:7,finance:2,budgets:3,operations:9}),5);
+test('treasurers do not receive approval counts because finance decisions require an independent approver',()=>{
+ assert.equal(dashboardPendingApprovalsForRole('treasurer',{registrations:8,organisations:7,finance:2,budgets:3,operations:9}),0);
 });
 test('department leaders do not receive approval counts they cannot administer',()=>{
  assert.equal(dashboardPendingApprovalsForRole('department_leader',{registrations:8,finance:2,operations:9}),0);
