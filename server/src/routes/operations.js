@@ -45,7 +45,7 @@ function validateStructuredOperationData(entity, data) {
     procurement: { required: ['requestedBy','itemDescription'], numbers: ['quantity','estimatedCost'], dates: ['requiredBy'], enums: { approvalStage: ['draft','submitted','under_review','approved','rejected','ordered','received'] } },
     communications: { required: ['campaignType','audience','channels','messageSummary','plannedDate'], dates: ['plannedDate','publishedAt'], enums: { campaignType: ['announcement','pastoral_notice','event_promotion','fundraising','outreach','newsletter','other'], approvalStatus: ['draft','pending','approved','rejected','published'] } },
     media: { required: ['projectType','producer'], dates: ['scheduledAt'], enums: { projectType: ['photography','video','audio','livestream','graphic_design','publication','other'], productionStage: ['planned','recording','editing','review','approved','published','archived'] } },
-    transport: { required: ['driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost'], dates: ['departureAt','returnAt'] },
+    transport: { required: ['driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost','maintenanceCost'], dates: ['departureAt','returnAt','nextServiceAt'], enums: { vehicleStatus: ['available','in_use','under_maintenance','out_of_service'] } },
     compliance: { required: ['recordType','responsibleOfficer','complianceArea','requirement'], dates: ['reviewDate','completedAt'], enums: { recordType: ['policy','governance_resolution','compliance_action','meeting','risk','other'], actionStatus: ['not_started','in_progress','awaiting_evidence','completed','overdue'] } },
     member_class: { required: ['programmeName','classLevel','facilitator','curriculum','startDate'], numbers: ['capacity','enrolledCount'], dates: ['startDate','endDate'], enums: { classLevel: ['new_believer','foundation','membership','baptism_preparation','discipleship','leadership','other'] } },
     volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','assignedMembers'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
@@ -64,6 +64,11 @@ function validateStructuredOperationData(entity, data) {
     for (const field of rule.dates || []) {
       if (data[field] === undefined || data[field] === null || data[field] === '') continue;
       if (Number.isNaN(new Date(data[field]).getTime())) return field + ' must be a valid date';
+    }
+    if (entity === 'member_class') {
+      for (const field of ['capacity','enrolledCount']) if (data[field] !== undefined && !Number.isInteger(Number(data[field]))) return field + ' must be a whole number';
+      if (data.capacity !== undefined && data.capacity < 1) return 'Class capacity must be at least one learner';
+      if (data.enrolledCount !== undefined && data.capacity !== undefined && data.enrolledCount > data.capacity) return 'Enrolled learners cannot exceed class capacity';
     }
     for (const [field, allowed] of Object.entries(rule.enums || {})) {
       if (data[field] !== undefined && data[field] !== '' && !allowed.includes(data[field])) return 'Select a valid ' + field;
