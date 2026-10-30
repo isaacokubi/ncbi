@@ -1590,3 +1590,16 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
  .dashboard-approval-item{align-items:center;flex-direction:row}
 }
 @media(prefers-reduced-motion:reduce){.dashboard-stat-card{transition:none}.dashboard-stat-card:hover{transform:none}}
+
+
+/* Website CMS: repeatable content controls */
+.website-cms-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.website-cms-card-actions button{min-height:32px;padding:5px 9px;border:1px solid var(--line,#ded8ca);border-radius:8px;background:transparent}
+.website-cms-card-actions button:disabled{opacity:.35;cursor:not-allowed}
+.website-cms-list-editor{display:grid;gap:12px;margin-top:18px;padding:16px;border:1px solid var(--line,#ded8ca);border-radius:12px;background:var(--surface-soft,#faf9f6)}
+.website-cms-list-editor> b{font-size:.9rem}
+.website-cms-list-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px}
+.website-cms-list-row .field{margin:0}
+.website-cms-list-row .danger-text-button{margin-bottom:8px}
+.website-cms-group>.secondary-button{margin:14px 0 4px}
+@media(max-width:640px){.website-cms-list-row{grid-template-columns:1fr}.website-cms-list-row .danger-text-button{justify-self:start;margin:0}.website-cms-card-actions{gap:5px}}
