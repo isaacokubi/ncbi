@@ -8,6 +8,7 @@ import { Member } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateEventRegistrationInput, validateEventRegistrationStatus } from '../domain/eventRegistrationPolicy.js';
+import { validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -54,21 +55,11 @@ function isMinor(dateOfBirth, at = new Date()) {
 
 const attendanceManagers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','department_leader']);
 const attendanceCategories = new Set(['sunday_service','midweek_service','prayer','bible_study','department','conference','outreach','other']);
-function validateQrSession(input) {
-  const activityName = String(input?.activityName || '').trim();
-  const category = input?.category || 'other';
-  const heldAt = new Date(input?.heldAt || '');
-  if (!activityName || activityName.length > 80) return { valid: false, message: 'Activity name must be 1–80 characters' };
-  if (!attendanceCategories.has(category)) return { valid: false, message: 'Invalid attendance category' };
-  if (Number.isNaN(heldAt.getTime()) || heldAt < new Date(Date.now() - 24 * 60 * 60 * 1000) || heldAt > new Date(Date.now() + 24 * 60 * 60 * 1000)) return { valid: false, message: 'Attendance session date must be within 24 hours of now' };
-  return { valid: true, value: { activityName, category, heldAt } };
-}
-
 // QR session tokens are signed, short-lived and bound to one organisation and service.
 router.post('/attendance/qr-session', async (req, res, next) => {
   try {
     if (!attendanceManagers.has(req.user.role)) return res.status(403).json({ message: 'Attendance session management permission required' });
-    const validation = validateQrSession(req.body);
+    const validation = validateQrSessionInput(req.body, new Date());
     if (!validation.valid) return res.status(400).json({ message: validation.message });
     const organisation = req.body.organisation || (req.user.organisation?._id ?? req.user.organisation);
     if (!mongoose.isValidObjectId(organisation) || !(await assertOrganisationAccess(req.user, organisation))) return res.status(403).json({ message: 'Organisation is outside your authorised scope' });
@@ -95,6 +86,7 @@ router.post('/attendance/qr-checkin', async (req, res, next) => {
     }
     if (session.purpose !== 'ncbi-attendance-checkin' || !mongoose.isValidObjectId(session.organisation) || !attendanceCategories.has(session.category) || !session.jti) return res.status(401).json({ message: 'QR session is not a valid attendance session' });
     if (!(await assertOrganisationAccess(req.user, session.organisation))) return res.status(403).json({ message: 'QR session belongs to another organisation' });
+    if (req.user.role === 'member' && String(req.user.memberProfile || '') !== String(memberId)) return res.status(403).json({ message: 'Members can only check in their own profile' });
     const member = await Member.findOne({ _id: memberId, homeOrganisation: session.organisation, status: { $in: ['member','worker','minister','new_believer'] } }).select('_id').lean();
     if (!member) return res.status(404).json({ message: 'Active member profile not found in this branch' });
     const heldAt = new Date(session.heldAt);
