@@ -27,7 +27,7 @@ try{
    asset.cloudinaryResourceType=uploaded.resourceType;
    asset.cloudinaryFormat=uploaded.format;
    asset.secureUrl=uploaded.secureUrl;
-   asset.size=uploaded.bytes||buffer.length;
+   asset.optimizedSize=uploaded.bytes||buffer.length;
    asset.storageKey='cloudinary:'+uploaded.publicId;
    await asset.save();
    migrated++;
