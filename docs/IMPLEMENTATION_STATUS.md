@@ -190,7 +190,7 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 ## Configurable budget approval matrices
 - Senior authorised leadership can configure organisation-scoped budget approval policies with non-overlapping amount bands, permitted approver roles and one to three required distinct approvers.
 - Budget decisions are recorded individually with actor, role, decision, note and timestamp. Rejections require an explanation; a budget remains submitted until the configured number of independent approvals is reached.
-- Policies currently apply to budget approvals only. Journal, supplier invoice and payment approval matrices are not yet integrated. There is not yet a dedicated frontend policy administration workspace or MongoDB concurrency/integration coverage.
+- Policies currently apply to budget approvals only. Journal, supplier invoice and payment approval matrices are not yet integrated. A dedicated Budget approval matrix panel is now available from Finance → Budgets for authorised senior approvers; it supports organisation scope, inclusive amount bands, selected approver roles, required approval count and activation/deactivation. Policies still apply only to budgets. MongoDB concurrency/integration coverage and race-safe overlapping-range creation remain outstanding.
 
 
 ## Church media publishing and public gallery
