@@ -45,7 +45,7 @@ export function budgetDecisionError(budget, actorId) {
 }
 export function isValidPositiveAmount(value) {
   const text = String(value ?? '').trim();
-  if (!/^\\d+(?:\\.\\d{1,2})?$/.test(text)) return false;
+  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return false;
   const [whole, fraction = ''] = text.split('.');
   const cents = BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2));
   return cents > 0n && cents <= 10000000000000n;
