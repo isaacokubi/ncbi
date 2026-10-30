@@ -131,13 +131,15 @@ router.get('/overview.csv', allowRoles('super_admin','international_executive','
       ])
     ]);
     const rows = [], memberMap = new Map(members.map(x => [x._id, x.count])), attendanceMap = new Map(attendance.map(x => [x._id, x.count]));
-    for (const { key } of monthLabels(start, months)) {
+    if (req.user.role !== 'treasurer') for (const { key } of monthLabels(start, months)) {
       rows.push(['trend', key, 'new_members', '', memberMap.get(key) || 0, '']);
       rows.push(['trend', key, 'attendance_records', '', attendanceMap.get(key) || 0, '']);
     }
     for (const x of finance) rows.push(['finance', x._id.month, x._id.direction, x.transactions + ' confirmed transactions', Number(x.total.toString()), x._id.currency || 'KES']);
-    for (const x of ministry) rows.push(['ministry', '', 'active_records', x._id, x.count, '']);
-    for (const x of branches) { rows.push(['branch', '', 'registered_members', x.code || x.name, x.members, '']); rows.push(['branch', '', 'attendance_records', x.code || x.name, x.attendanceRecords, '']); }
+    if (req.user.role !== 'treasurer') {
+      for (const x of ministry) rows.push(['ministry', '', 'active_records', x._id, x.count, '']);
+      for (const x of branches) { rows.push(['branch', '', 'registered_members', x.code || x.name, x.members, '']); rows.push(['branch', '', 'attendance_records', x.code || x.name, x.attendanceRecords, '']); }
+    }
     res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="ncbi-management-report.csv"', 'Cache-Control': 'no-store' });
     res.send(csvDocument(rows));
   } catch (error) { next(error); }
