@@ -1833,3 +1833,35 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
     border-radius:30% 30% 14px 14px!important;
   }
 }
+
+
+/* Keep the bishop's name clear: the supporting hero caption sits below the portrait instead of over it. */
+.public-art-frame{
+  position:relative;
+  z-index:3;
+}
+.bishop-name{
+  position:relative;
+  z-index:4;
+  display:block;
+  width:100%;
+  margin:10px 0 0;
+  padding:8px 12px;
+  line-height:1.35;
+  background:rgba(22,11,40,.92);
+  border:1px solid rgba(234,213,140,.42);
+  border-radius:8px;
+  white-space:normal;
+}
+.public-art-caption{
+  position:relative;
+  z-index:2;
+  inset:auto;
+  width:min(100%,560px);
+  max-width:100%;
+  margin:14px 0 0 auto;
+}
+@media(max-width:720px){
+  .bishop-name{font-size:18px;padding:9px 10px}
+  .public-art-caption{width:100%;margin:12px auto 0}
+}
