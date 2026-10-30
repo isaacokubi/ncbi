@@ -123,8 +123,11 @@ test('platform, international and national dashboards receive distinct indicator
   const international = dashboardMetricsForRole('international_executive', metrics);
   const national = dashboardMetricsForRole('national_admin', metrics);
   assert.deepEqual(Object.keys(platform), ['organisationUnits','activeOrganisations','activeUsers','pendingAccounts','branches']);
+  assert.ok(Object.hasOwn(international, 'activeOrganisations'));
+  assert.ok(Object.hasOwn(international, 'activeUsers'));
+  assert.equal(international.activeOrganisations, 38);
+  assert.equal(international.activeUsers, 120);
   assert.ok(Object.hasOwn(international, 'nationalOffices'));
-  assert.ok(!Object.hasOwn(international, 'activeUsers'));
   assert.ok(Object.hasOwn(national, 'regionalUnits'));
   assert.ok(!Object.hasOwn(national, 'nationalOffices'));
   assert.ok(!Object.hasOwn(national, 'organisationUnits'));
