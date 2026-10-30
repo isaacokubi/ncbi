@@ -14,13 +14,14 @@ import paymentRoutes from './routes/payments.js';
 import reportsRoutes from './routes/reports.js';
 import portalRoutes from './routes/portal.js';
 import publicRoutes from './routes/public.js';
+import brandingRoutes from './routes/branding.js';
 
 const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
 const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map(v => v.trim());
 app.use(cors({ origin: (origin, callback) => !origin || allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('Origin not allowed by CORS')) }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '2mb' }));
 if (process.env.NODE_ENV !== 'test') app.use(morgan('tiny'));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'ncbi-api', timestamp: new Date().toISOString() }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }), authRoutes);
@@ -34,6 +35,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/branding', brandingRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' }));
 app.use((error, _req, res, _next) => {
   if (error.type === 'entity.too.large') return res.status(413).json({ message: 'File exceeds the 10 MiB upload limit' });
