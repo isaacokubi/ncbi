@@ -125,7 +125,7 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
         : null;
 
       const normalizePhone = value => {
-        const digits = String(value || '').replace(/\\D/g, '');
+        const digits = String(value || '').replace(/\D/g, '');
         if (digits.startsWith('254')) return digits.slice(3);
         if (digits.startsWith('0')) return digits.slice(1);
         return digits;
@@ -136,11 +136,11 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
           status: { $in: eligibleStatuses },
           phone: { $exists: true, $ne: '' }
         }).select('_id firstName lastName phone membershipNumber').lean();
-        const applicantName = target.fullName.toLocaleLowerCase().replace(/\\s+/g, ' ').trim();
+        const applicantName = target.fullName.toLocaleLowerCase().replace(/\s+/g, ' ').trim();
         const phone = normalizePhone(target.registrationPhone);
         const matches = candidates.filter(member =>
           normalizePhone(member.phone) === phone &&
-          (member.firstName + ' ' + member.lastName).toLocaleLowerCase().replace(/\\s+/g, ' ').trim() === applicantName
+          (member.firstName + ' ' + member.lastName).toLocaleLowerCase().replace(/\s+/g, ' ').trim() === applicantName
         );
         if (matches.length > 1) return res.status(409).json({ message: 'More than one member matches this name and phone number. Ask the applicant for their membership number or resolve the duplicate member records before approving.' });
         if (matches.length === 1) verifiedMember = matches[0];
