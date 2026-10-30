@@ -11,6 +11,7 @@ import { validateEventRegistrationInput, validateEventRegistrationStatus } from 
 import { canCheckInWithQr, validateQrSessionInput } from '../domain/attendanceQrPolicy.js';
 import { canReadOperationsEntity } from '../domain/workspaceEntityPolicy.js';
 import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
+import { validateAnnouncementRecord } from '../domain/announcementPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -184,6 +185,14 @@ router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
     const status = req.body.status === undefined ? record.status : String(req.body.status);
     if (!['pending','in_progress','completed'].includes(status)) return res.status(400).json({ message: 'Status must be pending, in_progress or completed' });
     let assignedTo = record.assignedTo || [];
+    if (entity === 'announcement') {
+      const policy = validateAnnouncementRecord({
+        title: req.body.title ?? record.title,
+        data: req.body.data ?? record.data,
+        visibility: req.body.visibility ?? record.visibility
+      }, req.user, { existingPublic: record.visibility === 'public' });
+      if (!policy.valid) return res.status(policy.status).json({ message: policy.message });
+    }
     if (req.body.assignedTo !== undefined) {
       if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid pastoral assignee' });
       const pastor = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean();
@@ -415,6 +424,10 @@ router.post('/:entity', async (req, res, next) => {
     if (sensitiveEntities.has(entity) && visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
     const payload = safeData(data ?? {});
     if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+    if (entity === 'announcement') {
+      const policy = validateAnnouncementRecord({ title, data: payload, visibility: visibility || 'organisation' }, req.user);
+      if (!policy.valid) return res.status(policy.status).json({ message: policy.message });
+    }
     const memberLinkError = await validateLinkedMember(entity, payload, targetOrg);
     if (memberLinkError) return res.status(400).json({ message: memberLinkError });
     if (assignedTo !== undefined) {
@@ -490,6 +503,7 @@ router.delete('/:entity/:id', async (req, res, next) => {
     const filter = scopedRecordFilter(entity, ids, req.user); filter._id = id;
     const record = await OperationsRecord.findOne(filter);
     if (!record) return res.status(404).json({ message: 'Record not found' });
+    if (entity === 'announcement' && record.visibility === 'public' && !['super_admin','international_executive','national_admin'].includes(req.user.role)) return res.status(403).json({ message: 'Only headquarters administrators may archive public NCBI announcements' });
     record.status = 'archived'; record.archivedAt = new Date(); record.updatedBy = req.user._id; await record.save();
     await audit(req, 'archive', entity, record, `Archived ${entity}: ${record.title}`);
     res.json({ message: 'Record archived' });
