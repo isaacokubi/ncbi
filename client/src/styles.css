@@ -657,3 +657,12 @@ p{line-height:1.65}
 }
 @media(max-width:420px){.public-brand small{font-size:7px;letter-spacing:.08em}.public-brand b{font-size:19px}.public-hero-actions{align-items:stretch;flex-direction:column}.public-hero-actions>*{width:100%}.public-hero-art{min-height:275px}.public-art-caption{max-width:220px}.public-section-heading{gap:12px}.public-section-heading>div{min-width:0}.public-contact-actions{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.public-site *,.public-site *::before,.public-site *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Public homepage content cards and resilient data states. */
+.public-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.public-retry-button{display:inline-flex;align-items:center;gap:8px;margin:14px 0 0;padding:9px 13px;border:1px solid #b99751;border-radius:7px;background:#321842;color:#f2dda0;font-size:12px;font-weight:800;cursor:pointer}
+.public-retry-button:hover{background:#482652}
+.public-state[role="alert"]{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.public-state-error .public-retry-button{flex:0 0 auto}
+@media(max-width:520px){.public-state[role="alert"]{align-items:flex-start;flex-direction:column}}
