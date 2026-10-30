@@ -15,9 +15,16 @@ import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
 const router = Router();
 router.use(requireAuth);
 const entities = new Set(['department','event','pastoral_case','prayer_request','mission','discipleship_course','service_plan','leadership_appointment','asset','project','document','visitor_follow_up','announcement','volunteer','training','property','children_ministry','youth_ministry','family_ministry','small_group','baptism','wedding','funeral','benevolence','facility_booking','inventory','procurement','communications','media','transport','compliance','member_class','volunteer_schedule','event_registration','sermon','church_plant','sponsorship','donation_pledge','member_enrolment','member_notification','ministry_report','welfare_visit','discipline_case','counselling_case']);
-const sensitiveEntities = new Set(['pastoral_case','prayer_request','benevolence','discipline_case','counselling_case']);
+const sensitiveEntities = new Set(['pastoral_case','prayer_request','benevolence','welfare_visit','discipline_case','counselling_case']);
 const managers = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin']);
 const canManageSensitive = new Set(['super_admin','international_executive','national_admin','branch_pastor']);
+
+async function validateLinkedMember(entity, payload, organisation) {
+  if (!['pastoral_case','welfare_visit','discipline_case','counselling_case','volunteer','member_enrolment'].includes(entity) || !payload.memberId) return null;
+  if (!mongoose.isValidObjectId(payload.memberId)) return 'Select a valid member for this record';
+  const member = await Member.findOne({ _id: payload.memberId, homeOrganisation: organisation }).select('_id').lean();
+  return member ? null : 'The selected member does not belong to this church organisation';
+}
 
 async function audit(req, action, entity, record, summary) {
   await AuditLog.create({ organisation: record?.organisation ?? req.user.organisation?._id ?? req.user.organisation, actor: req.user._id, action, entity, recordId: record?._id, summary, ipAddress: req.ip, userAgent: req.get('user-agent') });
@@ -408,11 +415,8 @@ router.post('/:entity', async (req, res, next) => {
     if (sensitiveEntities.has(entity) && visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
     const payload = safeData(data ?? {});
     if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
-    if (entity === 'pastoral_case' && payload.memberId) {
-      if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'Select a valid member for this pastoral record' });
-      const careMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: targetOrg }).select('_id').lean();
-      if (!careMember) return res.status(400).json({ message: 'The selected member does not belong to this church organisation' });
-    }
+    const memberLinkError = await validateLinkedMember(entity, payload, targetOrg);
+    if (memberLinkError) return res.status(400).json({ message: memberLinkError });
     if (assignedTo !== undefined) {
       if (!Array.isArray(assignedTo) || assignedTo.length > 10 || assignedTo.some(id => !mongoose.isValidObjectId(id))) return res.status(400).json({ message: 'Assignees must be valid user identifiers' });
       const eligibleAssignees = await User.countDocuments({ _id: { $in: assignedTo }, organisation: targetOrg, active: true });
@@ -459,11 +463,8 @@ router.patch('/:entity/:id', async (req, res, next) => {
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
-      if (entity === 'pastoral_case' && payload.memberId) {
-        if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'Select a valid member for this pastoral record' });
-        const careMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: record.organisation }).select('_id').lean();
-        if (!careMember) return res.status(400).json({ message: 'The selected member does not belong to this church organisation' });
-      }
+      const memberLinkError = await validateLinkedMember(entity, payload, record.organisation);
+      if (memberLinkError) return res.status(400).json({ message: memberLinkError });
       if (entity === 'member_notification') {
         if (String(payload.memberId || '') !== String(record.data?.memberId || '')) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
         const message = String(payload.message || '').trim();
