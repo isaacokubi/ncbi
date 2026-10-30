@@ -88,7 +88,16 @@ router.get('/members',async(req,res,next)=>{
   catch(e){next(e);}
 });
 router.post('/members',async(req,res,next)=>{
-  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership registration permission required'});const {firstName,lastName,phone,email,status,profilePhotoUrl,residentialLocation,emergencyContactName,emergencyContactRelationship,emergencyContactPhone,householdReference,baptisedAt,baptismChurch}=req.body;if(!firstName||!lastName)return res.status(400).json({message:'First and last name are required'});const member=await Member.create({firstName,lastName,phone,email,status,profilePhotoUrl,residentialLocation,emergencyContactName,emergencyContactRelationship,emergencyContactPhone,householdReference,baptisedAt,baptismChurch,homeOrganisation:req.user.organisation._id??req.user.organisation});res.status(201).json({member});}
+  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership registration permission required'});const {firstName,lastName,phone,email,status,profilePhotoUrl,residentialLocation,emergencyContactName,emergencyContactRelationship,emergencyContactPhone,householdReference,baptisedAt,baptismChurch}=req.body;if(!firstName||!lastName)return res.status(400).json({message:'First and last name are required'});const organisationId=req.user.organisation._id??req.user.organisation;
+    const memberStatus=status||'visitor';
+    let membershipNumber;
+    if(memberStatus!=='visitor'){
+      const organisation=await Organisation.findById(organisationId).select('code').lean();
+      if(!organisation)return res.status(409).json({message:'Member organisation is unavailable'});
+      const sequence=await SequenceCounter.findOneAndUpdate({key:'membership:'+String(organisationId)},{$inc:{value:1}},{new:true,upsert:true,setDefaultsOnInsert:true});
+      membershipNumber='NCBI-'+organisation.code+'-'+String(sequence.value).padStart(6,'0');
+    }
+    const member=await Member.create({firstName,lastName,phone,email,status:memberStatus,membershipNumber,profilePhotoUrl,residentialLocation,emergencyContactName,emergencyContactRelationship,emergencyContactPhone,householdReference,baptisedAt,baptismChurch,homeOrganisation:organisationId});res.status(201).json({member});}
   catch(e){next(e);}
 });
 router.post('/members/:id/convert',async(req,res,next)=>{
