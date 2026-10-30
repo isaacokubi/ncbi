@@ -154,3 +154,9 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - The calculation uses decimal minor units rather than floating-point arithmetic. If an approved budget exists and the proposed posting would exceed it, posting is blocked with a conflict response and an audit event.
 - No approved budget configured for an account and period is not interpreted as a zero allocation; posting remains available and the absence of an approved allocation is not silently treated as an approval.
 - This control currently measures posted actual expenditure. It does not yet reserve pending commitments, provide authorised overspend overrides, or provide an atomic cross-request budget reservation under concurrent posting. Those controls and MongoDB concurrency/integration tests remain outstanding.
+
+
+## Configurable budget approval matrices
+- Senior authorised leadership can configure organisation-scoped budget approval policies with non-overlapping amount bands, permitted approver roles and one to three required distinct approvers.
+- Budget decisions are recorded individually with actor, role, decision, note and timestamp. Rejections require an explanation; a budget remains submitted until the configured number of independent approvals is reached.
+- Policies currently apply to budget approvals only. Journal, supplier invoice and payment approval matrices are not yet integrated. There is not yet a dedicated frontend policy administration workspace or MongoDB concurrency/integration coverage.

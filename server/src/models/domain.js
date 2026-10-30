@@ -93,7 +93,31 @@ bankReconciliationSchema.index({ organisation: 1, bankAccount: 1, statementDate:
 
 export const LedgerAccount = mongoose.models.LedgerAccount || model('LedgerAccount', ledgerAccountSchema);
 export const JournalEntry = mongoose.models.JournalEntry || model('JournalEntry', journalEntrySchema);
+
+budgetSchema.add({
+  approvals: [{
+    actor: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    role: { type: String, required: true },
+    decision: { type: String, enum: ['approve','reject'], required: true },
+    note: { type: String, maxlength: 300 },
+    decidedAt: { type: Date, required: true }
+  }]
+});
 export const Budget = mongoose.models.Budget || model('Budget', budgetSchema);
+
+const financeApprovalPolicySchema = new Schema({
+  organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
+  transactionType: { type: String, enum: ['budget'], required: true },
+  minimumAmount: { type: Schema.Types.Decimal128, required: true, default: '0.00' },
+  maximumAmount: { type: Schema.Types.Decimal128, default: null },
+  approverRoles: [{ type: String, enum: ['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'] }],
+  requiredApprovals: { type: Number, min: 1, max: 3, default: 1 },
+  active: { type: Boolean, default: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+}, { timestamps: true });
+financeApprovalPolicySchema.index({ organisation: 1, transactionType: 1, active: 1 });
+export const FinanceApprovalPolicy = mongoose.models.FinanceApprovalPolicy || model('FinanceApprovalPolicy', financeApprovalPolicySchema);
 export const BankReconciliation = mongoose.models.BankReconciliation || model('BankReconciliation', bankReconciliationSchema);
 
 const paymentIntentSchema = new Schema({

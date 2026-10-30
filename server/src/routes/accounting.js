@@ -2,11 +2,12 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
-import { LedgerAccount, JournalEntry, Budget, BankReconciliation, AuditLog } from '../models/domain.js';
+import { LedgerAccount, JournalEntry, Budget, BankReconciliation, AuditLog, FinanceApprovalPolicy } from '../models/domain.js';
 import { Organisation } from '../models/index.js';
 import { buildFinancialStatements } from '../domain/financialStatements.js';
 import { budgetDecisionError, budgetTransition } from '../domain/financePolicy.js';
 import { budgetPeriodRange, budgetPostingDecision, selectApplicableBudget } from '../domain/budgetControl.js';
+import { approvalPolicyOverlaps, approvalPolicyRangeError, approvalProgress } from '../domain/approvalMatrix.js';
 
 const router=Router();
 router.use(requireAuth);
@@ -190,13 +191,64 @@ router.post('/budgets/:id/decision',async(req,res,next)=>{try{
  if(!budget)return res.status(404).json({message:'Budget not found'});
  const separationError=budgetDecisionError(budget,req.user._id);
  if(separationError)return res.status(403).json({message:separationError});
- const transition=budgetTransition(budget.status||'submitted',decision);
- if(!transition.allowed)return res.status(409).json({message:`Cannot ${decision} a budget in ${budget.status||'submitted'} state`});
+ if((budget.status||'submitted')!=='submitted')return res.status(409).json({message:`Cannot ${decision} a budget in ${budget.status||'submitted'} state`});
  const note=String(req.body.note||'').trim().slice(0,300);
  if(decision==='reject'&&!note)return res.status(400).json({message:'Provide a reason when rejecting a budget'});
- budget.status=transition.status;budget.decidedBy=req.user._id;if(decision==='approve'){budget.approvedBy=req.user._id;budget.approvedAt=new Date();}budget.decisionNote=note;await budget.save();
- await AuditLog.create({organisation:budget.organisation,actor:req.user._id,action:'budget_'+decision,entity:'budget',recordId:budget._id,summary:`Budget ${transition.status}: ${budget.fiscalYear} ${budget.period}`,metadata:{account:budget.account,amount:String(budget.amount),note}});
- res.json({budget});
+ const policy=await FinanceApprovalPolicy.findOne({organisation:budget.organisation,transactionType:'budget',active:true,minimumAmount:{$lte:budget.amount},$or:[{maximumAmount:null},{maximumAmount:{$gte:budget.amount}}]}).lean();
+ if(policy&&!policy.approverRoles.includes(req.user.role))return res.status(403).json({message:'Your role is not authorised by the applicable budget approval matrix'});
+ if(!policy&&!approvers.has(req.user.role))return res.status(403).json({message:'Independent budget approval permission required'});
+ budget.approvals=budget.approvals||[];
+ if(budget.approvals.some(item=>String(item.actor)===String(req.user._id)))return res.status(409).json({message:'You have already participated in this budget decision'});
+ const requiredApprovals=policy?.requiredApprovals||1;
+ const approvalProgressResult=approvalProgress({approvals:budget.approvals,actorId:req.user._id,decision,requiredApprovals});
+ if(!approvalProgressResult.allowed)return res.status(409).json({message:approvalProgressResult.reason});
+ budget.approvals.push({actor:req.user._id,role:req.user.role,decision,note,decidedAt:new Date()});
+ if(decision==='reject'){
+  budget.status='rejected';budget.decidedBy=req.user._id;budget.decisionNote=note;
+ }else if(budget.approvals.filter(item=>item.decision==='approve').length>=requiredApprovals){
+  const transition=budgetTransition('submitted','approve');
+  budget.status=transition.status;budget.decidedBy=req.user._id;budget.approvedBy=req.user._id;budget.approvedAt=new Date();budget.decisionNote=note;
+ }
+ await budget.save();
+ await AuditLog.create({organisation:budget.organisation,actor:req.user._id,action:'budget_'+decision,entity:'budget',recordId:budget._id,summary:`Budget ${budget.status}: ${budget.fiscalYear} ${budget.period}`,metadata:{account:budget.account,amount:String(budget.amount),note,approvals:budget.approvals.length,requiredApprovals}});
+ res.json({budget,pendingApprovals:budget.status==='submitted'?Math.max(0,requiredApprovals-budget.approvals.filter(item=>item.decision==='approve').length):0});
+}catch(e){next(e);}});
+
+const approvalPolicyAdmins=new Set(['super_admin','international_executive','national_admin','regional_overseer']);
+router.get('/approval-policies',async(req,res,next)=>{try{
+ if(!approvers.has(req.user.role))return res.status(403).json({message:'Finance approval policy access denied'});
+ const ids=await accessibleOrganisationIds(req.user);
+ const filter={organisation:{$in:ids}};
+ if(req.query.transactionType)filter.transactionType=String(req.query.transactionType);
+ const policies=await FinanceApprovalPolicy.find(filter).populate('organisation','name code').populate('createdBy','fullName').populate('updatedBy','fullName').sort({transactionType:1,minimumAmount:1}).lean();
+ res.json({policies});
+}catch(e){next(e);}});
+router.post('/approval-policies',async(req,res,next)=>{try{
+ if(!approvalPolicyAdmins.has(req.user.role))return res.status(403).json({message:'Only senior authorised leadership can configure financial approval policies'});
+ const {organisation,transactionType='budget',minimumAmount='0.00',maximumAmount=null,approverRoles,requiredApprovals=1}=req.body;
+ const org=organisation||(req.user.organisation?._id??req.user.organisation);
+ if(!mongoose.isValidObjectId(org)||!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});
+ if(transactionType!=='budget')return res.status(400).json({message:'Only budget approval policies are currently supported'});
+ const roles=Array.isArray(approverRoles)?[...new Set(approverRoles.map(String))]:[];
+ if(!roles.length||roles.some(role=>!approvers.has(role))||!Number.isInteger(requiredApprovals)||requiredApprovals<1||requiredApprovals>3||requiredApprovals>roles.length)return res.status(400).json({message:'Select valid approver roles and a required approval count supported by the selected roles'});
+ const rangeError=approvalPolicyRangeError(minimumAmount,maximumAmount);
+ if(rangeError)return res.status(400).json({message:rangeError});
+ const existing=await FinanceApprovalPolicy.find({organisation:org,transactionType,active:true}).lean();
+ const candidate={minimumAmount:String(minimumAmount),maximumAmount:maximumAmount===null||maximumAmount===''?null:String(maximumAmount)};
+ if(existing.some(policy=>approvalPolicyOverlaps(policy,candidate)))return res.status(409).json({message:'This amount range overlaps an active approval policy for the selected organisation'});
+ const policy=await FinanceApprovalPolicy.create({organisation:org,transactionType,minimumAmount:candidate.minimumAmount,maximumAmount:candidate.maximumAmount,approverRoles:roles,requiredApprovals,createdBy:req.user._id,updatedBy:req.user._id});
+ await AuditLog.create({organisation:org,actor:req.user._id,action:'approval_policy_create',entity:'finance_approval_policy',recordId:policy._id,summary:'Created budget approval matrix',metadata:{minimumAmount:candidate.minimumAmount,maximumAmount:candidate.maximumAmount,approverRoles:roles,requiredApprovals}});
+ res.status(201).json({policy});
+}catch(e){next(e);}});
+router.patch('/approval-policies/:id/status',async(req,res,next)=>{try{
+ if(!approvalPolicyAdmins.has(req.user.role))return res.status(403).json({message:'Only senior authorised leadership can change financial approval policies'});
+ if(typeof req.body.active!=='boolean')return res.status(400).json({message:'Active must be true or false'});
+ const ids=await accessibleOrganisationIds(req.user);
+ const policy=await FinanceApprovalPolicy.findOne({_id:req.params.id,organisation:{$in:ids}});
+ if(!policy)return res.status(404).json({message:'Approval policy not found'});
+ policy.active=req.body.active;policy.updatedBy=req.user._id;await policy.save();
+ await AuditLog.create({organisation:policy.organisation,actor:req.user._id,action:'approval_policy_status',entity:'finance_approval_policy',recordId:policy._id,summary:policy.active?'Activated budget approval matrix':'Deactivated budget approval matrix'});
+ res.json({policy});
 }catch(e){next(e);}});
 
 router.get('/reconciliations',async(req,res,next)=>{try{
