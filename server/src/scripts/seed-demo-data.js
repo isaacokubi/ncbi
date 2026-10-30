@@ -362,21 +362,7 @@ try {
   console.log('NCBI demo data seed completed (idempotent; existing unrelated records preserved).');
   console.log('Demo sign-in accounts (use SEED_COMMON_PASSWORD from server/.env):');
   for (const account of accountLog) console.log(`- ${account.email} | ${account.role} | ${account.status}`);
-  console.log(JSON.stringify({
-    created: counts,
-    totals: {
-      internationalOffices: await Organisation.countDocuments({ level: 'international', status: 'active' }),
-      nationalOffices: await Organisation.countDocuments({ level: 'national', status: 'active' }),
-      regions: await Organisation.countDocuments({ level: 'regional', status: 'active' }),
-      districts: await Organisation.countDocuments({ level: 'district', status: 'active' }),
-      churches: await Organisation.countDocuments({ level: 'branch', status: 'active' }),
-      demoUsers: await User.countDocuments({ email: /@demo\.ncbi\.org$/ }),
-      demoMembers: await Member.countDocuments({ membershipNumber: /^NCBI-(?:V)?[0-9]{1,2}-/ }),
-      demoAttendance: await Attendance.countDocuments({ activityName: 'Sunday Celebration Service' }),
-      demoFinance: await FinanceTransaction.countDocuments({ reference: /^DEMO-NCBI-CH-/ }),
-      demoOperations: await OperationsRecord.countDocuments({ reference: /^DEMO-/ })
-    }
-  }, null, 2));
+  console.log(JSON.stringify({ created: counts, verifiedTotals: integrity }, null, 2));
 } finally {
   await mongoose.disconnect();
 }
