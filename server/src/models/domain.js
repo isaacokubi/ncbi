@@ -277,3 +277,40 @@ const mediaAssetSchema = new Schema({
 }, { timestamps: true });
 mediaAssetSchema.index({ organisation: 1, record: 1, status: 1 });
 export const MediaAsset = mongoose.models.MediaAsset || model('MediaAsset', mediaAssetSchema);
+
+const inventoryItemSchema = new Schema({
+  organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
+  itemCode: { type: String, required: true, trim: true, uppercase: true, maxlength: 50 },
+  itemName: { type: String, required: true, trim: true, maxlength: 160 },
+  category: { type: String, required: true, trim: true, maxlength: 80 },
+  unit: { type: String, required: true, trim: true, maxlength: 30 },
+  location: { type: String, required: true, trim: true, maxlength: 160 },
+  reorderLevel: { type: Number, min: 0, default: 0 },
+  balance: { type: Number, min: 0, default: 0 },
+  active: { type: Boolean, default: true, index: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+}, { timestamps: true });
+inventoryItemSchema.index({ organisation: 1, itemCode: 1 }, { unique: true });
+inventoryItemSchema.index({ organisation: 1, active: 1, itemName: 1 });
+
+const inventoryMovementSchema = new Schema({
+  organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
+  item: { type: Schema.Types.ObjectId, ref: 'InventoryItem', required: true, index: true },
+  movementType: { type: String, enum: ['opening_stock','received','issued','transfer','adjustment','stocktake'], required: true },
+  quantity: { type: Number, required: true, min: 0.000001 },
+  delta: { type: Number, required: true },
+  balanceBefore: { type: Number, required: true, min: 0 },
+  balanceAfter: { type: Number, required: true, min: 0 },
+  adjustmentDirection: { type: String, enum: ['increase','decrease'], default: 'increase' },
+  reference: { type: String, trim: true, maxlength: 100 },
+  destination: { type: String, trim: true, maxlength: 160 },
+  notes: { type: String, trim: true, maxlength: 1000 },
+  idempotencyKey: { type: String, required: true, trim: true, maxlength: 120 },
+  performedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+}, { timestamps: true });
+inventoryMovementSchema.index({ organisation: 1, idempotencyKey: 1 }, { unique: true });
+inventoryMovementSchema.index({ organisation: 1, item: 1, createdAt: -1 });
+
+export const InventoryItem = mongoose.models.InventoryItem || model('InventoryItem', inventoryItemSchema);
+export const InventoryMovement = mongoose.models.InventoryMovement || model('InventoryMovement', inventoryMovementSchema);
