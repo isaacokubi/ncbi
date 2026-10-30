@@ -14,10 +14,18 @@ All workspace endpoints except health and login require `Authorization: Bearer <
 - `PATCH /api/workspace/organisations/:id/status` — approve/activate, suspend or archive.
 - `GET/POST /api/workspace/members` — list and register members.
 - `POST /api/workspace/members/:id/transfer` — transfer a member with history.
+- `POST /api/workspace/members/:id/convert` — convert a visitor to `new_believer` or `member`, allocate a branch-sequenced membership number and write an audit event.
+- `POST /api/workspace/users` accepts optional `memberProfile` for a member-role account; the profile must belong to the selected organisation and cannot already be linked to another account.
 - `POST /api/workspace/attendance` — record a member or visitor attendance.
 - `GET /api/workspace/attendance` — scoped paginated attendance register.
 - `GET /api/workspace/attendance/summary` — scoped attendance/member/confirmed-income summary.
 - `PATCH /api/workspace/members/:id` — update an authorised member profile.
+
+## Member portal
+- `GET /api/portal/summary` — for member-role accounts linked to a member profile; returns only that profile, its attendance, the account's own event registrations, upcoming branch events and organisation-wide branch announcements.
+
+## Reporting
+- `GET /api/reports/overview?months=12&organisation=<optional-id>` — returns membership and attendance trends, confirmed finance totals by currency, ministry activity counts and branch comparisons. Months are limited to 3–24. Any organisation filter must be inside the caller's authorised hierarchy. This is an operational report, not an audited financial statement.
 
 ## Dashboard
 - `GET /api/dashboard/summary` — scoped counts, confirmed income/expenses by currency, pending records and upcoming events.
