@@ -10,12 +10,12 @@ test('treasurer report payload contains finance aggregates only',()=>{
 });
 
 test('department leader dashboard exposes attendance activity only',()=>assert.deepEqual(dashboardMetricsForRole('department_leader',metrics),{attendanceRecordsThisMonth:44}));
-test('branch leadership dashboard can review church operations but not finance KPIs',()=>{
+test('branch pastor dashboard includes scoped stewardship indicators',()=>{
  const result=dashboardMetricsForRole('branch_pastor',metrics);
  assert.equal(result.members,120);
  assert.equal(result.attendanceRecordsThisMonth,44);
- assert.equal(Object.hasOwn(result,'confirmedIncomeThisMonth'),false);
- assert.equal(Object.hasOwn(result,'confirmedExpensesThisMonth'),false);
+ assert.deepEqual(result.confirmedIncomeThisMonth,metrics.confirmedIncomeThisMonth);
+ assert.deepEqual(result.confirmedExpensesThisMonth,metrics.confirmedExpensesThisMonth);
 });
 test('senior leadership dashboard retains organisation-wide operational indicators',()=>{
  const result=dashboardMetricsForRole('national_admin',metrics);
