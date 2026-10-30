@@ -59,8 +59,8 @@ router.get('/overview', allowRoles('super_admin','international_executive','nati
       ]),
       Organisation.aggregate([
         { $match: { _id: { $in: ids }, level: 'branch' } },
-        { $lookup: { from: 'members', localField: '_id', foreignField: 'homeOrganisation', as: 'members' } },
-        { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', as: 'attendance' } },
+        { $lookup: { from: 'members', localField: '_id', foreignField: 'homeOrganisation', pipeline: [{ $match: { createdAt: { $gte: start } } }], as: 'members' } },
+        { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', pipeline: [{ $match: { heldAt: { $gte: start } } }], as: 'attendance' } },
         { $project: {
           name: 1, code: 1, status: 1,
           members: { $size: { $filter: { input: '$members', as: 'member', cond: { $in: ['$$member.status', ['member','worker','minister']] } } } },
@@ -124,8 +124,8 @@ router.get('/overview.csv', allowRoles('super_admin','international_executive','
       OperationsRecord.aggregate([{ $match: { organisation: { $in: ids }, status: { $ne: 'archived' }, createdAt: { $gte: start } } }, { $group: { _id: '$entity', count: { $sum: 1 } } }, { $sort: { count: -1, _id: 1 } }]),
       Organisation.aggregate([
         { $match: { _id: { $in: ids }, level: 'branch' } },
-        { $lookup: { from: 'members', localField: '_id', foreignField: 'homeOrganisation', as: 'members' } },
-        { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', as: 'attendance' } },
+        { $lookup: { from: 'members', localField: '_id', foreignField: 'homeOrganisation', pipeline: [{ $match: { createdAt: { $gte: start } } }], as: 'members' } },
+        { $lookup: { from: 'attendances', localField: '_id', foreignField: 'organisation', pipeline: [{ $match: { heldAt: { $gte: start } } }], as: 'attendance' } },
         { $project: { name: 1, code: 1, members: { $size: { $filter: { input: '$members', as: 'member', cond: { $in: ['$member.status', ['member','worker','minister']] } } } }, attendanceRecords: { $size: '$attendance' } } },
         { $sort: { members: -1, name: 1 } }, { $limit: 30 }
       ])
