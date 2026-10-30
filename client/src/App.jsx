@@ -43,7 +43,7 @@ function visibleForRole(key,role){
  if(['branding','websiteContent'].includes(key))return ['super_admin','national_admin'].includes(role);
  if(role==='member')return key==='memberPortal'||key==='security';
  if(key==='gallery')return branchAdminRoles.includes(role);
- if(key==='registrations')return branchAdminRoles.includes(role);
+ if(key==='registrations')return ['super_admin','international_executive','national_admin','branch_admin','branch_pastor'].includes(role);
  if(role==='treasurer')return ['dashboard','security','finance','payments','accounts','journals','budgets','reconciliation','suppliers','reports'].includes(key);
  if(role==='department_leader')return ['dashboard','security','attendance','departments','events','discipleship','services'].includes(key);
  if(key==='memberPortal')return false;
