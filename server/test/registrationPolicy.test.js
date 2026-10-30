@@ -27,3 +27,16 @@ test('national and platform administrators can decide non-member applications', 
 test('unapproved roles cannot decide registrations', () => {
   assert.match(registrationDecisionError({ role: 'treasurer', organisation: 'branch-a' }, visitorApplication), /permission required/);
 });
+
+const officialApplication = { registrationCategory: 'official', organisation: 'branch-a', requestedRole: 'branch_pastor' };
+test('only an authority above the requested dashboard can approve official applications', () => {
+  assert.equal(registrationDecisionError({ role: 'national_admin' }, officialApplication), null);
+  assert.equal(registrationDecisionError({ role: 'super_admin' }, officialApplication), null);
+  assert.match(registrationDecisionError({ role: 'branch_admin', organisation: 'branch-a' }, officialApplication), /not authorised/);
+  assert.match(registrationDecisionError({ role: 'treasurer', organisation: 'branch-a' }, officialApplication), /permission required/);
+});
+test('branch administrators may approve lower-level ministry dashboard requests', () => {
+  const request = { ...officialApplication, requestedRole: 'department_leader' };
+  assert.equal(registrationDecisionError({ role: 'branch_admin', organisation: 'branch-a' }, request), null);
+  assert.match(registrationDecisionError({ role: 'branch_admin', organisation: 'branch-b' }, request), /assigned branch/);
+});
