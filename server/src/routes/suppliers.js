@@ -5,7 +5,7 @@ import { accessibleOrganisationIds, assertOrganisationAccess } from '../middlewa
 import { AuditLog, LedgerAccount, JournalEntry, Budget, Supplier, PurchaseRequest, PurchaseQuote, SupplierInvoice, SupplierPayment, FinanceApprovalPolicy } from '../models/domain.js';
 import { approvalProgress } from '../domain/approvalMatrix.js';
 import { budgetPeriodRange, selectApplicableBudget, budgetPostingDecision } from '../domain/budgetControl.js';
-import { supplierNameError, supplierInvoiceError, supplierPaymentError, supplierDecisionError, invoicePaymentStatus, moneyToMinor } from '../domain/supplierWorkflow.js';
+import { supplierNameError, supplierInvoiceError, supplierPaymentError, supplierDecisionError, invoicePaymentStatus, moneyToMinor, supplierQuoteError } from '../domain/supplierWorkflow.js';
 
 const router=Router();
 router.use(requireAuth);
@@ -78,8 +78,9 @@ router.post('/purchase-requests/:id/quotes',async(req,res,next)=>{try{
  if(!purchaseRequest)return res.status(404).json({message:'Purchase request not found'});
  if(!['submitted','approved'].includes(purchaseRequest.status)||purchaseRequest.selectedQuote)return res.status(409).json({message:'Quotes can only be added before a purchase order is issued'});
  const {supplier,quoteNumber,amount,currency=purchaseRequest.currency,deliveryDays,validUntil,terms,documentReference}=req.body;
- const minor=moneyToMinor(amount),days=Number(deliveryDays),expiry=new Date(validUntil);
- if(!mongoose.isValidObjectId(supplier)||!String(quoteNumber||'').trim()||String(quoteNumber).length>80||minor===null||minor<=0n||String(currency).toUpperCase()!==purchaseRequest.currency||!Number.isInteger(days)||days<0||days>3650||Number.isNaN(expiry.getTime())||expiry<new Date(new Date().toISOString().slice(0,10)))return res.status(400).json({message:'Supplier, quote reference, positive amount, matching currency, valid delivery period and future validity date are required'});
+ const validation=supplierQuoteError({quoteNumber,amount,currency,requestCurrency:purchaseRequest.currency,deliveryDays,validUntil});
+ if(!mongoose.isValidObjectId(supplier)||validation)return res.status(400).json({message:validation||'Select a valid supplier'});
+ const days=Number(deliveryDays),expiry=new Date(validUntil);
  const vendor=await Supplier.findOne({_id:supplier,organisation:purchaseRequest.organisation,status:'active'}).select('_id');
  if(!vendor)return res.status(400).json({message:'Select an active supplier in this organisation'});
  const quote=await PurchaseQuote.create({organisation:purchaseRequest.organisation,purchaseRequest:purchaseRequest._id,supplier,quoteNumber:String(quoteNumber).trim(),currency:String(currency).toUpperCase(),amount:asAmount(amount),deliveryDays:days,validUntil:expiry,terms:String(terms||'').slice(0,1000),documentReference:String(documentReference||'').slice(0,300),createdBy:req.user._id});

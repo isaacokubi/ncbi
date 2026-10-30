@@ -38,3 +38,14 @@ export const invoicePaymentStatus=({amount,paid})=>{
  return 'partially_paid';
 };
 export const moneyToMinor=moneyMinor;
+
+export const supplierQuoteError=({quoteNumber,amount,currency,requestCurrency,deliveryDays,validUntil,now=new Date()})=>{
+ if(!String(quoteNumber||'').trim()||String(quoteNumber).trim().length>80)return 'A valid supplier quote reference is required';
+ const minor=moneyMinor(amount);
+ if(minor===null||minor<=0n)return 'Quoted amount must be positive and use no more than two decimal places';
+ if(!/^[A-Z]{3}$/.test(String(currency||'').toUpperCase())||String(currency).toUpperCase()!==String(requestCurrency||'').toUpperCase())return 'Quotation currency must match the approved purchase request';
+ if(!Number.isInteger(Number(deliveryDays))||Number(deliveryDays)<0||Number(deliveryDays)>3650)return 'Delivery days must be a whole number between 0 and 3,650';
+ const expiry=new Date(validUntil),today=new Date(now.toISOString().slice(0,10));
+ if(!validUntil||Number.isNaN(expiry.getTime())||expiry<today)return 'A valid future quotation expiry date is required';
+ return null;
+};
