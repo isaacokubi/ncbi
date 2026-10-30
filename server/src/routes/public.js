@@ -5,8 +5,8 @@ import { SiteContent } from '../models/siteContent.js';
 
 const router = Router();
 import mongoose from 'mongoose';
-const Branding = mongoose.models.NcbiBranding || mongoose.model('NcbiBranding', new mongoose.Schema({key:{type:String,unique:true,default:'global'},logoData:{type:String,required:true}},{timestamps:true}));
-router.get('/branding',async(_req,res,next)=>{try{const item=await Branding.findOne({key:'global'}).select('logoData').lean();res.set('Cache-Control','public, max-age=60, stale-while-revalidate=300');res.json({logoUrl:item?.logoData||'/ncbi-logo.jpg?v=20261030-2'});}catch(error){next(error);}});
+const Branding = mongoose.models.NcbiBranding || mongoose.model('NcbiBranding', new mongoose.Schema({key:{type:String,unique:true,default:'global'},logoData:{type:String,required:true},heroImageData:{type:String,default:''}},{timestamps:true}));
+router.get('/branding',async(_req,res,next)=>{try{const item=await Branding.findOne({key:'global'}).select('logoData heroImageData').lean();res.set('Cache-Control','public, max-age=60, stale-while-revalidate=300');res.json({logoUrl:item?.logoData||'/ncbi-logo.jpg?v=20261030-2',heroImageUrl:item?.heroImageData||'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1100&q=85'});}catch(error){next(error);}});
 
 // Public data is opt-in: only records explicitly marked public are exposed.
 // No member directory, financial data, pastoral records or internal notices
