@@ -154,15 +154,22 @@ router.patch('/registrations/:id/decision', requireAuth, async (req, res, next) 
           message: 'No existing member matched this applicant by name and phone. Enter the membership number assigned by your branch, or create/verify the member record before approving.'
         });
         const names = target.fullName.split(/\\s+/);
-        const createdMember = await Member.create({
-          firstName: names.shift() || target.fullName,
-          lastName: names.join(' ') || 'Member',
-          phone: target.registrationPhone,
-          email: target.email,
-          membershipNumber: suppliedNumber,
-          status: 'member',
-          homeOrganisation: target.organisation
-        });
+        if (await Member.exists({ homeOrganisation: target.organisation, membershipNumber: suppliedNumber })) return res.status(409).json({ message: 'That membership number is already assigned in this branch. Check the member record and choose the correct number.' });
+        let createdMember;
+        try {
+          createdMember = await Member.create({
+            firstName: names.shift() || target.fullName,
+            lastName: names.join(' ') || 'Member',
+            phone: target.registrationPhone,
+            email: target.email,
+            membershipNumber: suppliedNumber,
+            status: 'member',
+            homeOrganisation: target.organisation
+          });
+        } catch (error) {
+          if (error?.code === 11000) return res.status(409).json({ message: 'That membership number was assigned at the same time by another user. Refresh the workspace and verify the correct member record.' });
+          throw error;
+        }
         verifiedMember = { _id: createdMember._id, membershipNumber: createdMember.membershipNumber };
       } else if (!verifiedMember.membershipNumber && suppliedNumber) {
         const updatedMember = await Member.findOneAndUpdate(
