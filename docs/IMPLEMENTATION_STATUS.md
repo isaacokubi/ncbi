@@ -248,3 +248,11 @@ The inventory workspace now has a dedicated organisation-scoped stock register i
 - The Purchasing and procurement page now opens the existing supplier and procurement workflow: supplier register, purchase request submission, independent approvals governed by the configured approval matrix, supplier invoices, invoice approvals and supplier payment requests/settlements.
 - The client build and server syntax/unit checks completed successfully on GitHub Actions run [41065398554](https://github.com/isaacokubi/ncbi/actions/runs/41065398554) for commit `6a4fe700b78e85e28915da992a201698cc739164`; the workflow was still finalising its run status when this note was prepared.
 - Procurement quotation comparison, automated purchase-order generation and supplier delivery/receiving reconciliation remain separate enhancements. Inventory and procurement actions still require production integration testing with authorised users and a MongoDB replica-set deployment because stock movements rely on transactions.
+
+
+## Media ministry workspace (30 October 2026)
+
+- The Media ministry navigation page now opens the Cloudinary-backed church media workspace instead of the generic operations table.
+- Upload controls now expose the formats already validated by the server: JPG/PNG/WebP images (15 MB), MP4/WebM video (100 MB), MP3/M4A/WAV/OGG audio (50 MB), and PDF documents (25 MB). Images are resized/compressed in the browser; Cloudinary stores and optimises supported image/video media.
+- Audio and PDF submissions are shown as dedicated resource cards with an authenticated open action. Existing publication consent, branch scoping and headquarters review rules remain in place.
+- GitHub Actions run [41065938920](https://github.com/isaacokubi/ncbi/actions/runs/41065938920) completed successfully for commit `b7626c6314ce003051cd16e40c0e47ea97a8f020`, including server checks, client terminology tests and the production Vite build.
