@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dashboardMetricsForRole, reportPayloadForRole } from '../src/domain/dashboardPolicy.js';
 const metrics={branches:3,members:120,visitors:9,attendanceRecordsThisMonth:44,confirmedIncomeThisMonth:[{_id:'KES',total:10}],confirmedExpensesThisMonth:[{_id:'KES',total:4}],pendingApprovals:2};
-test('treasurer dashboard exposes finance KPIs only',()=>assert.deepEqual(dashboardMetricsForRole('treasurer',metrics),{confirmedIncomeThisMonth:metrics.confirmedIncomeThisMonth,confirmedExpensesThisMonth:metrics.confirmedExpensesThisMonth,pendingApprovals:2}));
+test('treasurer dashboard exposes finance KPIs only',()=>assert.deepEqual(dashboardMetricsForRole('treasurer',metrics),{confirmedIncomeThisMonth:metrics.confirmedIncomeThisMonth,confirmedExpensesThisMonth:metrics.confirmedExpensesThisMonth}));
 test('branch admin dashboard excludes financial KPIs',()=>assert.deepEqual(dashboardMetricsForRole('branch_admin',metrics),{branches:3,members:120,visitors:9,attendanceRecordsThisMonth:44,pendingApprovals:2}));
 test('treasurer report payload contains finance aggregates only',()=>{
  const source={generatedAt:'now',period:{months:12},scope:{organisationUnits:2,branches:5},totals:{KES:{income:10}},trend:[{month:'2026-10',label:'Oct',newMembers:8,attendanceRecords:44,finance:{KES:{income:10}}}],ministryActivity:[{entity:'event',count:2}],branchPerformance:[{name:'Branch'}]};
