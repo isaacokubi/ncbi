@@ -15,6 +15,7 @@ This document distinguishes working code from planned work. A module is not prod
 - Server-derived organisation subtree scopes for headquarters, national, regional and district oversight.
 - Member registration, scoped listing and transfer history.
 - Attendance entry with database uniqueness protection for duplicate member check-ins.
+- Event self-registration for authenticated members, idempotent duplicate-submit handling, cancellation and re-registration, leadership registration lists, and controlled pending/confirmed/waitlisted/cancelled status transitions. Attendee contact details are limited to the attendee and authorised leaders.
 - Reusable operational records for departments, events, pastoral cases, prayer requests, missions, discipleship, service plans, leadership appointments, assets, projects, documents, visitor follow-ups, announcements, volunteers, training and property.
 - Audit log entries for operational record create/update/archive and finance state decisions.
 - Finance submission and approval/confirmation state transitions; creator cannot approve own entry.
@@ -23,7 +24,7 @@ This document distinguishes working code from planned work. A module is not prod
 
 ## Not yet production-complete
 - Bank feeds, electronic receipts, tax handling and multi-stage approval matrices. The manual bank reconciliation tool does not import statements or connect to a bank feed.
-- Full visitor conversion workflow, QR attendance, member self-service, child safeguarding and consent management.
+- Full visitor conversion workflow, QR attendance, member self-service beyond event registration, child safeguarding and consent management.
 - Encrypted pastoral notes, granular case assignments and field-level access controls.
 - SMS/email/WhatsApp provider integrations and delivery receipts.
 - Event registration/ticketing, QR check-in, venue/resource conflict checking and certificate generation; event records are available, but the complete registration workflow remains to be built.
