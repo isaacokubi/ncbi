@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
-import { Member, Attendance, FinanceTransaction } from '../models/index.js';
-import { OperationsRecord, AuditLog } from '../models/domain.js';
+import { Member, User, Attendance, FinanceTransaction } from '../models/index.js';
+import { OperationsRecord, AuditLog, DocumentFile } from '../models/domain.js';
+import { calculateLessonProgress, setLessonCompletion } from '../domain/memberLearningPolicy.js';
 import { requireAuth } from '../middleware/auth.js';
 const router = Router();
 router.use(requireAuth);
@@ -41,6 +42,10 @@ router.get('/summary', async (req, res, next) => {
       OperationsRecord.find({ organisation: organisationId, entity: 'member_notification', 'data.recipientUserId': String(req.user._id), status: { $ne: 'archived' } }).sort({ createdAt: -1 }).limit(50).select('title status data createdAt').lean(),
       OperationsRecord.find({ organisation: organisationId, entity: 'document', status: { $in: ['active','completed'] }, 'data.memberId': String(member._id) }).sort({ createdAt: -1 }).limit(50).select('title reference createdAt data').lean()
     ]);
+    const documentIds = documents.map(document => document._id);
+    const documentFiles = documentIds.length ? await DocumentFile.find({ organisation: organisationId, document: { $in: documentIds }, status: 'active' }).sort({ version: -1 }).select('document _id originalName mimeType size version createdAt').lean() : [];
+    const filesByDocument = new Map();
+    for (const file of documentFiles) { const key = String(file.document); if (!filesByDocument.has(key)) filesByDocument.set(key, []); filesByDocument.get(key).push({ id: file._id, originalName: file.originalName, mimeType: file.mimeType, size: file.size, version: file.version, createdAt: file.createdAt }); }
     const profile = {
       _id: member._id, membershipNumber: member.membershipNumber, firstName: member.firstName, lastName: member.lastName,
       phone: member.phone, email: member.email, residentialLocation: member.residentialLocation,
@@ -58,11 +63,11 @@ router.get('/summary', async (req, res, next) => {
       profile, attendance,
       attendanceSummary: { total: attendanceTotal, thisYear: attendanceThisYear, lastAttendedAt: lastAttendance?.heldAt || null, lastActivity: lastAttendance?.activityName || null },
       upcomingEvents: events, registrations, announcements, giving: { transactions: giving, totalsByCurrency },
-      prayerRequests: prayerRequests.map(({ _id, title, status, createdAt, data }) => ({ _id, title, status, createdAt, category: data?.category || 'General', followUpRequested: Boolean(data?.followUpRequested) })),
+      prayerRequests: prayerRequests.map(({ _id, title, status, createdAt, data }) => ({ _id, title, status, createdAt, category: data?.category || 'General', followUpRequested: Boolean(data?.followUpRequested), memberVisibleUpdate: data?.memberVisibleUpdate || '' })),
       groups: groups.map(({ _id, title, startAt, data }) => ({ _id, title, meetingDay: data?.meetingDay || '', meetingTime: data?.meetingTime || '', location: data?.location || '', description: data?.description || '', enrolmentOpen: data?.enrolmentOpen !== false })),
-      courses: courses.map(({ _id, title, startAt, endAt, data }) => ({ _id, title, startAt, endAt, description: data?.description || '', enrolmentOpen: data?.enrolmentOpen !== false })),
+      courses: courses.map(course => { const enrolment = enrolments.find(item => item.reference === `discipleship_course:${course._id}:${req.user._id}`); const progress = calculateLessonProgress(course.data?.lessons || [], enrolment?.data?.completedLessonIds || []); const canAccessLessons = ['active','in_progress','completed'].includes(enrolment?.status); return { _id: course._id, title: course.title, startAt: course.startAt, endAt: course.endAt, description: course.data?.description || '', enrolmentOpen: course.data?.enrolmentOpen !== false, enrolmentStatus: enrolment?.status || null, canAccessLessons, lessons: canAccessLessons ? progress.lessons : [], progressPercent: canAccessLessons ? progress.progressPercent : 0, completedLessons: canAccessLessons ? progress.completedLessonIds.length : 0, totalLessons: canAccessLessons ? progress.totalLessons : 0 }; }),
       enrolments, notifications,
-      documents: documents.map(({ _id, title, reference, createdAt, data }) => ({ _id, title, reference, createdAt, documentType: data?.documentType || 'Member document', description: data?.description || '', downloadAvailable: false }))
+      documents: documents.map(({ _id, title, reference, createdAt, data }) => ({ _id, title, reference, createdAt, documentType: data?.documentType || 'Member document', description: data?.description || '', files: filesByDocument.get(String(_id)) || [], downloadAvailable: (filesByDocument.get(String(_id)) || []).length > 0 }))
     });
   } catch (error) { next(error); }
 });
@@ -88,9 +93,12 @@ router.post('/prayer-requests', async (req, res, next) => {
     if (linked.error) return res.status(linked.error.status).json({ message: linked.error.message });
     const message = String(req.body.message || '').trim(), category = String(req.body.category || 'general').trim().slice(0, 40);
     if (message.length < 8 || message.length > 4000) return res.status(400).json({ message: 'Prayer request must contain 8–4,000 characters' });
+    let assignedPastor = linked.member.assignedPastor;
+    if (assignedPastor) { const validPastor = await User.findOne({ _id: assignedPastor, organisation: linked.organisationId, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean(); assignedPastor = validPastor?._id; }
+    if (!assignedPastor) assignedPastor = await User.findOne({ organisation: linked.organisationId, role: 'branch_pastor', active: true }).select('_id').then(user => user?._id);
     const record = await OperationsRecord.create({
       organisation: linked.organisationId, entity: 'prayer_request', title: 'Member prayer request', status: 'pending',
-      visibility: 'private', owner: req.user._id, assignedTo: linked.member.assignedPastor ? [linked.member.assignedPastor] : [],
+      visibility: 'private', owner: req.user._id, assignedTo: assignedPastor ? [assignedPastor] : [],
       data: { memberId: String(linked.member._id), category, message, followUpRequested: req.body.followUpRequested === true, submittedAt: new Date() },
       createdBy: req.user._id, updatedBy: req.user._id
     });
@@ -127,6 +135,25 @@ router.post('/enrolments', async (req, res, next) => {
     next(error);
   }
 });
+
+router.patch('/enrolments/:id/progress', async (req, res, next) => {
+  try {
+    const linked = await linkedMember(req.user);
+    if (linked.error) return res.status(linked.error.status).json({ message: linked.error.message });
+    if (!mongoose.isValidObjectId(req.params.id) || typeof req.body.completed !== 'boolean') return res.status(400).json({ message: 'A valid enrolment and completed true/false value are required' });
+    const enrolment = await OperationsRecord.findOne({ _id: req.params.id, organisation: linked.organisationId, entity: 'member_enrolment', createdBy: req.user._id, status: { $in: ['active','in_progress','completed'] }, 'data.programmeType': 'discipleship_course' });
+    if (!enrolment || !mongoose.isValidObjectId(enrolment.data?.programmeId)) return res.status(404).json({ message: 'An approved course enrolment was not found' });
+    const course = await OperationsRecord.findOne({ _id: enrolment.data.programmeId, organisation: linked.organisationId, entity: 'discipleship_course', status: { $in: ['active','completed'] } }).select('_id data').lean();
+    if (!course) return res.status(404).json({ message: 'The course is no longer available' });
+    const result = setLessonCompletion(course.data?.lessons || [], enrolment.data?.completedLessonIds || [], String(req.body.lessonId || ''), req.body.completed);
+    if (!result.valid) return res.status(400).json({ message: result.message });
+    enrolment.data = { ...enrolment.data, completedLessonIds: result.completedLessonIds, progressPercent: result.progressPercent, progressUpdatedAt: new Date(), courseCompletedAt: result.progressPercent === 100 ? (enrolment.data.courseCompletedAt || new Date()) : null };
+    if (enrolment.status === 'completed' && result.progressPercent < 100) enrolment.status = 'in_progress';
+    enrolment.updatedBy = req.user._id; await enrolment.save();
+    res.json({ progressPercent: result.progressPercent, completedLessonIds: result.completedLessonIds, completedLessons: result.completedLessonIds.length, totalLessons: result.totalLessons });
+  } catch (error) { next(error); }
+});
+
 router.patch('/notifications/:id/read', async (req, res, next) => {
   try {
     const linked = await linkedMember(req.user);
