@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import { OperationsRecord, AuditLog, SafeguardingConsent } from '../models/domain.js';
 import { validateSafeguardingConsentInput, validateSafeguardingRevocation } from '../domain/safeguardingPolicy.js';
-import { Member, Attendance } from '../models/index.js';
+import { Member, User, Attendance } from '../models/index.js';
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateEventRegistrationInput, validateEventRegistrationStatus } from '../domain/eventRegistrationPolicy.js';
@@ -162,6 +162,37 @@ router.patch('/safeguarding/consents/:id/revoke', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
+  try {
+    const pastoralRoles = new Set(['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor']);
+    if (!pastoralRoles.has(req.user.role)) return res.status(403).json({ message: 'Pastoral follow-up permission required' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Prayer request not found' });
+    const ids = await accessibleOrganisationIds(req.user);
+    const filter = { _id: req.params.id, entity: 'prayer_request', organisation: { $in: ids }, status: { $ne: 'archived' } };
+    if (req.user.role === 'branch_pastor') filter.organisation = req.user.organisation?._id ?? req.user.organisation;
+    const record = await OperationsRecord.findOne(filter);
+    if (!record) return res.status(404).json({ message: 'Prayer request not found' });
+    const status = req.body.status === undefined ? record.status : String(req.body.status);
+    if (!['pending','in_progress','completed'].includes(status)) return res.status(400).json({ message: 'Status must be pending, in_progress or completed' });
+    let assignedTo = record.assignedTo || [];
+    if (req.body.assignedTo !== undefined) {
+      if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid pastoral assignee' });
+      const pastor = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean();
+      if (!pastor) return res.status(400).json({ message: 'Assignee must be an active pastor in the same branch' });
+      assignedTo = [pastor._id];
+    } else if (!assignedTo.length && req.user.role === 'branch_pastor') assignedTo = [req.user._id];
+    const update = req.body.memberVisibleUpdate === undefined ? record.data?.memberVisibleUpdate || '' : String(req.body.memberVisibleUpdate || '').trim();
+    if (update.length > 500) return res.status(400).json({ message: 'Member update must be 500 characters or fewer' });
+    record.status = status; record.assignedTo = assignedTo;
+    record.data = { ...record.data, memberVisibleUpdate: update, memberVisibleUpdateAt: update ? new Date() : null, followUpUpdatedAt: new Date() };
+    record.updatedBy = req.user._id; await record.save();
+    await audit(req, 'pastoral-follow-up', 'prayer_request', record, 'Updated prayer request follow-up status');
+    res.set('Cache-Control', 'private, no-store');
+    res.json({ request: { _id: record._id, status: record.status, assignedTo: record.assignedTo, memberVisibleUpdate: record.data.memberVisibleUpdate } });
+  } catch (error) { next(error); }
+});
+
 // Keep this fixed path before /:entity so "audit" is not parsed as an entity name.
 router.get('/audit/logs', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'), async (req, res, next) => {
   try {
@@ -309,6 +340,16 @@ router.post('/:entity', async (req, res, next) => {
     if (sensitiveEntities.has(entity) && visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
     const payload = safeData(data ?? {});
     if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+    if (entity === 'member_notification') {
+      if (!mongoose.isValidObjectId(payload.memberId)) return res.status(400).json({ message: 'A valid memberId is required to address this notification' });
+      const targetMember = await Member.findOne({ _id: payload.memberId, homeOrganisation: targetOrg }).select('_id').lean();
+      if (!targetMember) return res.status(400).json({ message: 'The selected member does not belong to this branch' });
+      const recipient = await User.findOne({ role: 'member', memberProfile: targetMember._id, organisation: targetOrg, active: true }).select('_id').lean();
+      if (!recipient) return res.status(400).json({ message: 'The selected member has no active portal account' });
+      const message = String(payload.message || '').trim();
+      if (!message || message.length > 2000) return res.status(400).json({ message: 'Notification message must contain 1–2,000 characters' });
+      payload.memberId = String(targetMember._id); payload.recipientUserId = String(recipient._id); payload.message = message; payload.channel = 'in_app';
+    }
     const record = await OperationsRecord.create({
       organisation: targetOrg, entity, title, reference, status, startAt, endAt, assignedTo,
       owner: req.user._id,
@@ -334,6 +375,7 @@ router.patch('/:entity/:id', async (req, res, next) => {
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
+      if (entity === 'member_notification' && (String(payload.memberId || '') !== String(record.data?.memberId || '') || String(payload.recipientUserId || '') !== String(record.data?.recipientUserId || ''))) return res.status(400).json({ message: 'A sent notification cannot be reassigned; create a new notification instead' });
       record.data = payload;
     }
     if (sensitiveEntities.has(entity) && record.visibility === 'organisation') return res.status(400).json({ message: 'Sensitive pastoral records cannot be organisation-wide' });
