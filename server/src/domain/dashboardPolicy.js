@@ -16,7 +16,7 @@ export function dashboardPendingApprovalsForRole(role, breakdown) {
 
 export function dashboardMetricsForRole(role, metrics) {
   if (role === 'department_leader') return { attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth };
-  if (role === 'treasurer') return { confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth, confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth };
+  if (role === 'treasurer') return { confirmedIncomeThisMonth: metrics.confirmedIncomeThisMonth, confirmedExpensesThisMonth: metrics.confirmedExpensesThisMonth, pendingApprovals: metrics.pendingApprovals };
   if (role === 'branch_admin') return { branches: metrics.branches, members: metrics.members, visitors: metrics.visitors, attendanceRecordsThisMonth: metrics.attendanceRecordsThisMonth, pendingApprovals: metrics.pendingApprovals };
   return metrics;
 }
