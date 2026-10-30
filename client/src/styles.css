@@ -1267,3 +1267,90 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
   }
   .public-nav-group > summary svg { color: inherit; }
 }
+
+
+/* Restore polished navbar hover feedback and animated active-page underline. */
+@media (min-width: 761px) {
+  .public-nav > a,
+  .public-nav-group > summary {
+    position: relative;
+    isolation: isolate;
+    transition: color .22s ease, transform .22s ease, text-shadow .22s ease;
+  }
+  .public-nav > a::after,
+  .public-nav-group > summary::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 3px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #dfcc80, #fff2c8);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform .24s cubic-bezier(.2,.75,.25,1);
+  }
+  .public-nav > a:hover,
+  .public-nav-group > summary:hover {
+    color: #fff2c8 !important;
+    transform: translateY(-2px);
+    text-shadow: 0 3px 14px rgba(223,204,128,.24);
+  }
+  .public-nav > a:hover::after,
+  .public-nav-group > summary:hover::after,
+  .public-nav > a[aria-current="page"]::after,
+  .public-nav-group:has(.public-nav-dropdown a[aria-current="page"]) > summary::after,
+  .public-nav-group[open] > summary::after {
+    transform: scaleX(1);
+  }
+  .public-nav > a[aria-current="page"],
+  .public-nav-group:has(.public-nav-dropdown a[aria-current="page"]) > summary {
+    color: #fff2c8 !important;
+    text-shadow: 0 2px 12px rgba(223,204,128,.2);
+  }
+  .public-nav-group > summary svg {
+    transition: transform .22s ease, color .22s ease;
+  }
+  .public-nav-group:hover > summary svg {
+    transform: translateY(1px);
+  }
+  .public-nav-group[open] > summary svg {
+    transform: rotate(180deg);
+  }
+}
+.public-nav-dropdown > a {
+  position: relative;
+  transition: color .18s ease, background .18s ease, padding-left .18s ease, box-shadow .18s ease;
+}
+.public-nav-dropdown > a:hover {
+  padding-left: 17px;
+  background: #f5eff7;
+  color: #76521d;
+  box-shadow: inset 3px 0 0 #dfcc80;
+}
+.public-nav-dropdown > a[aria-current="page"] {
+  background: #f5eff7;
+  color: #76521d;
+  box-shadow: inset 3px 0 0 #dfcc80;
+  font-weight: 700;
+}
+@media (max-width: 760px) {
+  .public-nav > a,
+  .public-nav-group > summary {
+    transition: color .18s ease, background .18s ease;
+  }
+  .public-nav > a:active,
+  .public-nav-group > summary:active {
+    color: #fff2c8 !important;
+    background: rgba(223,204,128,.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-nav > a,
+  .public-nav-group > summary,
+  .public-nav-group > summary svg,
+  .public-nav-dropdown > a {
+    transition: none !important;
+  }
+}
