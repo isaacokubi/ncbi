@@ -74,3 +74,10 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Members can update only their own phone, residential location and emergency-contact fields. The sign-in email remains read-only here so changing a profile contact address cannot silently desynchronise the login identity. The server resolves the member profile from the authenticated account and rejects changes to membership number, status, branch, ministry assignments and other staff-managed fields.
 - Portal attendance totals are derived from attendance records attached to the exact linked member profile; no sample or estimated values are shown.
 - Giving statements, contribution receipts, prayer-request submission, small-group enrolment, discipleship progress, personal notifications and member document access remain future modules because the current data model does not yet provide safe, member-linked workflows for them.
+
+
+## Role-based dashboard and operations access review
+- Dashboard metrics remain role-filtered: treasurers receive confirmed finance KPIs only; department leaders receive their attendance KPI only; branch administrators receive operational KPIs without finance totals.
+- The generic operations read API now enforces role policy server-side. Member accounts cannot enumerate general operational registers, treasurers cannot use generic operations as a route into non-finance records, and department leaders can read only the four operational record types used by their dashboard.
+- Management roles retain access subject to organisation scope and additional restrictions for sensitive pastoral and safeguarding data.
+- Automated policy tests cover member, treasurer, department leader, branch administrator and senior leadership access boundaries.
