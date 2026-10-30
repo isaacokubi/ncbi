@@ -13,7 +13,7 @@ test('all governance roles have distinct professional dashboard copy', () => {
 });
 
 test('priority workspaces expose purpose-specific labels, descriptions and empty states', () => {
-  for (const key of ['members','visitors','attendance','departments','events','pastoral','finance','payments','accounts','journals','budgets','reconciliation','reports','documents','memberPortal']) {
+  for (const key of ['members','visitors','attendance','departments','events','pastoral','finance','payments','accounts','journals','budgets','reconciliation','suppliers','reports','documents','memberPortal']) {
     assert.ok(NAVIGATION_TERMS[key], `Missing navigation label for ${key}`);
     assert.ok(MODULE_PRESENTATION[key]?.title, `Missing page title for ${key}`);
   }
@@ -48,4 +48,14 @@ test('legacy public starter copy is upgraded while editor customisations are pre
   assert.match(migrated.pages.about.body, /commitment to faith in Jesus Christ/);
   assert.equal(migrated.pages.contact.body, 'A custom contact message approved by NCBI.');
   assert.equal(migrated.navigation.branches, 'Our branches');
+});
+
+test('public contact information has editable defaults and survives CMS merges',()=>{
+  const defaults=DEFAULT_SITE_CONTENT.pages.contact;
+  for(const field of ['contactEmail','phone','whatsapp','physicalAddress','postalAddress','officeHours'])assert.equal(typeof defaults[field],'string');
+  const merged=mergeSiteContent({pages:{contact:{contactEmail:'office@example.org',phone:'+254 700 000 000',physicalAddress:'NCBI Headquarters'}}});
+  assert.equal(merged.pages.contact.contactEmail,'office@example.org');
+  assert.equal(merged.pages.contact.phone,'+254 700 000 000');
+  assert.equal(merged.pages.contact.physicalAddress,'NCBI Headquarters');
+  assert.equal(merged.pages.contact.officeHours,defaults.officeHours);
 });
