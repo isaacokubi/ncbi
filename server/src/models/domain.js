@@ -90,3 +90,25 @@ export const LedgerAccount = mongoose.models.LedgerAccount || model('LedgerAccou
 export const JournalEntry = mongoose.models.JournalEntry || model('JournalEntry', journalEntrySchema);
 export const Budget = mongoose.models.Budget || model('Budget', budgetSchema);
 export const BankReconciliation = mongoose.models.BankReconciliation || model('BankReconciliation', bankReconciliationSchema);
+
+const paymentIntentSchema = new Schema({
+  organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
+  amount: { type: Schema.Types.Decimal128, required: true },
+  phoneNumber: { type: String, required: true },
+  accountReference: { type: String, required: true, maxlength: 12 },
+  description: { type: String, maxlength: 100 },
+  debitAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },
+  creditAccount: { type: Schema.Types.ObjectId, ref: 'LedgerAccount', required: true },
+  status: { type: String, enum: ['initiated','accepted','processing','paid','failed'], default: 'initiated', index: true },
+  merchantRequestId: String,
+  checkoutRequestId: { type: String, unique: true, sparse: true },
+  responseDescription: String,
+  mpesaReceipt: { type: String, unique: true, sparse: true },
+  transactionDate: Date,
+  financeTransaction: { type: Schema.Types.ObjectId, ref: 'FinanceTransaction' },
+  journalEntry: { type: Schema.Types.ObjectId, ref: 'JournalEntry' },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  callbackReceivedAt: Date
+}, { timestamps: true });
+paymentIntentSchema.index({ organisation: 1, createdAt: -1 });
+export const PaymentIntent = mongoose.models.PaymentIntent || model('PaymentIntent', paymentIntentSchema);
