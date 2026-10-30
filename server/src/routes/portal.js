@@ -53,7 +53,7 @@ router.patch('/profile', async (req, res, next) => {
   try {
     const linked = await linkedMember(req.user);
     if (linked.error) return res.status(linked.error.status).json({ message: linked.error.message });
-    const allowed = ['phone','email','residentialLocation','emergencyContactName','emergencyContactRelationship','emergencyContactPhone'];
+    const allowed = ['phone','residentialLocation','emergencyContactName','emergencyContactRelationship','emergencyContactPhone'];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] === undefined) continue;
