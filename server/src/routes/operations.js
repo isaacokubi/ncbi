@@ -39,7 +39,7 @@ async function validateVolunteerRoster(entity, data, organisation, excludeId=nul
   const eligible = await Member.find({ _id: { $in: memberIds }, homeOrganisation: organisation, status: { $in: ['new_believer','member','worker','minister'] } }).select('_id firstName lastName').lean();
   if (eligible.length !== memberIds.length) return 'Every assigned person must be an eligible member of this church organisation';
   data.assignedMembers = eligible.map(member => member.firstName + ' ' + member.lastName).join(', ') + (data.assignmentNotes ? ' · ' + data.assignmentNotes : '');
-  if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(data.serviceTime||'')) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(data.serviceEndTime||'')) || data.serviceEndTime <= data.serviceTime) return 'Enter a valid service start and end time; the end must be later than the start';
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(data.serviceTime||'')) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(data.serviceEndTime||'')) || data.serviceEndTime <= data.serviceTime) return 'Enter a valid service start and end time; the end must be later than the start';
   const conflictFilter = { organisation, entity: 'volunteer_schedule', status: { $nin: ['archived','cancelled'] }, 'data.serviceDate': data.serviceDate, $or: [{ 'data.assignedMemberIds': { $in: memberIds } }, { 'data.ministryTeam': data.ministryTeam }] };
   if (excludeId) conflictFilter._id = { $ne: excludeId };
   const conflicts = await OperationsRecord.find(conflictFilter).select('title data.ministryTeam data.assignedMemberIds data.serviceTime data.serviceEndTime').lean();
