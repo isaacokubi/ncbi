@@ -17,6 +17,7 @@ import portalRoutes from './routes/portal.js';
 import publicRoutes from './routes/public.js';
 import brandingRoutes from './routes/branding.js';
 import siteContentRoutes from './routes/siteContent.js';
+import mediaRoutes from './routes/media.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -40,9 +41,10 @@ app.use('/api/portal', portalRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/branding', brandingRoutes);
 app.use('/api/site-content', siteContentRoutes);
+app.use('/api/media', mediaRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Resource not found' }));
 app.use((error, _req, res, _next) => {
-  if (error.type === 'entity.too.large') return res.status(413).json({ message: 'File exceeds the 10 MiB upload limit' });
+  if (error.type === 'entity.too.large') return res.status(413).json({ message: 'File exceeds the configured upload limit' });
   if (error.status === 503) return res.status(503).json({ message: error.message });
   console.error(error);
   if (error.code === 11000) return res.status(409).json({ message: 'A record with that unique value already exists' });
