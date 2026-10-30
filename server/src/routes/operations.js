@@ -218,8 +218,29 @@ router.post('/visitors/:id/follow-up', async (req, res, next) => {
     const ids = await accessibleOrganisationIds(req.user);
     const filter = { _id: req.params.id, entity: 'visitor_follow_up', organisation: { $in: ids }, status: { $ne: 'archived' } };
     if (['branch_pastor','branch_admin'].includes(req.user.role)) filter.organisation = req.user.organisation?._id ?? req.user.organisation;
-    const record = await OperationsRecord.findOne(filter);
-    if (!record) return res.status(404).json({ message: 'Visitor record not found' });
+    let record = await OperationsRecord.findOne(filter);
+    if (!record) {
+      const visitorFilter = { _id: req.params.id, homeOrganisation: { $in: ids }, status: 'visitor' };
+      if (['branch_pastor','branch_admin'].includes(req.user.role)) visitorFilter.homeOrganisation = req.user.organisation?._id ?? req.user.organisation;
+      const visitor = await Member.findOne(visitorFilter).select('_id firstName lastName phone email homeOrganisation').lean();
+      if (!visitor) return res.status(404).json({ message: 'Visitor record not found in your authorised church scope' });
+      const reference = `visitor:${visitor._id}`;
+      const existing = await OperationsRecord.findOne({ organisation: visitor.homeOrganisation, entity: 'visitor_follow_up', reference });
+      if (existing) record = existing;
+      else {
+        const history = [{ ...validation.value, actor: req.user._id, recordedAt: new Date() }];
+        record = await OperationsRecord.create({
+          organisation: visitor.homeOrganisation, entity: 'visitor_follow_up',
+          title: [visitor.firstName, visitor.lastName].filter(Boolean).join(' ') || 'Church visitor',
+          reference, status: validation.value.status, owner: req.user._id,
+          assignedTo: [req.user._id], visibility: 'organisation',
+          data: { memberId: String(visitor._id), phone: visitor.phone || '', email: visitor.email || '', followUpHistory: history, lastContactAt: new Date(), lastContactMethod: validation.value.contactMethod, lastOutcome: validation.value.outcome, nextFollowUpAt: validation.value.nextFollowUpAt, followUpNote: validation.value.note },
+          createdBy: req.user._id, updatedBy: req.user._id
+        });
+        await audit(req, 'visitor-follow-up-created', 'visitor_follow_up', record, 'Started visitor follow-up from the visitor directory');
+        return res.status(201).json({ record, created: true });
+      }
+    }
     let assignedTo = record.assignedTo || [];
     if (req.body.assignedTo !== undefined) {
       if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid follow-up officer' });
