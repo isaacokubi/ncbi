@@ -5,6 +5,7 @@ import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import mongoose from 'mongoose';
 import { OperationsRecord, DocumentFile, AuditLog } from '../models/domain.js';
+import { Member } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
@@ -34,6 +35,49 @@ async function findDocument(req, id) {
   const ids = await accessibleOrganisationIds(req.user);
   return OperationsRecord.findOne({ _id:id, entity:'document', organisation:{$in:ids}, status:{$ne:'archived'} });
 }
+
+async function linkedMemberForDocuments(req) {
+  if (req.user.role !== 'member' || !req.user.memberProfile) return null;
+  const organisation = req.user.organisation?._id ?? req.user.organisation;
+  return Member.findOne({ _id: req.user.memberProfile, homeOrganisation: organisation }).select('_id homeOrganisation').lean();
+}
+async function sendVerifiedFile(res, file) {
+  const root = storageRoot();
+  const target = path.resolve(root, file.storageKey);
+  if (path.dirname(target) !== root) return res.status(404).json({ message: 'File not found' });
+  const data = await readFile(target);
+  if (data.length !== file.size || createHash('sha256').update(data).digest('hex') !== file.checksum) return res.status(404).json({ message: 'Stored file failed integrity verification' });
+  const ext = types[file.mimeType]?.ext;
+  if (!ext) return res.status(404).json({ message: 'File not found' });
+  res.set({ 'Content-Type': 'application/octet-stream', 'Content-Length': String(file.size), 'Content-Disposition': 'attachment; filename="' + filename(file.originalName, ext) + '"', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store, private' });
+  return res.send(data);
+}
+router.get('/member/files', async (req, res, next) => {
+  try {
+    const member = await linkedMemberForDocuments(req);
+    if (!member) return res.status(403).json({ message: 'Member document access denied' });
+    const documents = await OperationsRecord.find({ organisation: member.homeOrganisation, entity: 'document', status: { $in: ['active','completed'] }, 'data.memberId': String(member._id) }).sort({ createdAt: -1 }).limit(50).select('title reference createdAt data').lean();
+    const ids = documents.map(document => document._id);
+    const stored = ids.length ? await DocumentFile.find({ organisation: member.homeOrganisation, document: { $in: ids }, status: 'active' }).sort({ version: -1 }).select('document originalName mimeType size version createdAt').lean() : [];
+    const byDocument = new Map();
+    for (const file of stored) { const key = String(file.document); if (!byDocument.has(key)) byDocument.set(key, []); byDocument.get(key).push({ id: file._id, originalName: file.originalName, mimeType: file.mimeType, size: file.size, version: file.version, createdAt: file.createdAt }); }
+    res.set('Cache-Control', 'private, no-store');
+    res.json({ documents: documents.map(document => ({ ...document, files: byDocument.get(String(document._id)) || [] })) });
+  } catch (error) { next(error); }
+});
+router.get('/member/files/:fileId/download', async (req, res, next) => {
+  try {
+    const member = await linkedMemberForDocuments(req);
+    if (!member || !mongoose.isValidObjectId(req.params.fileId)) return res.status(404).json({ message: 'File not found' });
+    const file = await DocumentFile.findOne({ _id: req.params.fileId, organisation: member.homeOrganisation, status: 'active' }).select('+storageKey').lean();
+    if (!file) return res.status(404).json({ message: 'File not found' });
+    const document = await OperationsRecord.findOne({ _id: file.document, organisation: member.homeOrganisation, entity: 'document', status: { $in: ['active','completed'] }, 'data.memberId': String(member._id) }).select('_id').lean();
+    if (!document) return res.status(404).json({ message: 'File not found' });
+    await AuditLog.create({ organisation: member.homeOrganisation, actor: req.user._id, action: 'member-document-download', entity: 'document_file', recordId: file._id, summary: 'Member downloaded an assigned document' });
+    return sendVerifiedFile(res, file);
+  } catch (error) { next(error); }
+});
+
 router.get('/:id/files', async (req,res,next) => {
   try {
     if (!managers.has(req.user.role)) return res.status(403).json({message:'Document access denied'});
