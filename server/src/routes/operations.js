@@ -515,7 +515,7 @@ router.get('/:entity', async (req, res, next) => {
     const filter = scopedRecordFilter(entity, ids, req.user);
     if (req.query.status && ['draft','pending','active','scheduled','in_progress','completed','cancelled','closed','archived'].includes(req.query.status)) filter.status = req.query.status;
 if (req.query.search) {
-      const term = String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\    if (req.query.search) filter.title = { $regex: String(req.query.search).slice(0, 80).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };');
+      const term = String(req.query.search).slice(0, 80).replace(/[^a-z0-9 _@.-]/gi, '');
       const pattern = { $regex: term, $options: 'i' };
       filter.$or = [
         { title: pattern }, { reference: pattern },
