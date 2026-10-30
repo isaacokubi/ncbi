@@ -4,7 +4,12 @@ This document distinguishes working code from planned work. A module is not prod
 
 ## Implemented in this delivery
 - React sign-in against the API, authenticated session restoration, sign-out and role-scoped live dashboard KPIs/events/organisation directory.
-- Client loading, empty, retry and API error states; no illustrative dashboard figures are represented as live data.\n- Database-backed registers and create/update/archive workflows for members, visitors, attendance, events, departments, missions, discipleship, service plans, leadership appointments, assets, projects, documents, announcements, volunteers, training and property.\n- Scoped user administration with role hierarchy checks, account activation/deactivation and one-time temporary passwords.\n- Finance transaction entry with separate approval/confirmation controls.\n- Chart of accounts, balanced double-entry journal submission and independent posting, expense budgets and bank statement reconciliation APIs and client workspaces.\n- GitHub Actions CI workflow for server syntax/tests and client production build.
+- Client loading, empty, retry and API error states; no illustrative dashboard figures are represented as live data.
+- Database-backed registers and create/update/archive workflows for members, visitors, attendance, events, departments, missions, discipleship, service plans, leadership appointments, assets, projects, documents, announcements, volunteers, training and property.
+- Scoped user administration with role hierarchy checks, account activation/deactivation and one-time temporary passwords.
+- Finance transaction entry with separate approval/confirmation controls.
+- Chart of accounts, balanced double-entry journal submission and independent posting, expense budgets and bank statement reconciliation APIs and client workspaces.
+- GitHub Actions CI workflow for server syntax/tests and client production build.
 - Hierarchical organisation creation with parent-level validation and pending/active/suspended/archived lifecycle.
 - Server-derived organisation subtree scopes for headquarters, national, regional and district oversight.
 - Member registration, scoped listing and transfer history.
@@ -25,7 +30,8 @@ This document distinguishes working code from planned work. A module is not prod
 - Asset depreciation, maintenance and disposal approvals; project procurement and milestone financial controls.
 - Document malware scanning, immutable retention, versioning and external object storage.
 - MFA, refresh-token rotation/revocation, password reset, session management, formal audit immutability and alerting.
-- Mobile apps, offline sync, public website, data migration tooling and multilingual/multi-currency reporting.\n- Dedicated member/parent portals, safeguarding case management, encrypted counselling notes and child/guardian consent workflows. Generic operations records are not a substitute for these specialist controls.
+- Mobile apps, offline sync, public website, data migration tooling and multilingual/multi-currency reporting.
+- Dedicated member/parent portals, safeguarding case management, encrypted counselling notes and child/guardian consent workflows. Generic operations records are not a substitute for these specialist controls.
 - Automated integration/e2e/security/performance tests and verified backup/restore drills.
 
 ## Production gate
