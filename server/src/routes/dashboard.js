@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { Member, Attendance, FinanceTransaction, Organisation } from '../models/index.js';
 import { OperationsRecord } from '../models/domain.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds } from '../middleware/organisationScope.js';
 
 const router = Router();
 router.use(requireAuth);
-router.get('/summary', async (req, res, next) => {
+router.get('/summary', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer'), async (req, res, next) => {
   try {
     const ids = await accessibleOrganisationIds(req.user);
     const start = new Date(); start.setDate(1); start.setHours(0,0,0,0);

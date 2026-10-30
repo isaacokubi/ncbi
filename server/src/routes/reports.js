@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Attendance, FinanceTransaction, Member, Organisation } from '../models/index.js';
 import { OperationsRecord } from '../models/domain.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 
 const router = Router();
@@ -20,7 +20,7 @@ function monthLabels(start, count) {
 // Consolidated reports deliberately derive every organisation filter from the
 // authenticated user's hierarchy. Client-supplied branch IDs are only accepted
 // after assertOrganisationAccess confirms that they are inside that scope.
-router.get('/overview', async (req, res, next) => {
+router.get('/overview', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer'), async (req, res, next) => {
   try {
     const months = Math.min(24, Math.max(3, Number.parseInt(req.query.months, 10) || 12));
     const scopeIds = await accessibleOrganisationIds(req.user);
@@ -105,7 +105,7 @@ router.get('/overview', async (req, res, next) => {
 
 import { csvDocument } from '../domain/reportCsv.js';
 
-router.get('/overview.csv', async (req, res, next) => {
+router.get('/overview.csv', allowRoles('super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin','treasurer'), async (req, res, next) => {
   try {
     const months = Math.min(24, Math.max(3, Number.parseInt(req.query.months, 10) || 12));
     const scopeIds = await accessibleOrganisationIds(req.user);
