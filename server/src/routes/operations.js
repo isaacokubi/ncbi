@@ -37,6 +37,39 @@ function safeData(data) {
 }
 
 function validateStructuredOperationData(entity, data) {
+  const operationalRules = {
+    inventory: { required: ['itemCode','itemName','category','unit','movementType','location'], numbers: ['quantity','reorderLevel'], dates: ['movementDate'], enums: { movementType: ['opening_stock','received','issued','transfer','adjustment','stocktake'] } },
+    procurement: { required: ['requestedBy','itemDescription'], numbers: ['quantity','estimatedCost'], dates: ['requiredBy'], enums: { approvalStage: ['draft','submitted','under_review','approved','rejected','ordered','received'] } },
+    communications: { required: ['campaignType','audience','channels','messageSummary','plannedDate'], dates: ['plannedDate','publishedAt'], enums: { campaignType: ['announcement','pastoral_notice','event_promotion','fundraising','outreach','newsletter','other'], approvalStatus: ['draft','pending','approved','rejected','published'] } },
+    media: { required: ['projectType','producer'], dates: ['scheduledAt'], enums: { projectType: ['photography','video','audio','livestream','graphic_design','publication','other'], productionStage: ['planned','recording','editing','review','approved','published','archived'] } },
+    transport: { required: ['driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost'], dates: ['departureAt','returnAt'] },
+    compliance: { required: ['recordType','responsibleOfficer','complianceArea','requirement'], dates: ['reviewDate','completedAt'], enums: { recordType: ['policy','governance_resolution','compliance_action','meeting','risk','other'], actionStatus: ['not_started','in_progress','awaiting_evidence','completed','overdue'] } },
+    member_class: { required: ['programmeName','classLevel','facilitator','curriculum','startDate'], numbers: ['capacity','enrolledCount'], dates: ['startDate','endDate'], enums: { classLevel: ['new_believer','foundation','membership','baptism_preparation','discipleship','leadership','other'] } },
+    volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','assignedMembers'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
+  };
+  const rule = operationalRules[entity];
+  if (rule) {
+    for (const field of rule.required) {
+      if (typeof data[field] !== 'string' || !data[field].trim()) return field + ' is required';
+    }
+    for (const field of rule.numbers || []) {
+      if (data[field] === undefined || data[field] === null || data[field] === '') continue;
+      const value = Number(data[field]);
+      if (!Number.isFinite(value) || value < 0 || value > 1000000000000) return field + ' must be a non-negative number';
+      data[field] = value;
+    }
+    for (const field of rule.dates || []) {
+      if (data[field] === undefined || data[field] === null || data[field] === '') continue;
+      if (Number.isNaN(new Date(data[field]).getTime())) return field + ' must be a valid date';
+    }
+    for (const [field, allowed] of Object.entries(rule.enums || {})) {
+      if (data[field] !== undefined && data[field] !== '' && !allowed.includes(data[field])) return 'Select a valid ' + field;
+    }
+    for (const [field, value] of Object.entries(data)) {
+      if (typeof value === 'string' && value.length > 5000) return field + ' must be no longer than 5,000 characters';
+    }
+  }
+
   const requiredTextFields = {
     property: ['location'],
     prayer_request: ['requestSummary'],

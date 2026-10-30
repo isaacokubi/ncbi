@@ -107,6 +107,14 @@ export const EMPTY_STATES = Object.freeze({
   journals: 'No journal entries are available in this organisation scope. Prepare a balanced journal and submit it for independent review.',
   budgets: 'No budget proposals are available in this scope. Prepare a proposal and submit it for independent authorisation.',
   reconciliation: 'No bank reconciliations are available in this scope.',
+  inventory: 'No inventory items or stock movements have been recorded for this church. Create an opening-stock record or register the first item to begin tracking balances and movements.',
+  procurement: 'No purchase requests are recorded in this organisation. Create a requisition to begin supplier review and approval tracking.',
+  communications: 'No communication campaigns are scheduled. Create a campaign to record its audience, channels, approval and publication date.',
+  media: 'No media projects are recorded. Create a production or livestream plan to begin coordinating the media team and content.',
+  transport: 'No vehicle or trip records are available. Create a trip request or register a vehicle to begin transport coordination.',
+  compliance: 'No governance or compliance actions are recorded. Create a policy review, resolution or compliance task to establish the register.',
+  classes: 'No membership or discipleship classes are scheduled. Create a programme to record its curriculum, facilitator and learning dates.',
+  volunteerSchedule: 'No ministry service rosters are scheduled. Create a roster to assign teams, service dates and member responsibilities.',
   documents: 'No institutional records match this view. Register a document to begin its controlled record history.',
   default: 'No matching records are available. Adjust the search criteria or create a record if your role permits.'
 });
