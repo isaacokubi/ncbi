@@ -20,7 +20,7 @@ router.get('/users',async(req,res,next)=>{
 router.post('/users',async(req,res,next)=>{
  try{
   if(!userManagers.includes(req.user.role))return res.status(403).json({message:'User administration permission required'});
-  const {fullName,email,password,role,organisation}=req.body;
+  const {fullName,email,password,role,organisation,memberProfile}=req.body;
   if(!fullName||!email||!password||!role||!organisation)return res.status(400).json({message:'Name, email, temporary password, role and organisation are required'});
   if(String(password).length<14)return res.status(400).json({message:'Temporary password must be at least 14 characters'});
   if(!Object.hasOwn(roleRank,role)||roleRank[role]>=roleRank[req.user.role])return res.status(403).json({message:'You cannot assign a role equal to or above your own authority'});
@@ -28,8 +28,15 @@ router.post('/users',async(req,res,next)=>{
   const org=await Organisation.findById(organisation);
   const allowedLevels={international_executive:['international'],national_admin:['national'],regional_overseer:['regional'],district_pastor:['district'],branch_pastor:['branch'],branch_admin:['branch'],treasurer:['branch','district','regional','national'],department_leader:['branch','district','regional','national'],member:['branch','district','regional','national']};
   if(allowedLevels[role]&&!allowedLevels[role].includes(org?.level))return res.status(400).json({message:'The selected role is not valid at this organisation level'});
+  if(memberProfile){
+    if(role!=='member')return res.status(400).json({message:'Only member accounts can be linked to a member profile'});
+    const linked=await Member.findOne({_id:memberProfile,homeOrganisation:organisation}).select('_id').lean();
+    if(!linked)return res.status(400).json({message:'The selected member profile must belong to the same organisation'});
+    const alreadyLinked=await User.findOne({memberProfile}).select('_id').lean();
+    if(alreadyLinked)return res.status(409).json({message:'This member profile already has a portal account'});
+  }
   const passwordHash=await bcrypt.hash(String(password),12);
-  const user=await User.create({fullName:String(fullName).trim(),email:String(email).trim().toLowerCase(),passwordHash,role,organisation,active:true});
+  const user=await User.create({fullName:String(fullName).trim(),email:String(email).trim().toLowerCase(),passwordHash,role,organisation,memberProfile:memberProfile||null,active:true});
   res.status(201).json({user:{id:user.id,fullName:user.fullName,email:user.email,role:user.role,organisation:user.organisation,active:user.active}});
  }catch(e){next(e);}
 });
