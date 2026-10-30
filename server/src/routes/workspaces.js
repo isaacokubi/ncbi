@@ -4,6 +4,7 @@ import { Organisation, Member, Attendance, FinanceTransaction, User } from '../m
 import { requireAuth, allowRoles } from '../middleware/auth.js';
 import { accessibleOrganisationIds, assertOrganisationAccess } from '../middleware/organisationScope.js';
 import { validateAttendanceInput } from '../domain/attendancePolicy.js';
+import { SequenceCounter, AuditLog } from '../models/domain.js';
 
 const router = Router(); router.use(requireAuth);
 const roleRank={super_admin:100,international_executive:90,national_admin:80,regional_overseer:70,district_pastor:60,branch_pastor:50,branch_admin:45,treasurer:35,department_leader:25,member:10};
@@ -81,6 +82,30 @@ router.get('/members',async(req,res,next)=>{
 router.post('/members',async(req,res,next)=>{
   try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership registration permission required'});const {firstName,lastName,phone,email,status}=req.body;if(!firstName||!lastName)return res.status(400).json({message:'First and last name are required'});const member=await Member.create({firstName,lastName,phone,email,status,homeOrganisation:req.user.organisation._id??req.user.organisation});res.status(201).json({member});}
   catch(e){next(e);}
+});
+router.post('/members/:id/convert',async(req,res,next)=>{
+  try{
+    if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Visitor conversion permission required'});
+    const ids=await accessibleOrganisationIds(req.user);
+    const member=await Member.findOne({_id:req.params.id,homeOrganisation:{$in:ids}});
+    if(!member)return res.status(404).json({message:'Visitor not found'});
+    if(member.status!=='visitor')return res.status(409).json({message:'Only visitor records can be converted'});
+    const nextStatus=req.body.status||'new_believer';
+    if(!['new_believer','member'].includes(nextStatus))return res.status(400).json({message:'Conversion status must be new_believer or member'});
+    const organisation=await Organisation.findById(member.homeOrganisation).select('code').lean();
+    if(!organisation)return res.status(409).json({message:'The member organisation is unavailable'});
+    const sequence=await SequenceCounter.findOneAndUpdate(
+      {key:'membership:'+String(member.homeOrganisation)},
+      {$inc:{value:1}},
+      {new:true,upsert:true,setDefaultsOnInsert:true}
+    );
+    member.membershipNumber=member.membershipNumber||('NCBI-'+organisation.code+'-'+String(sequence.value).padStart(6,'0'));
+    member.status=nextStatus;
+    member.joinedAt=member.joinedAt||new Date();
+    await member.save();
+    await AuditLog.create({organisation:member.homeOrganisation,actor:req.user._id,action:'visitor-converted',entity:'member',recordId:member._id,summary:'Visitor converted to '+nextStatus,metadata:{membershipNumber:member.membershipNumber}});
+    res.json({member});
+  }catch(e){next(e);}
 });
 router.patch('/members/:id',async(req,res,next)=>{
   try{

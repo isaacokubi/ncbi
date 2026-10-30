@@ -25,7 +25,7 @@ This document distinguishes working code from planned work. A module is not prod
 
 ## Not yet production-complete
 - Bank feeds, electronic receipts, tax handling and multi-stage approval matrices. The manual bank reconciliation tool does not import statements or connect to a bank feed.
-- Full visitor conversion workflow, QR attendance, member self-service beyond event registration, child safeguarding and consent management.
+- Visitor conversion now promotes a scoped visitor to new believer or member, assigns a branch-sequenced membership number, preserves the original record and writes an audit event. QR attendance, broader member self-service, child safeguarding and consent management remain outstanding.
 - Encrypted pastoral notes, granular case assignments and field-level access controls.
 - SMS/email/WhatsApp provider integrations and delivery receipts.
 - QR attendance check-in, venue/resource conflict checking and certificate generation remain outstanding. Event registration supports authenticated self-service, duplicate-safe submissions, cancellation/re-registration and leadership-managed statuses.
