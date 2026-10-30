@@ -34,7 +34,7 @@ This document distinguishes working code from planned work. A module is not prod
 - Encrypted pastoral notes, granular case assignments and field-level access controls.
 - SMS/email/WhatsApp provider integrations and delivery receipts; the public site currently displays only records explicitly marked public.
 - QR attendance session issuance, signed-token check-in, native camera scanner, manual token fallback, local QR image generation and browser print workflow are implemented. Broad browser/device acceptance tests, venue/resource conflict checking and certificate generation remain outstanding. Event registration supports authenticated self-service, duplicate-safe submissions, cancellation/re-registration and leadership-managed statuses.
-- Missions field reporting, discipleship lesson delivery and assessments.
+- Missions field reporting, advanced discipleship content delivery, quizzes, assessments and certificates.
 - Asset depreciation, maintenance and disposal approvals; project procurement and milestone financial controls.
 - Private authenticated document upload/download, organisation-scoped access, file type/signature checks, checksums, audit entries and append-only version history are implemented. Configure a private persistent storage path. Automated scanning, retention and off-site replication remain future work.
 - MFA and password reset flows, per-device refresh-token rotation, formal audit immutability and security alerting remain outstanding. Password changes and explicit sign-out-everywhere increment a server-checked token version, invalidating previously issued JWT sessions; these account-security actions are written to the audit log. Password minimum is six characters across password changes, provisioned accounts, bootstrap and demo seeding.
@@ -73,7 +73,7 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Expanded the member portal into a responsive personal workspace with membership identity, branch, contact details, membership status, ministry connections, attendance totals and recent check-ins, upcoming programmes, the member's own event registrations and branch announcements.
 - Members can update only their own phone, residential location and emergency-contact fields. The sign-in email remains read-only here so changing a profile contact address cannot silently desynchronise the login identity. The server resolves the member profile from the authenticated account and rejects changes to membership number, status, branch, ministry assignments and other staff-managed fields.
 - Portal attendance totals are derived from attendance records attached to the exact linked member profile; no sample or estimated values are shown.
-- Giving statements, contribution receipts, prayer-request submission, small-group enrolment, discipleship progress, personal notifications and member document access remain future modules because the current data model does not yet provide safe, member-linked workflows for them.
+- Giving history and printable receipts, private prayer requests, small-group enrolment requests, approved-course lesson completion, personal in-app notifications and member-specific private document downloads are implemented. External SMS/email/WhatsApp delivery, advanced learning assessments and server-generated PDF receipts remain outstanding.
 
 
 ## Role-based dashboard and operations access review
@@ -89,7 +89,7 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Members can submit private prayer requests; requests are assigned to their linked assigned pastor where one exists. Members see only their own request status, and prayer text is omitted from audit summaries.
 - Members can request enrolment in active branch small groups and discipleship courses. Duplicate requests are prevented by a deterministic programme/member reference.
 - Member notifications can be addressed with `member_notification` records using `data.recipientUserId`; members can read only their own and mark them read.
-- Member document metadata is visible only when `data.memberId` exactly matches the linked profile. Downloads remain disabled until private object storage, malware scanning, expiring access and audit logging are implemented.
+- Member document metadata and active file versions are visible only when `data.memberId` exactly matches the linked profile. Authenticated member downloads verify organisation, document assignment, active file status and SHA-256 integrity and write an audit event. Malware scanning, retention policies and off-site replication remain future work.
 
 
 ## Member portal upgrade follow-through
