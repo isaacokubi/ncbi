@@ -39,11 +39,15 @@ async function validateVolunteerRoster(entity, data, organisation, excludeId=nul
   const eligible = await Member.find({ _id: { $in: memberIds }, homeOrganisation: organisation, status: { $in: ['new_believer','member','worker','minister'] } }).select('_id firstName lastName').lean();
   if (eligible.length !== memberIds.length) return 'Every assigned person must be an eligible member of this church organisation';
   data.assignedMembers = eligible.map(member => member.firstName + ' ' + member.lastName).join(', ') + (data.assignmentNotes ? ' · ' + data.assignmentNotes : '');
-  if (data.serviceDate && data.serviceTime) {
-    const conflictFilter = { organisation, entity: 'volunteer_schedule', status: { $nin: ['archived','cancelled'] }, 'data.serviceDate': data.serviceDate, 'data.serviceTime': data.serviceTime, 'data.assignedMemberIds': { $in: memberIds } };
-    if (excludeId) conflictFilter._id = { $ne: excludeId };
-    const conflict = await OperationsRecord.findOne(conflictFilter).select('title data.ministryTeam').lean();
-    if (conflict) return 'One or more selected members are already rostered for ' + conflict.title + ' at this date and time';
+  if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(data.serviceTime||'')) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(data.serviceEndTime||'')) || data.serviceEndTime <= data.serviceTime) return 'Enter a valid service start and end time; the end must be later than the start';
+  const conflictFilter = { organisation, entity: 'volunteer_schedule', status: { $nin: ['archived','cancelled'] }, 'data.serviceDate': data.serviceDate, $or: [{ 'data.assignedMemberIds': { $in: memberIds } }, { 'data.ministryTeam': data.ministryTeam }] };
+  if (excludeId) conflictFilter._id = { $ne: excludeId };
+  const conflicts = await OperationsRecord.find(conflictFilter).select('title data.ministryTeam data.assignedMemberIds data.serviceTime data.serviceEndTime').lean();
+  for (const conflict of conflicts) {
+    const otherStart=String(conflict.data?.serviceTime||''),otherEnd=String(conflict.data?.serviceEndTime||otherStart);
+    const overlaps=otherStart && otherEnd && otherStart < data.serviceEndTime && otherEnd > data.serviceTime;
+    const sameMember=(conflict.data?.assignedMemberIds||[]).some(id=>memberIds.includes(String(id)));
+    if(overlaps&&(sameMember||String(conflict.data?.ministryTeam||'').toLowerCase()===String(data.ministryTeam||'').toLowerCase())) return sameMember ? 'One or more selected members are already rostered for '+conflict.title+' during this time' : 'This ministry team already has an overlapping roster for '+conflict.title;
   }
   return null;
 }
@@ -66,7 +70,7 @@ function validateStructuredOperationData(entity, data) {
     transport: { required: ['driver','tripPurpose','origin','destination','departureAt'], numbers: ['passengerCount','odometerStart','fuelCost','maintenanceCost'], dates: ['departureAt','returnAt','nextServiceAt'], enums: { vehicleStatus: ['available','in_use','under_maintenance','out_of_service'] } },
     compliance: { required: ['recordType','responsibleOfficer','complianceArea','requirement'], dates: ['reviewDate','completedAt'], enums: { recordType: ['policy','governance_resolution','compliance_action','meeting','risk','other'], actionStatus: ['not_started','in_progress','awaiting_evidence','completed','overdue'] } },
     member_class: { required: ['programmeName','classLevel','facilitator','curriculum','startDate'], numbers: ['capacity','enrolledCount'], dates: ['startDate','endDate'], enums: { classLevel: ['new_believer','foundation','membership','baptism_preparation','discipleship','leadership','other'] } },
-    volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','serviceTime'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
+    volunteer_schedule: { required: ['ministryTeam','teamLeader','serviceDate','serviceTime','serviceEndTime'], dates: ['serviceDate'], enums: { attendanceStatus: ['scheduled','confirmed','partially_confirmed','completed','absent','cancelled'] } }
   };
   const rule = operationalRules[entity];
   if (rule) {
