@@ -5,7 +5,7 @@ import SupplierWorkspace from './components/SupplierWorkspace.jsx';
 import MediaWorkspace from './components/MediaWorkspace.jsx';
 import BudgetApprovalPolicies from './components/BudgetApprovalPolicies.jsx';
 import VisitorFollowUpWorkspace from './components/VisitorFollowUpWorkspace.jsx';
-import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X, MapPin } from 'lucide-react';
+import { Activity, ArrowUpRight, Bell, BookOpen, CalendarDays, Church, CircleDollarSign, ClipboardList, FileBarChart, HeartHandshake, LayoutDashboard, LogOut, Menu, Network, Search, ShieldCheck, Users, UserRound, Wallet, RefreshCw, Plus, Pencil, Archive, CheckCircle, XCircle, Filter, ChevronLeft, ChevronRight, ChevronDown, X, MapPin } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -451,7 +451,7 @@ function App(){
    <div className="sidebar-bottom"><button type="button" className="nav-item" onClick={()=>setDark(value=>!value)}><ShieldCheck size={18}/>{(!collapsed||mobileNavOpen)&&<span>{dark?'Light appearance':'Dark appearance'}</span>}</button><button type="button" className="nav-item logout-link" onClick={logout}><LogOut size={18}/>{(!collapsed||mobileNavOpen)&&<span>Sign out</span>}</button>{(!collapsed||mobileNavOpen)&&<div className="profile"><div className="profile-avatar">{user.fullName.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div><div><b>{user.fullName}</b><small>{user.email}</small></div></div>}</div>
   </aside>
   <main className="main">
-   <header className="topbar"><div className="topbar-heading"><button type="button" className="mobile-nav-trigger" aria-label="Open navigation" aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(true)}><Menu size={20}/></button><span className="crumb">NCBI /</span> <b>{title}</b></div><div className="top-actions"><span className="period-label">{dateNow.toUpperCase()}</span><button type="button" className="top-user" onClick={logout} title="Sign out"><span className="top-avatar">{user.fullName.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</span><LogOut size={15}/></button></div></header>
+   <header className="topbar"><div className="topbar-heading"><button type="button" className="mobile-nav-trigger" aria-label="Open navigation" aria-expanded={mobileNavOpen} onClick={()=>setMobileNavOpen(true)}><Menu size={20}/></button><span className="crumb">NCBI /</span> <b>{title}</b></div><div className="top-actions"><span className="period-label">{dateNow.toUpperCase()}</span><button type="button" className="top-user" onClick={logout} title="Sign out" aria-label={`Sign out of ${user.fullName}`}><span className="top-avatar" aria-hidden="true"><UserRound size={17} strokeWidth={2}/></span><LogOut size={15}/></button></div></header>
    <div className="content">
     {error&&<div className="page-error" role="alert">{error}<button onClick={()=>setError('')}>Dismiss</button></div>}{success&&<div className="page-success" role="status">{success}<button onClick={()=>setSuccess('')}>Dismiss</button></div>}
     {page==='dashboard'&&<section className="dashboard-page">
