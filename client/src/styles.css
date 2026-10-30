@@ -770,3 +770,46 @@ html{scroll-behavior:smooth;scroll-padding-top:94px}
 .public-branch-card>a{display:block;width:fit-content;margin-top:7px;font-size:13px;font-weight:650}
 .public-branch-card .public-branch-status,.public-event-card .public-branch-status,.public-news-card .public-branch-status{display:inline-flex;align-items:center;gap:7px;margin-top:16px;padding:6px 9px;border-radius:30px;background:#f5f0f7;color:#6b4c75;font-size:10px;font-weight:750;letter-spacing:.04em}
 .public-branch-status i{width:6px;height:6px;border-radius:50%;background:#8c6c35}
+
+
+/* Public contact details managed through the website CMS */
+.public-contact-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:28px;max-width:760px}
+.public-contact-details>a,.public-contact-details>div{display:flex;flex-direction:column;gap:6px;padding:15px 17px;border:1px solid #e9e1eb;border-radius:9px;background:#fff;text-decoration:none;color:#302536;min-width:0}
+.public-contact-details b{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#8e6b2b}
+.public-contact-details span{font-size:13px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-line}
+.public-contact-details a:hover{border-color:#8e6b2b;box-shadow:0 6px 18px #22003112}
+.website-cms-subheading{margin:22px 0 12px;color:#38263f;font:600 16px 'Playfair Display',serif}
+.supplier-workspace{display:flex;flex-direction:column;gap:18px}
+.supplier-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.supplier-toolbar h2{margin:6px 0;color:var(--purple);font:600 23px 'Playfair Display',serif}
+.supplier-toolbar p{margin:5px 0;color:#817786;font-size:12px;line-height:1.6}
+.supplier-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.supplier-metrics article{display:grid;grid-template-columns:24px 1fr;align-items:center;gap:5px 9px;padding:16px}
+.supplier-metrics article svg{grid-row:span 2;color:#8e6b2b;width:19px}
+.supplier-metrics article span{font-size:10px;color:#8a818e}
+.supplier-metrics article b{font-size:20px;color:var(--purple)}
+.supplier-forms-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.supplier-form{display:flex;flex-direction:column;gap:10px;padding:18px}
+.supplier-form h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;color:var(--purple);font-size:14px}
+.supplier-form h3 svg{color:#8e6b2b}
+.supplier-two-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.supplier-register{padding:18px;min-width:0}
+.supplier-register .panel-heading{margin-bottom:12px}
+.supplier-register .panel-heading h3{margin:0;color:var(--purple);font-size:15px}
+.supplier-register .panel-heading p{margin:5px 0 0;color:#8a818e;font-size:11px}
+.supplier-register table{width:100%;border-collapse:collapse;font-size:11px}
+.supplier-register th,.supplier-register td{padding:10px 9px;border-bottom:1px solid #eee9f0;text-align:left;vertical-align:top}
+.supplier-register th{color:#766b7b;font-size:9px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.supplier-register td{color:#44394a}
+.supplier-register td small{display:block;margin-top:4px;color:#8a818e}
+.supplier-register td input{width:150px;max-width:100%;height:30px;margin:3px 0;padding:5px 7px;border:1px solid #e5dfe8;border-radius:5px;font-size:10px}
+.supplier-register .table-action{display:inline-flex;align-items:center;gap:4px;margin:3px 4px 3px 0;padding:6px 8px;border:1px solid #e5dfe8;border-radius:5px;background:#fff;color:#55435c;font-size:10px;cursor:pointer}
+.supplier-register .table-action.danger{color:#9b3c35;border-color:#f0d8d4}
+.supplier-register .table-action:disabled{opacity:.5;cursor:wait}
+@media(max-width:900px){.supplier-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.public-contact-details,.supplier-forms-grid{grid-template-columns:1fr}.supplier-toolbar{align-items:flex-start;flex-direction:column}.supplier-two-fields{grid-template-columns:1fr}.supplier-register{padding:12px}.supplier-metrics{gap:8px}.supplier-metrics article{padding:11px}.supplier-register th,.supplier-register td{padding:8px 6px}}
+.dark .supplier-toolbar h2,.dark .supplier-form h3,.dark .supplier-metrics article b,.dark .supplier-register .panel-heading h3{color:var(--champagne)}
+.dark .supplier-register th,.dark .supplier-register td{border-color:#3b3040;color:#e8dfea}
+.dark .supplier-register td input,.dark .supplier-register .table-action{background:#211a26;border-color:#493a50;color:#eee}
+.dark .public-contact-details>a,.dark .public-contact-details>div{background:#211a26;border-color:#493a50;color:#eee}
+.dark .website-cms-subheading{color:var(--champagne)}
