@@ -140,7 +140,7 @@ router.get('/attendance',async(req,res,next)=>{
   try{
     const ids=await accessibleOrganisationIds(req.user);
     const page=Math.max(1,Number(req.query.page)||1),limit=Math.min(100,Math.max(1,Number(req.query.limit)||25));
-    const filter={organisation:{$in:ids}};
+    const filter=attendanceWorkspaceFilter(req.user,ids);
     if(req.query.from||req.query.to)filter.heldAt={...(req.query.from?{$gte:new Date(req.query.from)}:{}),...(req.query.to?{$lte:new Date(req.query.to)}:{})};
     if(req.query.activity){const safe=String(req.query.activity).slice(0,80).replace(/[^a-z0-9 ]/gi,'');filter.activityName={$regex:safe,$options:'i'};}
     const [records,total]=await Promise.all([Attendance.find(filter).sort({heldAt:-1}).skip((page-1)*limit).limit(limit).populate('member','firstName lastName membershipNumber').populate('organisation','name code').populate('recordedBy','fullName').lean(),Attendance.countDocuments(filter)]);

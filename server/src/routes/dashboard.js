@@ -15,10 +15,10 @@ router.get('/summary', allowRoles('super_admin','international_executive','natio
       Organisation.countDocuments({ _id: { $in: ids }, level: 'branch', status: 'active' }),
       Member.countDocuments({ homeOrganisation: { $in: ids }, status: { $in: ['member','worker','minister'] } }),
       Member.countDocuments({ homeOrganisation: { $in: ids }, status: 'visitor' }),
-      Attendance.countDocuments({ organisation: { $in: ids }, heldAt: { $gte: start } }),
+      Attendance.countDocuments(attendanceDashboardFilter(req.user, ids, start)),
       FinanceTransaction.aggregate([{ $match: { organisation: { $in: ids }, status: 'confirmed', direction: 'income', occurredAt: { $gte: start } } }, { $group: { _id: '$currency', total: { $sum: { $toDouble: '$amount' } } } }]),
       FinanceTransaction.aggregate([{ $match: { organisation: { $in: ids }, status: 'confirmed', direction: 'expense', occurredAt: { $gte: start } } }, { $group: { _id: '$currency', total: { $sum: { $toDouble: '$amount' } } } }]),
-      OperationsRecord.find({ organisation: { $in: ids }, entity: 'event', status: { $in: ['scheduled','active'] }, startAt: { $gte: new Date() } }).sort({ startAt: 1 }).limit(6).select('title startAt organisation').populate('organisation','name').lean(),
+      (canSeeUpcomingEvents(req.user) ? OperationsRecord.find({ organisation: { $in: ids }, entity: 'event', status: { $in: ['scheduled','active'] }, startAt: { $gte: new Date() } }).sort({ startAt: 1 }).limit(6).select('title startAt organisation').populate('organisation','name').lean() : Promise.resolve([])),
       OperationsRecord.countDocuments({ organisation: { $in: ids }, status: 'pending' })
     ]);
     const metrics = req.user.role === 'department_leader' ? { attendanceRecordsThisMonth: attendance } : { branches, members, visitors, attendanceRecordsThisMonth: attendance, confirmedIncomeThisMonth: income, confirmedExpensesThisMonth: expenses, pendingApprovals: pendingRecords };
