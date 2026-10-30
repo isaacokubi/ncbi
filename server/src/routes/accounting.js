@@ -228,7 +228,7 @@ router.post('/approval-policies',async(req,res,next)=>{try{
  const {organisation,transactionType='budget',minimumAmount='0.00',maximumAmount=null,approverRoles,requiredApprovals=1}=req.body;
  const org=organisation||(req.user.organisation?._id??req.user.organisation);
  if(!mongoose.isValidObjectId(org)||!(await assertOrganisationAccess(req.user,org)))return res.status(403).json({message:'Organisation outside your authorised scope'});
- if(transactionType!=='budget')return res.status(400).json({message:'Only budget approval policies are currently supported'});
+ if(!['budget','supplier_invoice','supplier_payment'].includes(transactionType))return res.status(400).json({message:'Select budget, supplier invoice or supplier payment'});
  const roles=Array.isArray(approverRoles)?[...new Set(approverRoles.map(String))]:[];
  if(!roles.length||roles.some(role=>!approvers.has(role))||!Number.isInteger(requiredApprovals)||requiredApprovals<1||requiredApprovals>3)return res.status(400).json({message:'Select valid approver roles and a required approval count supported by the selected roles'});
  const rangeError=approvalPolicyRangeError(minimumAmount,maximumAmount);
