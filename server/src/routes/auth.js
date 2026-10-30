@@ -171,6 +171,7 @@ router.post('/password-reset/request', async (req, res, next) => {
   try {
     const email = String(req.body.email || '').trim().toLowerCase();
     if (!validEmail(email)) return res.status(400).json({ message: 'Enter a valid email address.' });
+    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM || !/^https:\/\//i.test(String(process.env.APP_BASE_URL || ''))) return res.status(503).json({ message: 'Email recovery is not configured yet. Please contact the NCBI administrator.' });
     const user = await User.findOne({ email, active: true, accountApproval: 'approved' });
     if (user) {
       const token = randomBytes(32).toString('hex');
@@ -189,7 +190,7 @@ router.post('/password-reset/request', async (req, res, next) => {
         user.passwordResetTokenHash = undefined;
         user.passwordResetExpiresAt = undefined;
         await user.save();
-        throw error;
+        console.error('NCBI password reset email delivery failed:', error.message);
       }
     }
     res.json({ message: 'If an active NCBI account exists for that email, a password-reset link will be sent shortly.' });
