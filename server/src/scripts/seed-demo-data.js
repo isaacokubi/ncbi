@@ -14,7 +14,8 @@ const now = new Date();
 const dateOffset = (days) => new Date(now.getTime() - days * 86400000);
 const slug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
 const passwordHash = await bcrypt.hash(password, 12);
-const counts = { organisations: 0, users: 0, members: 0, attendance: 0, finance: 0, operations: 0, inventory: 0 };\nconst accountLog = [];
+const counts = { organisations: 0, users: 0, members: 0, attendance: 0, finance: 0, operations: 0, inventory: 0 };
+const accountLog = [];
 
 await connectDatabase();
 try {
@@ -263,6 +264,8 @@ try {
   }
 
   console.log('NCBI demo data seed completed (idempotent; existing unrelated records preserved).');
+  console.log('Demo sign-in accounts (use SEED_COMMON_PASSWORD from server/.env):');
+  for (const account of accountLog) console.log(`- ${account.email} | ${account.role} | ${account.status}`);
   console.log(JSON.stringify({
     created: counts,
     totals: {
