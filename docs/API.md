@@ -5,6 +5,8 @@ All workspace endpoints except health and login require `Authorization: Bearer <
 ## Authentication
 - `POST /api/auth/login` — email/password; returns short-lived JWT and safe user profile.
 - `GET /api/auth/me` — current active account.
+- `GET/POST /api/workspace/users` — scoped user directory and role-controlled account provisioning.
+- `PATCH /api/workspace/users/:id/status` — activate or deactivate a lower-privilege account.
 
 ## Organisation and people
 - `GET /api/workspace/organisations` — organisations in the user's permitted scope.
@@ -13,7 +15,9 @@ All workspace endpoints except health and login require `Authorization: Bearer <
 - `GET/POST /api/workspace/members` — list and register members.
 - `POST /api/workspace/members/:id/transfer` — transfer a member with history.
 - `POST /api/workspace/attendance` — record a member or visitor attendance.
+- `GET /api/workspace/attendance` — scoped paginated attendance register.
 - `GET /api/workspace/attendance/summary` — scoped attendance/member/confirmed-income summary.
+- `PATCH /api/workspace/members/:id` — update an authorised member profile.
 
 ## Dashboard
 - `GET /api/dashboard/summary` — scoped counts, confirmed income/expenses by currency, pending records and upcoming events.
