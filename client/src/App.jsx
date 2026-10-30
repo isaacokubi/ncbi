@@ -6,7 +6,6 @@ import MediaWorkspace from './components/MediaWorkspace.jsx';
 import SermonResourcesWorkspace from './components/SermonResourcesWorkspace.jsx';
 import { OperationalModuleFields, buildOperationalModuleData } from './components/OperationalModuleFields.jsx';
 import InventoryStockWorkspace from './components/InventoryStockWorkspace.jsx';
-import InventoryStockWorkspace from './components/InventoryStockWorkspace.jsx';
 import BudgetApprovalPolicies from './components/BudgetApprovalPolicies.jsx';
 import VisitorFollowUpWorkspace from './components/VisitorFollowUpWorkspace.jsx';
 import AnnouncementWorkspace from './components/AnnouncementWorkspace.jsx';
