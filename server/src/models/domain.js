@@ -107,7 +107,7 @@ export const Budget = mongoose.models.Budget || model('Budget', budgetSchema);
 
 const financeApprovalPolicySchema = new Schema({
   organisation: { type: Schema.Types.ObjectId, ref: 'Organisation', required: true, index: true },
-  transactionType: { type: String, enum: ['budget'], required: true },
+  transactionType: { type: String, enum: ['budget','supplier_invoice','supplier_payment'], required: true },
   minimumAmount: { type: Schema.Types.Decimal128, required: true, default: '0.00' },
   maximumAmount: { type: Schema.Types.Decimal128, default: null },
   approverRoles: [{ type: String, enum: ['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor'] }],
@@ -205,7 +205,8 @@ const purchaseRequestSchema=new Schema({
  createdBy:{type:Schema.Types.ObjectId,ref:'User',required:true},
  approvedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
  approvedAt:Date,
- decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null}
+ decidedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
+ approvals:[{actor:{type:Schema.Types.ObjectId,ref:'User',required:true},role:{type:String,required:true},decision:{type:String,enum:['approve','reject'],required:true},note:{type:String,maxlength:500},decidedAt:{type:Date,required:true}}]
 },{timestamps:true});
 purchaseRequestSchema.index({organisation:1,requestNumber:1},{unique:true});
 
@@ -244,7 +245,8 @@ const supplierPaymentSchema=new Schema({
  approvedAt:Date,
  confirmedBy:{type:Schema.Types.ObjectId,ref:'User',default:null},
  confirmedAt:Date,
- journalEntry:{type:Schema.Types.ObjectId,ref:'JournalEntry',default:null}
+ journalEntry:{type:Schema.Types.ObjectId,ref:'JournalEntry',default:null},
+ approvals:[{actor:{type:Schema.Types.ObjectId,ref:'User',required:true},role:{type:String,required:true},decision:{type:String,enum:['approve','reject'],required:true},note:{type:String,maxlength:500},decidedAt:{type:Date,required:true}}]
 },{timestamps:true});
 supplierPaymentSchema.index({organisation:1,createdAt:-1});
 supplierPaymentSchema.index({organisation:1,reference:1},{unique:true,partialFilterExpression:{reference:{$type:'string',$gt:''}}});
