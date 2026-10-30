@@ -99,3 +99,10 @@ Attendance officers can issue a signed, organisation-bound QR session token for 
 - Member-specific document files can be downloaded through authenticated endpoints after a fresh assignment and checksum check.
 - Prayer request follow-up supports assignment to an active pastor in the same branch, a controlled workflow status and a member-visible progress update. Internal prayer text is not included in the member-facing update.
 - Branch managers can create and edit in-app notifications for a member's linked portal account. The recipient account is resolved and pinned by the API; notification records are not a substitute for external SMS/email delivery.
+
+
+## Public website CMS
+- A global public-site content document is stored in MongoDB and served with the public branch/programme/news feed.
+- Super Admin and National Admin can edit the home, about, mission, ministries, branches, programmes, news and contact page copy, card arrays, navigation labels and footer from Administration → Public website.
+- Logo replacement remains in Administration → Church branding. Branch records and public event/announcement content remain sourced from the existing organisation and operations modules.
+- The protected CMS API validates page keys and object shapes, limits the payload to 100 KB and renders user copy as React text rather than executable HTML.
