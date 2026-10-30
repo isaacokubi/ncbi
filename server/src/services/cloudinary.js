@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import { randomUUID } from 'node:crypto';
 
 function configured(){
  const cloudName=process.env.CLOUDINARY_CLOUD_NAME;
@@ -12,10 +13,10 @@ function configured(){
 export function uploadChurchMedia(buffer,{mimeType,isVideo,originalName}){
  const client=configured();
  const resourceType=isVideo?'video':'image';
- const publicId='ncbi/church-media/'+Date.now()+'-'+Math.random().toString(36).slice(2,12);
+ const publicId='ncbi/church-media/'+randomUUID();
  const transformation=isVideo
   ?[{quality:'auto:good',video_codec:'h264',width:1920,height:1080,crop:'limit',format:'mp4'}]
-  :[{quality:'auto:good',fetch_format:'auto',width:1920,height:1920,crop:'limit'}];
+  :[{quality:'auto:good',width:1920,height:1920,crop:'limit',format:'webp'}];
  return new Promise((resolve,reject)=>{
   const stream=client.uploader.upload_stream({
    resource_type:resourceType,
