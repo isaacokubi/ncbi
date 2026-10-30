@@ -88,7 +88,7 @@ router.get('/members',async(req,res,next)=>{
   catch(e){next(e);}
 });
 router.post('/members',async(req,res,next)=>{
-  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership registration permission required'});const {firstName,lastName,phone,email,status}=req.body;if(!firstName||!lastName)return res.status(400).json({message:'First and last name are required'});const member=await Member.create({firstName,lastName,phone,email,status,homeOrganisation:req.user.organisation._id??req.user.organisation});res.status(201).json({member});}
+  try{if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership registration permission required'});const {firstName,lastName,phone,email,status,profilePhotoUrl,residentialLocation,emergencyContactName,emergencyContactRelationship,emergencyContactPhone,householdReference,baptisedAt,baptismChurch}=req.body;if(!firstName||!lastName)return res.status(400).json({message:'First and last name are required'});const member=await Member.create({firstName,lastName,phone,email,status,profilePhotoUrl,residentialLocation,emergencyContactName,emergencyContactRelationship,emergencyContactPhone,householdReference,baptisedAt,baptismChurch,homeOrganisation:req.user.organisation._id??req.user.organisation});res.status(201).json({member});}
   catch(e){next(e);}
 });
 router.post('/members/:id/convert',async(req,res,next)=>{
@@ -121,7 +121,7 @@ router.patch('/members/:id',async(req,res,next)=>{
     const member=await Member.findOne({_id:req.params.id,homeOrganisation:{$in:ids}});
     if(!member)return res.status(404).json({message:'Member not found'});
     if(!['super_admin','international_executive','national_admin','regional_overseer','district_pastor','branch_pastor','branch_admin'].includes(req.user.role))return res.status(403).json({message:'Membership update permission required'});
-    for(const key of ['firstName','lastName','phone','email','dateOfBirth','gender','status','joinedAt','ministries','assignedPastor']) if(req.body[key]!==undefined) member[key]=req.body[key];
+    for(const key of ['firstName','lastName','phone','email','dateOfBirth','gender','status','joinedAt','ministries','assignedPastor','profilePhotoUrl','residentialLocation','emergencyContactName','emergencyContactRelationship','emergencyContactPhone','householdReference','baptisedAt','baptismChurch']) if(req.body[key]!==undefined) member[key]=req.body[key];
     await member.save();
     res.json({member});
   }catch(e){next(e);}
