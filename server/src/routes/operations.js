@@ -14,6 +14,7 @@ import { validateVisitorFollowUp } from '../domain/visitorFollowUpPolicy.js';
 import { validateAnnouncementRecord } from '../domain/announcementPolicy.js';
 import { InventoryItem, InventoryMovement } from '../models/domain.js';
 import { inventoryItemInputError, inventoryMovementInputError, inventoryMovementDelta } from '../domain/inventoryPolicy.js';
+import { communicationApprovalError, validateAttendanceSessions } from '../domain/operationalWorkflowPolicy.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -312,10 +313,7 @@ router.patch('/prayer-requests/:id/follow-up', async (req, res, next) => {
     const status = req.body.status === undefined ? record.status : String(req.body.status);
     if (!['pending','in_progress','completed'].includes(status)) return res.status(400).json({ message: 'Status must be pending, in_progress or completed' });
     let assignedTo = record.assignedTo || [];
-    if (entity === 'communications' && req.body.data?.approvalStatus !== undefined && req.body.data.approvalStatus !== record.data?.approvalStatus) {
-      if (['approved','published'].includes(req.body.data.approvalStatus) && !['super_admin','international_executive','national_admin'].includes(req.user.role)) return res.status(403).json({ message: 'Only headquarters leadership may approve or publish church communications' });
-      if (req.body.data.approvalStatus === 'published' && record.data?.approvalStatus !== 'approved') return res.status(409).json({ message: 'Approve the communication before publishing it' });
-    }
+    if (entity === 'communications' && req.body.data?.approvalStatus !== undefined && req.body.data.approvalStatus !== record.data?.approvalStatus) { const approvalError = communicationApprovalError(req.user.role, record.data?.approvalStatus, req.body.data.approvalStatus); if (approvalError) return res.status(approvalError.status).json({ message: approvalError.message }); }
     if (req.body.assignedTo !== undefined) {
       if (!mongoose.isValidObjectId(req.body.assignedTo)) return res.status(400).json({ message: 'Select a valid pastoral assignee' });
       const pastor = await User.findOne({ _id: req.body.assignedTo, organisation: record.organisation, role: { $in: ['branch_pastor','district_pastor'] }, active: true }).select('_id').lean();
@@ -701,8 +699,7 @@ router.post('/:entity', async (req, res, next) => {
       const duplicate = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'member_enrolment', status: { $ne: 'archived' }, 'data.memberId': String(payload.memberId), 'data.programmeName': String(payload.programmeName).trim() }).select('_id').lean();
       if (duplicate) return res.status(409).json({ message: 'This member already has an active enrolment for this programme' });
     }
-    if (entity === 'communications' && ['approved','published','rejected'].includes(payload.approvalStatus) && !['super_admin','international_executive','national_admin'].includes(req.user.role)) return res.status(403).json({ message: 'Only headquarters leadership may approve, reject or publish church communications' });
-    if (entity === 'communications' && payload.approvalStatus === 'published') return res.status(409).json({ message: 'A communication must be approved before it can be published' });
+    if (entity === 'communications') { const approvalError = communicationApprovalError(req.user.role, null, payload.approvalStatus); if (approvalError) return res.status(approvalError.status).json({ message: approvalError.message }); }
     if (entity === 'volunteer_schedule' && payload.serviceDate && payload.serviceTime && payload.ministryTeam) {
       const duplicateRoster = await OperationsRecord.findOne({ organisation: targetOrg, entity: 'volunteer_schedule', status: { $ne: 'archived' }, 'data.ministryTeam': payload.ministryTeam, 'data.serviceDate': payload.serviceDate, 'data.serviceTime': payload.serviceTime }).select('_id').lean();
       if (duplicateRoster) return res.status(409).json({ message: 'A roster already exists for this ministry team at that date and time. Edit the existing roster instead.' });
@@ -757,12 +754,7 @@ router.patch('/:entity/:id', async (req, res, next) => {
     if (req.body.data !== undefined) {
       const payload = safeData(req.body.data);
       if (!payload) return res.status(400).json({ message: 'Record data must be an object under 30KB' });
-      if (entity === 'member_enrolment' && payload.attendanceSessions !== undefined) {
-        if (!Array.isArray(payload.attendanceSessions) || payload.attendanceSessions.length > 100) return res.status(400).json({ message: 'Attendance history must contain no more than 100 sessions' });
-        for (const session of payload.attendanceSessions) {
-          if (!session || typeof session.sessionTitle !== 'string' || !session.sessionTitle.trim() || session.sessionTitle.length > 160 || !['present','late','absent','excused'].includes(session.attendanceStatus) || Number.isNaN(new Date(session.sessionDate).getTime())) return res.status(400).json({ message: 'Each attendance entry needs a valid date, session title and attendance status' });
-        }
-      }
+      if (entity === 'member_enrolment' && payload.attendanceSessions !== undefined) { const attendanceError = validateAttendanceSessions(payload.attendanceSessions); if (attendanceError) return res.status(400).json({ message: attendanceError }); }
       if (entity === 'volunteer_schedule' && payload.serviceDate && payload.serviceTime && payload.ministryTeam) {
         const duplicateRoster = await OperationsRecord.findOne({ _id: { $ne: record._id }, organisation: record.organisation, entity: 'volunteer_schedule', status: { $ne: 'archived' }, 'data.ministryTeam': payload.ministryTeam, 'data.serviceDate': payload.serviceDate, 'data.serviceTime': payload.serviceTime }).select('_id').lean();
         if (duplicateRoster) return res.status(409).json({ message: 'Another roster already exists for this ministry team at that date and time.' });
