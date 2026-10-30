@@ -5,10 +5,10 @@ This document distinguishes working code from planned work. A module is not prod
 ## Implemented in this delivery
 - React sign-in against the API, authenticated session restoration, sign-out and role-scoped live dashboard KPIs/events/organisation directory.
 - Client loading, empty, retry and API error states; no illustrative dashboard figures are represented as live data.
-- Database-backed registers and create/update/archive workflows for members, visitors, attendance, events, departments, missions, discipleship, service plans, leadership appointments, assets, projects, documents, announcements, volunteers, training and property.
+- Database-backed registers and create/update/archive workflows for members, visitor follow-up, attendance, events and event registrations, departments, missions, church planting, discipleship, small groups, children/youth/family ministry programmes, baptisms, weddings, funerals, benevolence, service plans, leadership appointments, assets, property, facilities, inventory, procurement, projects, documents, communications, media, transport, compliance, volunteers, training, ministry reports and other operations.
 - Scoped user administration with role hierarchy checks, account activation/deactivation and one-time temporary passwords.
-- Finance transaction entry with separate approval/confirmation controls.
-- Chart of accounts, balanced double-entry journal submission and independent posting, expense budgets and bank statement reconciliation APIs and client workspaces.
+- Finance transaction entry with separate approval/confirmation controls; confirming a transaction creates its corresponding balanced posted journal entry using validated organisation-specific debit and credit accounts.
+- Chart of accounts, balanced double-entry journal submission and independent posting, expense budgets and bank statement reconciliation APIs and client workspaces. Bank reconciliation compares posted ledger activity with the entered statement balance; it does not import bank statements or connect to a bank feed.
 - GitHub Actions CI workflow for server syntax/tests and client production build.
 - Hierarchical organisation creation with parent-level validation and pending/active/suspended/archived lifecycle.
 - Server-derived organisation subtree scopes for headquarters, national, regional and district oversight.
