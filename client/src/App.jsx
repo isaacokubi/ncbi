@@ -55,7 +55,7 @@ const configs = {
  counselling:{title:'Counselling cases',entity:'counselling_case',description:'Restricted counselling case register. Do not store highly sensitive notes until encryption and specialist privacy controls are deployed.'}
 };
 const fmt = value => value ? new Intl.DateTimeFormat('en-KE',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value)) : '—';
-const money = groups => Array.isArray(groups) && groups.length ? groups.map(x => (x._id || 'KES')+' '+new Intl.NumberFormat('en-KE').format(Number(x.total||0))).join(' · ') : 'KES 0';
+const money = groups => Array.isArray(groups) && groups.length ? groups.map(x => (x._id || 'KES')+' '+new Intl.NumberFormat('en-KE').format(Number(x.total||0))).join(' · ') : 'No confirmed activity';
 const human = value => String(value || '').replaceAll('_',' ').replace(/\b\w/g, c=>c.toUpperCase());
 const dashboardProfiles = {
  super_admin:{title:'System administration',heading:'Platform overview',description:'Monitor the NCBI platform, organisation-wide activity and administration across all authorised church units.',showStructure:true,quickLinks:[['organisations','Organisation structure',Network],['users','User access',ShieldCheck],['members','Membership',Users],['attendance','Attendance',ClipboardList],['reports','Reports & analytics',FileBarChart]]},
@@ -150,8 +150,8 @@ function App(){
  const seedAccounts=async()=>{if(!window.confirm('Install the standard NCBI chart of accounts for this organisation? Existing account codes will not be overwritten.'))return;try{const r=await api('/accounting/accounts/seed-defaults',token,{method:'POST',body:JSON.stringify({})});setSuccess('Standard chart installed. '+r.created+' new accounts created.');await loadPage(token,'accounts',1);}catch(e){setError(e.message);}};
  const filteredRows=useMemo(()=>{const q=search.toLowerCase();if(!q)return rows;return rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q));},[rows,search]);
  const activeItem=navGroups.flatMap(g=>g.items).find(x=>x[0]===page);
- const dashboardProfile=dashboardProfiles[role]||dashboardProfiles.branch_admin; const title=page==='dashboard'?dashboardProfile.title:page==='organisations'?'Organisation structure':page==='users'?'User access & roles':page==='audit'?'Audit trail':page==='members'?'Membership':page==='attendance'?'Attendance register':page==='finance'?'Finance transactions':page==='payments'?'M-Pesa payments':page==='accounts'?'Chart of accounts':page==='journals'?'General ledger':page==='budgets'?'Budgets':page==='reconciliation'?'Bank reconciliation':page==='reports'?'Reports & analytics':page==='memberPortal'?'My member portal':(configs[page]?.title||'Workspace');
  const role=user?.role||'member';
+ const dashboardProfile=dashboardProfiles[role]||dashboardProfiles.branch_admin; const title=page==='dashboard'?dashboardProfile.title:page==='organisations'?'Organisation structure':page==='users'?'User access & roles':page==='audit'?'Audit trail':page==='members'?'Membership':page==='attendance'?'Attendance register':page==='finance'?'Finance transactions':page==='payments'?'M-Pesa payments':page==='accounts'?'Chart of accounts':page==='journals'?'General ledger':page==='budgets'?'Budgets':page==='reconciliation'?'Bank reconciliation':page==='reports'?'Reports & analytics':page==='memberPortal'?'My member portal':(configs[page]?.title||'Workspace');
  const dashboardMetrics=dashboard?.metrics||{};
  const dashboardStatDefinitions=[
   ['branches','Active branches',Church,'Active branch locations'],
