@@ -109,6 +109,19 @@ const configs = {
  counselling:{title:'Counselling cases',entity:'counselling_case',description:'Restricted counselling case register. Do not store highly sensitive notes until encryption and specialist privacy controls are deployed.'}
 };
 const fmt = value => value ? new Intl.DateTimeFormat('en-KE',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(value)) : '—';
+function scrollPageToTop() {
+ const reset = () => {
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  document.querySelectorAll('.main, .content, main, [data-page-scroll]').forEach(element => {
+   element.scrollTop = 0;
+   element.scrollLeft = 0;
+  });
+ };
+ reset();
+ if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(reset);
+}
 function organisationHierarchyRows(records) {
  const byId=new Map((records||[]).map(org=>[String(org._id),{...org,children:[]}]));
  const roots=[];
@@ -216,7 +229,8 @@ function PublicHome({onLogin,onRegister,brandLogo,heroImage:initialHeroImage,aut
  const loadPublicContent=useCallback(async()=>{setLoading(true);setError('');try{const [data,media,branding]=await Promise.all([api('/public/content',''),api('/media/public','').catch(()=>({items:[]})),api('/public/branding','').catch(()=>({}))]);setContent({branches:Array.isArray(data.branches)?data.branches.filter(item=>item&&typeof item==='object'):[],events:Array.isArray(data.events)?data.events.filter(item=>item&&typeof item==='object'):[],announcements:Array.isArray(data.announcements)?data.announcements.filter(item=>item&&typeof item==='object'):[],media:Array.isArray(media.items)?media.items:[]});if(data.siteContent)setSiteContent(mergeSiteContent(data.siteContent));if(branding.heroImageUrl)setHeroImage(branding.heroImageUrl);}catch(e){setError(e.message||'Public information is temporarily unavailable.');}finally{setLoading(false);}},[]);
  useEffect(()=>{loadPublicContent();},[loadPublicContent]);
  useEffect(()=>{const sync=()=>setActivePage(readPage());window.addEventListener('popstate',sync);window.addEventListener('hashchange',sync);return()=>{window.removeEventListener('popstate',sync);window.removeEventListener('hashchange',sync);};},[]);
- const navigate=(id)=>{if(!validPages.includes(id))return;setActivePage(id);setMenuOpen(false);document.querySelectorAll('.public-nav-group[open]').forEach(group=>group.removeAttribute('open'));if(window.location.hash!==`#${id}`)window.history.pushState({page:id},'',`#${id}`);window.scrollTo({top:0,behavior:'auto'});};
+  useEffect(()=>{scrollPageToTop();},[activePage]);
+ const navigate=(id)=>{if(!validPages.includes(id))return;setActivePage(id);setMenuOpen(false);document.querySelectorAll('.public-nav-group[open]').forEach(group=>group.removeAttribute('open'));if(window.location.hash!==`#${id}`)window.history.pushState({page:id},'',`#${id}`);scrollPageToTop();};
  const pageLink=(id,label,className)=> <a key={id} className={className||undefined} href={`#${id}`} aria-current={activePage===id?'page':undefined} onClick={e=>{e.preventDefault();navigate(id);}}>{label}</a>;
  const closeMenu=()=>setMenuOpen(false);
  useEffect(()=>{
@@ -379,7 +393,7 @@ function App(){
  },[page,loadDashboard,search,statusFilter]);
  useEffect(()=>{let alive=true;if(!token){setLoading(false);return()=>{alive=false;};}setLoading(true);api('/auth/me',token).then(async r=>{if(!alive)return;setUser(r.user);setError('');setPortalEditing(false);if(r.user.role==='member'){setPage('memberPortal');await loadPage(token,'memberPortal',1);}else{setPortalData(null);setPage('dashboard');await loadDashboard(token);}}).catch(e=>{if(!alive)return;if(e.status===401)logout();else setError(e.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[token,loadDashboard,logout]);
  useEffect(()=>{if(user&&user.role!=='member'&&page==='memberPortal'){setPortalData(null);setPortalEditing(false);setPage('dashboard');return;}if(!token||!user)return;loadPage(token,page,1).catch(e=>setError(e.message));},[page,token,user,loadPage]);
- useEffect(()=>{window.scrollTo({top:0,left:0,behavior:'smooth'});const mainContent=document.querySelector('.main');if(mainContent)mainContent.scrollTo({top:0,left:0,behavior:'smooth'});},[page]);
+ useEffect(()=>{scrollPageToTop();},[page,publicView,registrationView]);
  const changePassword=async e=>{e.preventDefault();setError('');if(newPassword!==confirmPassword){setError('The new password and confirmation do not match.');return;}setBusy(true);try{const result=await api('/auth/change-password',token,{method:'POST',body:JSON.stringify({currentPassword,newPassword})});setCurrentPassword('');setNewPassword('');setConfirmPassword('');logout();setPublicView(false);setLoginError(result.message);}catch(err){setError(err.message);}finally{setBusy(false);}};
  const login=async(email,password)=>{setBusy(true);setLoginError('');setError('');setPortalData(null);setPortalEditing(false);try{const r=await api('/auth/login','',{method:'POST',body:JSON.stringify({email,password})});const destination=r.user.role==='member'?'memberPortal':'dashboard';await loadPage(r.token,destination,1);sessionStorage.setItem('ncbi_access_token',r.token);setUser(r.user);setPage(destination);setToken(r.token);}catch(e){setLoginError(e.message);}finally{setBusy(false);setLoading(false);}};
  const openCreate=(targetPage=page)=>{if(typeof targetPage!=='string'||!targetPage)targetPage=page;const isEvent=targetPage==='events';const eventStart=new Date(Date.now()+3600000);const localEventStart=new Date(eventStart.getTime()-eventStart.getTimezoneOffset()*60000).toISOString().slice(0,16);setPage(targetPage);setEditing(null);setForm({status:isEvent?'scheduled':'active',visibility:['events','announcements'].includes(targetPage)?'public':'organisation',level:'branch',currency:'KES',direction:'income',category:'offering',paymentMethod:'cash',occurredAt:new Date().toISOString().slice(0,10),heldAt:new Date().toISOString().slice(0,16),entryDate:new Date().toISOString().slice(0,10),statementDate:new Date().toISOString().slice(0,10),fiscalYear:new Date().getFullYear(),period:'annual',type:'asset',normalBalance:'debit',startAt:isEvent?localEventStart:'',endAt:'',summary:'',description:'',venue:'',message:''});setJsonData(targetPage==='journals'?'[]':'{}');setShowForm(true);setError('');setSuccess('');};
